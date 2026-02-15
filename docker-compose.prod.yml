@@ -1,0 +1,258 @@
+services:
+  # ========================================
+  # REVERSE PROXY (SSL AUTOMÁTICO)
+  # ========================================
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy_proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - calflow_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ========================================
+  # EVOLUTION API
+  # ========================================
+  evolution:
+    image: evoapicloud/evolution-api:latest
+    container_name: evolution-api
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    volumes:
+      - evolution_instances:/evolution/instances
+      - evolution_store:/evolution/store
+    networks:
+      - calflow_net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ========================================
+  # SEU BOT JAVA
+  # ========================================
+  calflow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: calflow-java
+    restart: unless-stopped
+    environment:
+      # PostgreSQL
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/calflow
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+
+      # Evolution API
+      EVOLUTION_API_URL: http://evolution:8080
+      AUTHENTICATION_API_KEY: ${AUTHENTICATION_API_KEY}
+
+      # Google Calendar
+      GOOGLE_CALENDAR_ENABLED: true
+
+      # Profile
+      SPRING_PROFILES_ACTIVE: prod
+    volumes:
+      - ./service-account-key.json:/app/service-account-key.json:ro
+      - bot_logs:/app/logs
+    networks:
+      - calflow_net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      evolution:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1536M
+        reservations:
+          cpus: '0.25'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "7"
+
+  # ========================================
+  # POSTGRESQL
+  # ========================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: calflow
+      PGDATA: /var/lib/postgresql/data/pgdata
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=512MB"
+      - "-c"
+      - "effective_cache_size=1536MB"
+      - "-c"
+      - "work_mem=16MB"
+      - "-c"
+      - "maintenance_work_mem=128MB"
+      - "-c"
+      - "random_page_cost=1.1"
+      - "-c"
+      - "effective_io_concurrency=200"
+      - "-c"
+      - "wal_buffers=16MB"
+      - "-c"
+      - "default_statistics_target=100"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - calflow_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d calflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # ========================================
+  # REDIS CACHE
+  # ========================================
+  redis:
+    image: redis:7-alpine
+    container_name: redis-cache
+    restart: unless-stopped
+    command:
+      - "redis-server"
+      - "--appendonly"
+      - "yes"
+      - "--maxmemory"
+      - "512mb"
+      - "--maxmemory-policy"
+      - "allkeys-lru"
+      - "--save"
+      - "60 1000"
+    volumes:
+      - redis_data:/data
+    networks:
+      - calflow_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
+  # ========================================
+  # BACKUP AUTOMÁTICO
+  # ========================================
+  backup:
+    image: prodrigestivill/postgres-backup-local
+    container_name: postgres_backup
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: calflow
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      SCHEDULE: "@daily"
+      BACKUP_KEEP_DAYS: 7
+      BACKUP_KEEP_WEEKS: 4
+      BACKUP_KEEP_MONTHS: 6
+      HEALTHCHECK_PORT: 8080
+    volumes:
+      - ./backups:/backups
+    networks:
+      - calflow_net
+    depends_on:
+      - postgres
+
+  # ========================================
+  # MONITORAMENTO (Opcional mas recomendado)
+  # ========================================
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    volumes:
+      - uptime_data:/app/data
+    ports:
+      - "127.0.0.1:3001:3001"
+    networks:
+      - calflow_net
+
+# ========================================
+# NETWORKS
+# ========================================
+networks:
+  calflow_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+
+# ========================================
+# VOLUMES
+# ========================================
+volumes:
+  caddy_data:
+  caddy_config:
+  evolution_instances:
+  evolution_store:
+  postgres_data:
+  redis_data:
+  bot_logs:
+  uptime_data:
