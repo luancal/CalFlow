@@ -1,4 +1,4 @@
-# 👑  - Sistema Inteligente de Agendamento via WhatsApp
+# 👑 *CalFlow* - Sistema Inteligente de Agendamento via WhatsApp
 
 ![Java](https://img.shields.io/badge/Java-17-orange?style=flat&logo=openjdk)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-green?style=flat&logo=springboot)
@@ -496,7 +496,7 @@ curl https://api.seubot.com.br
 
 ## 📄 **Licença**
 
-**© 2026 calflow. Todos os direitos reservados.**
+**© 2026 CalFlow. Todos os direitos reservados.**
 
 Este software é proprietário. Não é permitido copiar, modificar, distribuir ou usar este código sem autorização expressa por escrito.
 

@@ -1,0 +1,25 @@
+# CONFIGURAÇÕES DO SERVIDOR
+server.port=8081
+spring.application.name=calflow
+
+# BANCO DE DADOS (POSTGRESQL)
+# Substitua pelos seus dados locais
+spring.datasource.url=jdbc:postgresql://localhost:5432/nome_do_seu_banco
+spring.datasource.username=seu_usuario
+spring.datasource.password=sua_senha
+
+# HIBERNATE / JPA
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+
+# EVOLUTION API
+# URL da sua instância da Evolution API
+evolution.api.url=http://localhost:8080
+
+# GOOGLE CALENDAR
+# Caminho para o seu arquivo de credenciais JSON
+google.calendar.credentials.file=classpath:service-account-key.json
+
+# CONFIGURAÇÕES DE AGENDAMENTO
+spring.task.execution.pool.core-size=5
+spring.task.execution.pool.max-size=10
