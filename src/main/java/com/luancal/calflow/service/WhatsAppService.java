@@ -149,7 +149,7 @@ public class WhatsAppService {
             estado.setServicoSelecionado(null);
             estado.setPaginaHorarios(0);
             estadoRepository.save(estado);
-            metaService.enviarMensagem(de, "🔄 Menu Principal:\n\n1. ✅ Novo Agendamento\n2. ❌ Cancelar ou Remarcar\n3. 📞 Informações e Preços\n4. 💬 Falar com atendente", clinica);
+            metaService.enviarMensagem(de, "🔄 Menu Principal:\n\n1. ✅ Novo Agendamento\n2. ❌ Cancelar ou Remarcar\n3. 📞 Informações e Preços\n4. 💬 Falar com atendente\n\nCaso precise, digite *menu* para voltar aqui", clinica);
 
             return;
         }
@@ -168,7 +168,7 @@ public class WhatsAppService {
                         estado.setEstadoAtual(2);
                         estadoRepository.save(estado);
                     } else {
-                        metaService.enviarMensagem(de, "Olá! Sou o assistente virtual da " + clinica.getNome() + ". 🤝\nPara facilitar, qual seu *nome completo*?", clinica);
+                        metaService.enviarMensagem(de, "E aí! 👊\n" + "Bem-vindo à " + clinica.getNome() + "\n" + "Vou te ajudar a agendar seu horário de forma rápida.\n" + "Pra começar, qual é o seu *nome*?", clinica);
                         estado.setEstadoAtual(1);
                         estadoRepository.save(estado);
                     }
@@ -193,10 +193,12 @@ public class WhatsAppService {
                             estadoRepository.save(estado);
                         } else {
                             // FLUXO NOVO (Escolher serviço)
-                            StringBuilder menuServicos = new StringBuilder("Digite o número do serviço que deseja (Ex: 2):\n\n");
+                            StringBuilder menuServicos = new StringBuilder("🏆 *Nossos Serviços*\n\n");
+                            menuServicos.append("Por favor, escolha o serviço que deseja agendar digitando o *NÚMERO* correspondente:\n\n");
                             for (int i = 0; i < servicos.size(); i++) {
                                 TipoServico s = servicos.get(i);
-                                menuServicos.append(i + 1).append(". *").append(s.getNome()).append("* - R$ ").append(s.getPreco()).append("\n");
+                                String precoFormatado = String.format("%.2f", s.getPreco()).replace(".", ",");
+                                menuServicos.append(i + 1).append(". *").append(s.getNome()).append("* - R$ ").append(precoFormatado).append("\n");
                             }
                             metaService.enviarMensagem(de, menuServicos.toString(), clinica);
                             estado.setEstadoAtual(10); // NOVO ESTADO: Escolhendo Serviço
@@ -225,23 +227,17 @@ public class WhatsAppService {
                     } else if (msgLimpa.equals("3")) {
                         List<TipoServico> servicos = servicoRepository.findByClinicaId(clinica.getId());
                         StringBuilder info = new StringBuilder();
-                        info.append("         👑 *").append(clinica.getNome().toUpperCase()).append("* 👑\n");
-                        info.append("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n");
-
+                        info.append("👑 *").append(clinica.getNome()).append("* 👑\n\n");
                         info.append("📍 *ENDEREÇO*\n");
                         info.append(clinica.getEndereco()).append("\n\n");
-
                         info.append("🕐 *HORÁRIOS DE ATENDIMENTO*\n");
                         info.append(gerarTextoHorario(clinica)).append("\n");
-
                         info.append("✨ *NOSSOS SERVIÇOS*\n");
                         for(TipoServico s : servicos) {
-                            info.append("▫️ ").append(s.getNome())
+                            info.append("• ").append(s.getNome())
                                     .append(" - *R$ ").append(String.format("%.2f", s.getPreco())).append("*\n");
                         }
-
-                        info.append("\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n");
-                        info.append("👉 Digite *1* para Agendar\n");
+                        info.append("\n👉 Digite *1* para Agendar\n");
                         info.append("👉 Digite *menu* para voltar");
                         metaService.enviarMensagem(de, info.toString(), clinica);
 
@@ -282,7 +278,7 @@ public class WhatsAppService {
                                 .limit(offset)
                                 .collect(Collectors.toList());
 
-                            StringBuilder sb = new StringBuilder("Horários para *" + data.format(DateTimeFormatter.ofPattern("dd/MM")) + "*:\n\n");
+                            StringBuilder sb = new StringBuilder("✨ *Ótima escolha!* Veja os horários disponíveis para *" + data.format(DateTimeFormatter.ofPattern("dd/MM")) + "*:\n\n");
                             DateTimeFormatter parser = DateTimeFormatter.ofPattern("HH:mm");
                             for (int i = 0; i < exibicao.size(); i++) {
                                 String horaInicioStr = exibicao.get(i);
@@ -338,11 +334,11 @@ public class WhatsAppService {
                                     .limit(offset)
                                     .collect(Collectors.toList());
                             if (exibicao.isEmpty()) {
-                                metaService.enviarMensagem(de, "📋 Você já viu todos os horários disponíveis para este dia.\nDigite uma nova data (ex: Amanhã) ou *menu*.", clinica);
+                                metaService.enviarMensagem(de, "📋 Você já viu todos os horários disponíveis para este dia.\nDigite uma nova data (ex: Amanhã, 22/08) ou *menu*.", clinica);
                                 return;
                             }
 
-                            StringBuilder sb = new StringBuilder("Horários para *" + dataSelecionada.format(DateTimeFormatter.ofPattern("dd/MM")) + "* (página " + (novaPagina + 1) + "):\n\n");
+                            StringBuilder sb = new StringBuilder("✨ *Ótima escolha!* Veja os horários disponíveis para *" + dataSelecionada.format(DateTimeFormatter.ofPattern("dd/MM")) + "* (página " + (novaPagina + 1) + "):\n\n");
                             DateTimeFormatter parser = DateTimeFormatter.ofPattern("HH:mm");
                             for (int i = 0; i < exibicao.size(); i++) {
                                 String horaInicioStr = exibicao.get(i);
@@ -376,12 +372,18 @@ public class WhatsAppService {
                             String tituloEvento = estado.getNomePaciente();
                             String servicoNome = (estado.getServicoSelecionado() != null) ? estado.getServicoSelecionado().getNome() : "Consulta";
                             String descricaoEvento = "Telefone: " + de + " | " + servicoNome;
-
+                            DateTimeFormatter parser = DateTimeFormatter.ofPattern("HH:mm");
+                            LocalTime inicioConf = LocalTime.parse(horaEscolhida, parser);
+                            LocalTime fimConf = inicioConf.plusMinutes(duracao);
+                            String intervaloHorario = inicioConf.format(parser) + " às " + fimConf.format(parser);
                             eventService.criarAgendamento(tituloEvento, data, de, horaEscolhida, clinica.getGoogleCalendarId(), duracao, descricaoEvento );
 
-                            metaService.enviarMensagem(de, "✅ *Agendamento Confirmado!*\n" +
-                                    "Marcado para: *" + data.format(DateTimeFormatter.ofPattern("dd/MM")) + " às " + horaEscolhida + "*\n" +
-                                    "Agradecemos a preferência. Nos vemos em breve! 👍\n\n" +
+                            metaService.enviarMensagem(de, "✅ *Seu agendamento foi realizado.*\n\n" +
+                                    "📅 *Data:* " + data.format(DateTimeFormatter.ofPattern("dd/MM")) + "\n" +
+                                    "🕒 *Horário:* " + intervaloHorario + "\n" +
+                                    "📝 *Serviço:* " + servicoNome + "\n" +
+                                    "📍 *Local:* " + clinica.getEndereco() + "\n\n" +
+                                    "Tamo junto! Nos vemos em breve 👊🔥 \n" +
                                     "Caso precise, digite *menu* para outras opções.", clinica);
                             estado.setEstadoAtual(0);
                             estado.setPaginaHorarios(0);
@@ -487,8 +489,9 @@ public class WhatsAppService {
 
         // 2. Sábado (Tratando horário diferenciado se existir)
         if (clinica.isTrabalhaSabado()) {
+            int inicio = (clinica.getAberturaSabado() != null) ? clinica.getAberturaSabado() : clinica.getHorarioAbertura();
             int fim = (clinica.getFechamentoSabado() != null) ? clinica.getFechamentoSabado() : clinica.getHorarioFechamento();
-            sb.append("• Sábado: ").append(clinica.getHorarioAbertura()).append("h às ").append(fim).append("h\n");
+            sb.append("• Sábado: ").append(inicio).append("h às ").append(fim).append("h\n");
         }
 
         // 3. Domingo

@@ -1,0 +1,20 @@
+# ============================================
+# CALFLOW - REVERSE PROXY
+# ============================================
+
+# API Evolution (Produção)
+api.seudominio.com {
+    reverse_proxy evolution:8080
+
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        -Server
+    }
+}
+
+# Se quiser expor o bot Java (opcional):
+# bot.seudominio.com {
+#     reverse_proxy calflow:8081
+# }

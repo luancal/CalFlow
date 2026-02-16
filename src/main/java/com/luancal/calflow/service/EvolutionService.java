@@ -1,6 +1,6 @@
 package com.luancal.calflow.service;
 
-import com.google.api.client.util.Value;
+import org.springframework.beans.factory.annotation.Value;
 import com.luancal.calflow.model.Clinica;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -14,7 +14,7 @@ import java.util.Map;
 @Service
 public class EvolutionService {
 
-    @Value("${evolution.api.url}")
+    @Value("${evolution.api.url:http://localhost:8080}")
     private String evolutionHost;
 
     public void enviarMensagem(String telefone, String texto, Clinica clinica) {
