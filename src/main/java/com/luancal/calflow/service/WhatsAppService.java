@@ -4,9 +4,11 @@ import com.google.api.services.calendar.model.Event;
 import com.luancal.calflow.controller.WhatsAppController;
 import com.luancal.calflow.model.Clinica;
 import com.luancal.calflow.model.EstadoConversa;
+import com.luancal.calflow.model.Profissional;
 import com.luancal.calflow.model.TipoServico;
 import com.luancal.calflow.repository.ClinicaRepository;
 import com.luancal.calflow.repository.EstadoConversaRepository;
+import com.luancal.calflow.repository.ProfissionalRepository;
 import com.luancal.calflow.repository.TipoServicoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +33,8 @@ public class WhatsAppService {
     private EstadoConversaRepository estadoRepository;
     @Autowired
     private TipoServicoRepository servicoRepository;
+    @Autowired
+    private ProfissionalRepository profissionalRepository;
     @Autowired
     private EvolutionService metaService;
     @Autowired
@@ -185,7 +189,7 @@ public class WhatsAppService {
                 case 2:
                     if (msgLimpa.equals("1")) {
                         List<TipoServico> servicos = servicoRepository.findByClinicaId(clinica.getId());
-
+                        List<Profissional> profissionais = profissionalRepository.findByClinicaIdAndAtivoTrue(clinica.getId());
                         if (servicos.isEmpty()) {
                             // FLUXO ANTIGO (Sem escolha de serviço)
                             metaService.enviarMensagem(de, "Certo! Agora digite a data desejada.\nExemplo: *20/01* ou *Sexta*", clinica);

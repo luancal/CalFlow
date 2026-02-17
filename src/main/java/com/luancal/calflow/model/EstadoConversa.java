@@ -27,6 +27,10 @@ public class EstadoConversa {
     @ManyToOne
     private TipoServico servicoSelecionado;
 
+    @ManyToOne
+    @JoinColumn(name = "profissional_id")
+    private Profissional profissionalSelecionado;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "dados_temporarios_usuario", joinColumns = @JoinColumn(name = "usuario_id"))
     @MapKeyColumn(name = "chave_dado")

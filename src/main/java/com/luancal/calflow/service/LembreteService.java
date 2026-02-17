@@ -17,10 +17,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -93,9 +90,12 @@ public class LembreteService {
                 }
 
                 enviarLembrete(event, clinica);
-
-                // Marca como processado
                 eventosProcessados.add(event.getId());
+                try {
+                    Thread.sleep(2000 + new Random().nextInt(3000)); // Espera 2 a 5 segundos entre cada lembrete
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
             }
         }
     }

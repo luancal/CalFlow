@@ -63,6 +63,8 @@ services:
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
       - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
     networks:
       - evolution_net
 
@@ -75,3 +77,4 @@ volumes:
   evolution_store:
   postgres_data:
   redis_data:
+  pgadmin_data:
