@@ -1,10 +1,15 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CalFlow - Automatize Agendamentos via WhatsApp</title>
+    <!-- FAVICON -->
+    <link rel="apple-touch-icon" sizes="180x180" href="images/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png">
+    <link rel="manifest" href="images/site.webmanifest">
+
     <meta name="description" content="Sistema inteligente de agendamento via WhatsApp para sua empresa. Converta mais clientes 24/7.">
     <meta name="theme-color" content="#F6AD55">
 
@@ -21,11 +26,7 @@
                 extend: {
                     fontFamily: { sans: ['"DM Sans"', 'system-ui', 'sans-serif'] },
                     colors: {
-                        amber: {
-                            400: '#FBBF24',
-                            500: '#F59E0B',
-                            600: '#D97706'
-                        }
+                        amber: { 400: '#FBBF24', 500: '#F59E0B', 600: '#D97706' }
                     }
                 }
             }
@@ -37,7 +38,6 @@
 
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
         body {
             font-family: 'DM Sans', system-ui, sans-serif;
             background-color: #0a0a0a;
@@ -46,245 +46,114 @@
             -moz-osx-font-smoothing: grayscale;
             text-rendering: optimizeLegibility;
         }
-
         input:focus, select:focus { outline: none; }
-
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: #0a0a0a; }
         ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
 
-        /* ===== ANIMATIONS ===== */
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(16px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(24px) scale(0.98); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        @keyframes spinSlow {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        @keyframes pulseRing {
-            0%, 100% { transform: scale(0.85); opacity: 0.4; }
-            50% { transform: scale(1.05); opacity: 0.8; }
-        }
-        @keyframes confettiFall {
-            0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
-            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
-        }
-        @keyframes shimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
-        }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(24px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes spinSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes pulseRing { 0%, 100% { transform: scale(0.85); opacity: 0.4; } 50% { transform: scale(1.05); opacity: 0.8; } }
+        @keyframes confettiFall { 0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+        @keyframes toastSlide { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes toastFade { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes fadeOutMsg { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-4px); } }
 
         .fade-in-up { animation: fadeInUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; opacity: 0; }
         .slide-up { animation: slideUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
         .spin-slow { animation: spinSlow 1.8s linear infinite; }
         .pulse-ring { animation: pulseRing 2.2s ease-in-out infinite; }
         .confetti-particle { animation: confettiFall 3s ease-in-out forwards; }
+        .fade-out-msg { animation: fadeOutMsg 0.35s ease-in forwards; }
 
-        /* ===== MODAL ===== */
-        .modal-backdrop {
-            position: fixed; inset: 0;
-            background: rgba(0, 0, 0, 0.75);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            z-index: 50;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .modal-content {
-            position: relative; width: 100%; max-width: 28rem; margin: 1rem;
-            border-radius: 1.25rem;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            background: #141414;
-            padding: 1.75rem;
-            box-shadow:
-                0 0 0 1px rgba(255,255,255,0.03),
-                0 25px 60px -12px rgba(0, 0, 0, 0.7),
-                0 10px 20px -5px rgba(0, 0, 0, 0.4);
-        }
+        .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 50; display: flex; align-items: center; justify-content: center; }
+        .modal-content { position: relative; width: 100%; max-width: 28rem; margin: 1rem; border-radius: 1.25rem; border: 1px solid rgba(255,255,255,0.06); background: #141414; padding: 1.75rem; box-shadow: 0 0 0 1px rgba(255,255,255,0.03), 0 25px 60px -12px rgba(0,0,0,0.7), 0 10px 20px -5px rgba(0,0,0,0.4); max-height: 90vh; overflow-y: auto; }
 
-        /* ===== INPUT ===== */
-        .input-field {
-            width: 100%;
-            border-radius: 0.75rem;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: #0a0a0a;
-            padding: 0.8rem 1rem;
-            font-size: 0.875rem;
-            color: #fff;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
-            font-family: 'DM Sans', system-ui, sans-serif;
-        }
+        .input-field { width: 100%; border-radius: 0.75rem; border: 1px solid rgba(255,255,255,0.08); background: #0a0a0a; padding: 0.8rem 1rem; font-size: 0.875rem; color: #fff; transition: border-color 0.2s ease, box-shadow 0.2s ease; font-family: 'DM Sans', system-ui, sans-serif; }
         .input-field::placeholder { color: #4b5563; }
-        .input-field:focus {
-            border-color: #F59E0B;
-            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1), 0 0 20px rgba(245, 158, 11, 0.05);
-        }
+        .input-field:focus { border-color: #F59E0B; box-shadow: 0 0 0 3px rgba(245,158,11,0.1), 0 0 20px rgba(245,158,11,0.05); }
         .input-field.error { border-color: #ef4444; }
-        .input-field.error:focus { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12); }
+        .input-field.error:focus { box-shadow: 0 0 0 3px rgba(239,68,68,0.12); }
 
-        /* ===== BUTTONS ===== */
-        .btn-primary {
-            width: 100%;
-            border-radius: 0.75rem;
-            background: #F59E0B;
-            padding: 0.9rem 1rem;
-            font-size: 1rem;
-            font-weight: 600;
-            color: #000;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-family: 'DM Sans', system-ui, sans-serif;
-        }
-        .btn-primary:hover { background: #FBBF24; box-shadow: 0 4px 20px rgba(245, 158, 11, 0.25); }
+        .btn-primary { width: 100%; border-radius: 0.75rem; background: #F59E0B; padding: 0.9rem 1rem; font-size: 1rem; font-weight: 600; color: #000; border: none; cursor: pointer; transition: all 0.2s ease; font-family: 'DM Sans', system-ui, sans-serif; }
+        .btn-primary:hover { background: #FBBF24; box-shadow: 0 4px 20px rgba(245,158,11,0.25); }
         .btn-primary:active { transform: scale(0.985); }
         .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
 
-        /* ===== CHECK ICON ===== */
-        .check-icon {
-            display: inline-flex;
-            height: 1.25rem; width: 1.25rem;
-            align-items: center; justify-content: center;
-            border-radius: 50%;
-            background: rgba(34, 197, 94, 0.15);
-            flex-shrink: 0;
-        }
+        .check-icon { display: inline-flex; height: 1.25rem; width: 1.25rem; align-items: center; justify-content: center; border-radius: 50%; background: rgba(34,197,94,0.15); flex-shrink: 0; }
 
-        /* ===== PLAN & METHOD BUTTONS ===== */
-        .plan-btn {
-            position: relative;
-            display: flex; flex-direction: column; align-items: flex-start; gap: 0.3rem;
-            border-radius: 0.75rem;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            padding: 1rem;
-            text-align: left;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            background: #0a0a0a;
-        }
-        .plan-btn:hover { border-color: rgba(255, 255, 255, 0.12); }
-        .plan-btn.active {
-            border-color: #F59E0B;
-            background: rgba(245, 158, 11, 0.06);
-            box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.15), 0 0 24px rgba(245, 158, 11, 0.05);
-        }
+        .plan-btn { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 0.3rem; border-radius: 0.75rem; border: 1px solid rgba(255,255,255,0.06); padding: 1rem; text-align: left; cursor: pointer; transition: all 0.2s ease; background: #0a0a0a; }
+        .plan-btn:hover { border-color: rgba(255,255,255,0.12); }
+        .plan-btn.active { border-color: #F59E0B; background: rgba(245,158,11,0.06); box-shadow: 0 0 0 1px rgba(245,158,11,0.15), 0 0 24px rgba(245,158,11,0.05); }
 
-        .method-btn {
-            position: relative;
-            display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
-            border-radius: 0.75rem;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            padding: 1rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            background: #0a0a0a;
-        }
-        .method-btn:hover { border-color: rgba(255, 255, 255, 0.12); }
-        .method-btn.active {
-            border-color: #F59E0B;
-            background: rgba(245, 158, 11, 0.06);
-            box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.15), 0 0 24px rgba(245, 158, 11, 0.05);
-        }
+        .method-btn { position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.4rem; border-radius: 0.75rem; border: 1px solid rgba(255,255,255,0.06); padding: 1rem; cursor: pointer; transition: all 0.2s ease; background: #0a0a0a; }
+        .method-btn:hover:not(.disabled) { border-color: rgba(255,255,255,0.12); }
+        .method-btn.active { border-color: #F59E0B; background: rgba(245,158,11,0.06); box-shadow: 0 0 0 1px rgba(245,158,11,0.15), 0 0 24px rgba(245,158,11,0.05); }
+        .method-btn.disabled { opacity: 0.4; cursor: not-allowed; }
 
-        /* ===== CARD COMPONENTS ===== */
-        .card-elevated {
-            background: #141414;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            box-shadow:
-                0 0 0 1px rgba(255, 255, 255, 0.02),
-                0 4px 24px rgba(0, 0, 0, 0.3),
-                0 1px 3px rgba(0, 0, 0, 0.2);
-        }
+        .card-elevated { background: #141414; border: 1px solid rgba(255,255,255,0.06); box-shadow: 0 0 0 1px rgba(255,255,255,0.02), 0 4px 24px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2); }
+        .card-feature { background: #141414; border: 1px solid rgba(255,255,255,0.06); transition: all 0.25s ease; }
+        .card-feature:hover { border-color: rgba(245,158,11,0.2); box-shadow: 0 4px 20px rgba(245,158,11,0.04); transform: translateY(-1px); }
+        .card-checkout { background: #141414; border: 1px solid rgba(245,158,11,0.12); box-shadow: 0 0 0 1px rgba(245,158,11,0.04), 0 25px 60px -12px rgba(0,0,0,0.5), 0 8px 24px -4px rgba(0,0,0,0.3); }
 
-        .card-feature {
-            background: #141414;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            transition: all 0.25s ease;
-        }
-        .card-feature:hover {
-            border-color: rgba(245, 158, 11, 0.2);
-            box-shadow: 0 4px 20px rgba(245, 158, 11, 0.04);
-            transform: translateY(-1px);
-        }
-
-        .card-checkout {
-            background: #141414;
-            border: 1px solid rgba(245, 158, 11, 0.12);
-            box-shadow:
-                0 0 0 1px rgba(245, 158, 11, 0.04),
-                0 25px 60px -12px rgba(0, 0, 0, 0.5),
-                0 8px 24px -4px rgba(0, 0, 0, 0.3);
-        }
-
-        /* ===== TRUST BADGES ===== */
-        .trust-grid {
-            display: grid;
-            gap: 0.5rem;
-            grid-template-columns: 1fr;
-        }
-        @media (min-width: 640px) {
-            .trust-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-        .trust-badge {
-            display: flex; align-items: center; gap: 0.5rem;
-            padding: 0.75rem 1rem;
-            border-radius: 0.75rem;
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.04);
-            transition: all 0.2s ease;
-        }
-        .trust-badge:hover {
-            background: rgba(255, 255, 255, 0.04);
-            border-color: rgba(34, 197, 94, 0.15);
-        }
-        .trust-badge-full {
-            grid-column: 1 / -1;
-            justify-content: center;
-        }
+        .trust-grid { display: grid; gap: 0.5rem; grid-template-columns: 1fr; }
+        @media (min-width: 640px) { .trust-grid { grid-template-columns: 1fr 1fr; } }
+        .trust-badge { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; border-radius: 0.75rem; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); transition: all 0.2s ease; }
+        .trust-badge:hover { background: rgba(255,255,255,0.04); border-color: rgba(34,197,94,0.15); }
+        .trust-badge-full { grid-column: 1 / -1; justify-content: center; }
 
         .hidden { display: none !important; }
-
-        /* ===== SUBTLE GLOW ===== */
-        .glow-amber {
-            box-shadow: 0 0 40px rgba(245, 158, 11, 0.06);
-        }
-
-        /* Logo container */
-        .logo-container {
-            background: #141414;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            border-radius: 1rem;
-            padding: 1rem;
-        }
-
-        /* ===== SELECTION NONE on buttons ===== */
+        .glow-amber { box-shadow: 0 0 40px rgba(245,158,11,0.06); }
+        .logo-container { background: #141414; border: 1px solid rgba(255,255,255,0.06); box-shadow: 0 8px 32px rgba(0,0,0,0.3); border-radius: 1rem; padding: 1rem; }
         button, .plan-btn, .method-btn { user-select: none; -webkit-user-select: none; }
+
+        /* Floating WhatsApp */
+        .fab-whatsapp { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 40; width: 56px; height: 56px; border-radius: 50%; background: #22c55e; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(34,197,94,0.35); transition: all 0.2s ease; }
+        .fab-whatsapp:hover { background: #16a34a; transform: scale(1.08); box-shadow: 0 6px 28px rgba(34,197,94,0.45); }
+        .fab-tooltip { position: absolute; bottom: 100%; right: 0; margin-bottom: 0.5rem; white-space: nowrap; background: #141414; color: #d1d5db; font-size: 0.75rem; padding: 0.4rem 0.75rem; border-radius: 0.5rem; border: 1px solid rgba(255,255,255,0.06); opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+        .fab-whatsapp:hover .fab-tooltip { opacity: 1; }
+
+        /* Toast */
+        .toast-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 60; background: rgba(245,158,11,0.12); backdrop-filter: blur(8px); border-bottom: 1px solid rgba(245,158,11,0.15); padding: 0.6rem 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; animation: toastSlide 0.3s ease-out forwards; }
+        .toast-bar.fade-out { animation: toastFade 0.3s ease-in forwards; }
+
+        /* Credential card */
+        .cred-card { background: #141414; border: 1px solid rgba(245,158,11,0.25); border-radius: 1rem; padding: 1.25rem; box-shadow: 0 0 30px rgba(245,158,11,0.06); }
+        .cred-field { display: flex; align-items: center; gap: 0.5rem; background: #0a0a0a; border: 1px solid rgba(255,255,255,0.06); border-radius: 0.5rem; padding: 0.5rem 0.75rem; }
+        .cred-field code { flex: 1; font-family: 'Courier New', monospace; font-size: 0.875rem; color: #F59E0B; letter-spacing: 0.05em; }
+        .cred-copy-btn { background: none; border: none; cursor: pointer; padding: 0.25rem; color: #6b7280; transition: color 0.2s; }
+        .cred-copy-btn:hover { color: #F59E0B; }
+
+        /* Info box */
+        .info-box { background: rgba(245,158,11,0.04); border: 1px solid rgba(245,158,11,0.12); border-radius: 0.75rem; padding: 0.875rem; }
+        .info-box-disabled { background: rgba(239,68,68,0.04); border: 1px solid rgba(239,68,68,0.12); }
     </style>
 </head>
 <body>
+<!-- ===== TOAST ===== -->
+<div id="loadingToast" class="toast-bar hidden" data-testid="loading-toast">
+    <svg class="spin-slow" style="height:1rem;width:1rem;color:#F59E0B" viewBox="0 0 24 24" fill="none"><circle style="opacity:0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path style="opacity:0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+    <span class="text-sm text-amber-500 font-medium">Preparando seu checkout...</span>
+</div>
+
 <!-- ===== CHECKOUT PAGE ===== -->
 <div id="checkoutPage">
     <main class="min-h-screen" style="background:#0a0a0a">
         <div class="mx-auto max-w-5xl px-5 py-8 md:py-12">
+            <!-- Back Button -->
+            <div class="mb-4 fade-in-up">
+                <a href="landing.html" class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-white transition-colors" data-testid="back-to-landing">
+                    <i data-lucide="arrow-left" class="h-4 w-4"></i>
+                    Voltar
+                </a>
+            </div>
+
             <!-- Logo -->
             <div class="mb-10 flex justify-center fade-in-up">
                 <div class="logo-container">
-                    <img
-                            src="/Downloads/CalFlow.jpeg"
-                            alt="CalFlow"
-                            class="h-auto w-44 md:w-48 rounded-lg"
-                            id="logo-img"
-                            style="image-rendering: auto;"
-                            onerror="this.src='https://customer-assets.emergentagent.com/job_booking-system-192/artifacts/4hfildy7_CalFlow.jpeg'"
-                    >
+                    <img src="images/CalFlow.jpeg" alt="CalFlow" class="h-auto w-44 md:w-48 rounded-lg" id="logo-img" style="image-rendering:auto" onerror="this.src='images/CalFlow.jpeg'">
                 </div>
             </div>
 
@@ -293,15 +162,9 @@
                 <!-- Left Side -->
                 <div class="order-2 lg:order-1 fade-in-up" style="animation-delay:0.08s">
                     <div class="mb-8">
-                        <h1 class="mb-3 text-2xl font-bold text-white md:text-3xl" style="text-wrap:balance">
-                            Automatize sua<br>Empresa com WhatsApp
-                        </h1>
-                        <p class="text-base text-gray-400 leading-relaxed">
-                            Sistema inteligente que agenda, lembra e recebe pagamentos dos seus clientes automaticamente pelo WhatsApp, 24 horas por dia.
-                        </p>
+                        <h1 class="mb-3 text-2xl font-bold text-white md:text-3xl" style="text-wrap:balance">Automatize sua<br>Empresa com WhatsApp</h1>
+                        <p class="text-base text-gray-400 leading-relaxed">Sistema inteligente que agenda, lembra e recebe pagamentos dos seus clientes automaticamente pelo WhatsApp, 24 horas por dia.</p>
                     </div>
-
-                    <!-- Features -->
                     <div class="mb-8 grid grid-cols-2 gap-3">
                         <div class="card-feature rounded-xl p-4" data-testid="feature-agendamentos">
                             <i data-lucide="calendar" class="mb-2.5 h-6 w-6 text-amber-500"></i>
@@ -324,8 +187,6 @@
                             <p class="text-xs text-gray-500">Responde dúvidas automaticamente</p>
                         </div>
                     </div>
-
-                    <!-- Trust Badges -->
                     <div class="card-elevated rounded-xl p-3" data-testid="trust-badges-section">
                         <div class="trust-grid">
                             <div class="trust-badge" data-testid="trust-pagamento-seguro">
@@ -353,21 +214,10 @@
                                 <span class="text-xs font-semibold text-amber-500 tracking-wide">OFERTA ESPECIAL</span>
                             </div>
                             <h2 class="mb-4 text-xl font-bold text-white" data-testid="checkout-title">CalFlow Premium</h2>
-                            <div class="rounded-xl p-4 space-y-3" style="background:#0a0a0a;border:1px solid rgba(255,255,255,0.04)">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm text-gray-400">Implantação (única vez):</span>
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-sm text-gray-600 line-through">R$ 997</span>
-                                        <span class="text-lg font-bold text-amber-500">R$ 497</span>
-                                    </div>
-                                </div>
-                                <div class="pt-3 flex items-center justify-between" style="border-top:1px solid rgba(255,255,255,0.04)">
-                                    <span class="text-sm text-gray-400">Mensalidade:</span>
-                                    <span class="text-lg font-bold text-white">R$ 197<span class="text-sm font-normal text-gray-500">/mês</span></span>
-                                </div>
-                                <p class="text-xs text-gray-600 pt-2" style="border-top:1px solid rgba(255,255,255,0.04)">
-                                    * A mensalidade cobre manutenção, atualizações e suporte. Novas funcionalidades ou personalizações são orçadas à parte.
-                                </p>
+
+                            <!-- DYNAMIC PRICING SECTION -->
+                            <div id="pricingDisplay" class="rounded-xl p-4 space-y-3" style="background:#0a0a0a;border:1px solid rgba(255,255,255,0.04)">
+                                <!-- Populated by JS -->
                             </div>
                         </div>
 
@@ -375,26 +225,11 @@
                         <div class="mb-6">
                             <p class="mb-3 text-sm font-medium text-gray-300">Incluso no pacote:</p>
                             <ul class="space-y-2.5 text-sm text-gray-400" data-testid="benefits-list">
-                                <li class="flex items-center gap-2.5">
-                                    <span class="check-icon"><i data-lucide="check" style="width:12px;height:12px;color:#22c55e;stroke-width:3"></i></span>
-                                    Configuração completa do sistema
-                                </li>
-                                <li class="flex items-center gap-2.5">
-                                    <span class="check-icon"><i data-lucide="check" style="width:12px;height:12px;color:#22c55e;stroke-width:3"></i></span>
-                                    Bot de agendamento WhatsApp
-                                </li>
-                                <li class="flex items-center gap-2.5">
-                                    <span class="check-icon"><i data-lucide="check" style="width:12px;height:12px;color:#22c55e;stroke-width:3"></i></span>
-                                    Lembretes automáticos
-                                </li>
-                                <li class="flex items-center gap-2.5">
-                                    <span class="check-icon"><i data-lucide="check" style="width:12px;height:12px;color:#22c55e;stroke-width:3"></i></span>
-                                    Integração com pagamentos
-                                </li>
-                                <li class="flex items-center gap-2.5">
-                                    <span class="check-icon"><i data-lucide="check" style="width:12px;height:12px;color:#22c55e;stroke-width:3"></i></span>
-                                    Suporte prioritário 30 dias
-                                </li>
+                                <li class="flex items-center gap-2.5"><span class="check-icon"><i data-lucide="check" style="width:12px;height:12px;color:#22c55e;stroke-width:3"></i></span>Configuração completa do sistema</li>
+                                <li class="flex items-center gap-2.5"><span class="check-icon"><i data-lucide="check" style="width:12px;height:12px;color:#22c55e;stroke-width:3"></i></span>Bot de agendamento WhatsApp</li>
+                                <li class="flex items-center gap-2.5"><span class="check-icon"><i data-lucide="check" style="width:12px;height:12px;color:#22c55e;stroke-width:3"></i></span>Lembretes automáticos</li>
+                                <li class="flex items-center gap-2.5"><span class="check-icon"><i data-lucide="check" style="width:12px;height:12px;color:#22c55e;stroke-width:3"></i></span>Integração com pagamentos</li>
+                                <li class="flex items-center gap-2.5"><span class="check-icon"><i data-lucide="check" style="width:12px;height:12px;color:#22c55e;stroke-width:3"></i></span>Suporte prioritário 30 dias</li>
                             </ul>
                         </div>
 
@@ -405,15 +240,15 @@
                                 <label class="block text-sm font-medium text-gray-300">Escolha seu plano</label>
                                 <div class="grid grid-cols-2 gap-3">
                                     <div class="plan-btn active" onclick="selectPlano('mensal')" id="planMensal" data-testid="plan-mensal-btn">
-                                        <span class="text-sm font-semibold text-white">Mensal</span>
+                                        <span class="plan-label text-sm font-semibold text-white">Mensal</span>
                                         <span class="text-lg font-bold text-amber-500">R$ 497</span>
                                         <span class="text-xs text-gray-500">+ R$ 197/mês</span>
                                     </div>
                                     <div class="plan-btn" onclick="selectPlano('anual')" id="planAnual" data-testid="plan-anual-btn">
                                         <span class="absolute -top-2 right-2 rounded-full bg-green-500 px-2 py-0.5 text-[10px] font-semibold text-white" style="position:absolute;top:-0.5rem;right:0.5rem;z-index:2">Implantação grátis</span>
-                                        <span class="text-sm font-semibold text-gray-400">Anual</span>
+                                        <span class="plan-label text-sm font-semibold text-gray-400">Anual</span>
                                         <span class="text-lg font-bold text-amber-500">R$ 2.197</span>
-                                        <span class="text-xs text-gray-500">Implantação + 12 meses</span>
+                                        <span class="text-xs text-gray-500">Até 12x de R$ 183,08</span>
                                     </div>
                                 </div>
                             </div>
@@ -424,21 +259,18 @@
                                 <input type="text" id="inputNome" class="input-field" placeholder="João da Silva" required data-testid="input-nome">
                                 <p class="text-xs text-red-400 hidden" id="errNome"></p>
                             </div>
-
                             <!-- Email -->
                             <div class="space-y-1.5">
                                 <label class="block text-sm font-medium text-gray-300">E-mail</label>
                                 <input type="email" id="inputEmail" class="input-field" placeholder="joao@email.com" required data-testid="input-email">
                                 <p class="text-xs text-red-400 hidden" id="errEmail"></p>
                             </div>
-
                             <!-- Phone -->
                             <div class="space-y-1.5">
                                 <label class="block text-sm font-medium text-gray-300">WhatsApp (com DDD)</label>
                                 <input type="tel" id="inputTelefone" class="input-field" placeholder="(32) 99999-9999" required data-testid="input-telefone">
                                 <p class="text-xs text-red-400 hidden" id="errTelefone"></p>
                             </div>
-
                             <!-- CPF/CNPJ -->
                             <div class="space-y-1.5">
                                 <label class="block text-sm font-medium text-gray-300">CPF/CNPJ</label>
@@ -450,16 +282,47 @@
                             <div class="space-y-3 pt-2">
                                 <label class="block text-sm font-medium text-gray-300">Forma de pagamento</label>
                                 <div class="grid grid-cols-2 gap-3">
-                                    <div class="method-btn active" onclick="selectMethod('pix')" id="methodPix" data-testid="method-pix-btn">
-                                        <span class="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-green-500 px-2 py-0.5 text-[10px] font-semibold text-white" style="position:absolute;top:-0.5rem;left:50%;transform:translateX(-50%);white-space:nowrap;z-index:2">Recomendado</span>
-                                        <i data-lucide="qr-code" class="h-5 w-5 text-amber-500"></i>
-                                        <span class="text-xs font-medium text-white">PIX</span>
-                                        <span class="text-[10px] text-gray-500">Aprovação instantânea</span>
-                                    </div>
-                                    <div class="method-btn" onclick="selectMethod('cartao')" id="methodCartao" data-testid="method-cartao-btn">
-                                        <i data-lucide="credit-card" class="h-5 w-5 text-gray-500"></i>
-                                        <span class="text-xs font-medium text-gray-400">Cartão</span>
+                                    <!-- CARTÃO PRIMEIRO - RECOMENDADO -->
+                                    <div class="method-btn active" onclick="selectMethod('cartao')" id="methodCartao" data-testid="method-cartao-btn">
+                                        <span class="method-badge absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-green-500 px-2 py-0.5 text-[10px] font-semibold text-white" style="position:absolute;top:-0.5rem;left:50%;transform:translateX(-50%);white-space:nowrap;z-index:2">Recomendado</span>
+                                        <i data-lucide="credit-card" class="h-5 w-5 text-amber-500"></i>
+                                        <span class="text-xs font-medium text-white">Assinatura</span>
                                         <span class="text-[10px] text-gray-500">Até 12x sem juros</span>
+                                    </div>
+                                    <!-- PIX SEGUNDO -->
+                                    <div class="method-btn" onclick="handlePixClick()" id="methodPix" data-testid="method-pix-btn">
+                                        <i data-lucide="qr-code" class="h-5 w-5 text-gray-500"></i>
+                                        <span class="text-xs font-medium text-gray-400">Implantação via PIX</span>
+                                        <span class="text-[10px] text-gray-500">Aprovação imediata</span>
+                                    </div>
+                                </div>
+                                <!-- PIX disabled message for anual (hidden by default, shown temporarily on click) -->
+                                <div id="pixDisabledMsg" class="info-box info-box-disabled hidden" data-testid="pix-disabled-msg">
+                                    <div class="flex items-start gap-2">
+                                        <i data-lucide="info" class="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5"></i>
+                                        <p class="text-xs text-gray-400">PIX indisponível para o plano anual. Use o cartão para parcelar em até 12x sem juros.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- PIX explanation (mensal + pix) -->
+                            <div id="pixInfoSection" class="hidden info-box">
+                                <div class="flex items-start gap-2 mb-3">
+                                    <i data-lucide="info" class="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5"></i>
+                                    <span class="text-xs font-semibold text-amber-500">Como funciona o pagamento PIX + Cartão?</span>
+                                </div>
+                                <div class="space-y-2 pl-6">
+                                    <div class="flex items-start gap-2">
+                                        <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] text-amber-500 font-bold" style="background:rgba(245,158,11,0.12)">1</span>
+                                        <p class="text-xs text-gray-400">Você cadastra seu <strong class="text-white">cartão de crédito/débito</strong> para a mensalidade de <strong class="text-white">R$ 197/mês</strong>.</p>
+                                    </div>
+                                    <div class="flex items-start gap-2">
+                                        <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] text-amber-500 font-bold" style="background:rgba(245,158,11,0.12)">2</span>
+                                        <p class="text-xs text-gray-400">Em seguida, você paga a <strong class="text-white">implantação de R$ 497 via PIX</strong> (pagamento único, aprovação imediata).</p>
+                                    </div>
+                                    <div class="flex items-start gap-2">
+                                        <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] text-amber-500 font-bold" style="background:rgba(245,158,11,0.12)">3</span>
+                                        <p class="text-xs text-gray-400">A partir do próximo mês, o <strong class="text-white">cartão é cobrado automaticamente</strong> — sem precisar fazer nada.</p>
                                     </div>
                                 </div>
                             </div>
@@ -476,13 +339,11 @@
                                     <span class="text-sm text-gray-300">Total a pagar agora:</span>
                                     <span class="text-xl font-bold text-amber-500" id="totalValor">R$ 497</span>
                                 </div>
-                                <p class="mt-1 text-xs text-gray-500" id="totalDesc">Depois: R$ 197/mês (cancelável a qualquer momento)</p>
+                                <p class="mt-1 text-xs text-gray-500" id="totalDesc">Implantação no cartão. Depois: R$ 197/mês (cancelável a qualquer momento)</p>
                             </div>
 
                             <!-- Submit -->
-                            <button type="submit" class="btn-primary" id="submitBtn" disabled data-testid="submit-btn">
-                                Finalizar com PIX
-                            </button>
+                            <button type="submit" class="btn-primary" id="submitBtn" disabled data-testid="submit-btn">Finalizar com Cartão</button>
                         </form>
                     </div>
                 </div>
@@ -491,31 +352,109 @@
     </main>
 </div>
 
+<!-- ===== MODAL: CADASTRAR CARTÃO (passo 1 do fluxo PIX) ===== -->
+<div id="cardRegisterModal" class="modal-backdrop hidden">
+    <div class="modal-content slide-up">
+        <button onclick="closeCardRegisterModal()"
+                style="position:absolute;top:1rem;right:1rem;background:none;border:none;cursor:pointer;color:#6b7280">
+            <i data-lucide="x" class="h-5 w-5"></i>
+        </button>
+
+        <!-- Barra de progresso -->
+        <div class="flex items-center gap-2 mb-6">
+            <div class="flex items-center gap-2 text-amber-500">
+                <div class="w-7 h-7 rounded-full bg-amber-500 text-black text-xs font-bold flex items-center justify-center">1</div>
+                <span class="text-xs font-semibold">Cadastrar Cartão</span>
+            </div>
+            <div class="flex-1 h-px bg-neutral-800 mx-1"></div>
+            <div class="flex items-center gap-2 text-neutral-600">
+                <div class="w-7 h-7 rounded-full border border-neutral-700 text-xs font-bold flex items-center justify-center">2</div>
+                <span class="text-xs">Pagar PIX</span>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2.5 mb-2">
+            <i data-lucide="credit-card" class="h-6 w-6 text-amber-500"></i>
+            <h2 class="text-xl font-semibold text-white">Cadastrar cartão para assinatura</h2>
+        </div>
+        <p class="text-sm text-gray-400 mb-4">
+            Seu cartão será usado para cobrar a mensalidade de
+            <strong class="text-white">R$ 197/mês</strong> a partir do próximo mês.
+            <strong class="text-white">Não há cobrança agora.</strong>
+        </p>
+
+        <div class="rounded-xl p-3.5 mb-5" style="background:#0a0a0a;border:1px solid rgba(34,197,94,0.12)">
+            <div class="flex items-center gap-2">
+                <i data-lucide="shield-check" class="h-4 w-4 text-green-500 flex-shrink-0"></i>
+                <p class="text-xs text-gray-400">Dados protegidos. O cartão é <strong class="text-green-400">tokenizado</strong> e nunca armazenado em texto simples.</p>
+            </div>
+        </div>
+
+        <div class="space-y-4">
+            <div class="space-y-1.5">
+                <label class="text-sm text-gray-300">Número do cartão</label>
+                <input id="regCardNumero" class="input-field" placeholder="0000 0000 0000 0000" oninput="maskCardNumber(this)">
+                <p class="text-xs text-red-400 hidden" id="errRegCardNumero"></p>
+            </div>
+            <div class="space-y-1.5">
+                <label class="text-sm text-gray-300">Nome no cartão</label>
+                <input id="regCardNome" class="input-field" placeholder="JOÃO DA SILVA"
+                       style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+                <p class="text-xs text-red-400 hidden" id="errRegCardNome"></p>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-1.5">
+                    <label class="text-sm text-gray-300">Validade</label>
+                    <input id="regCardValidade" class="input-field" placeholder="MM/AA" maxlength="5" oninput="maskCardExpiry(this)">
+                    <p class="text-xs text-red-400 hidden" id="errRegCardValidade"></p>
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-sm text-gray-300">CVV</label>
+                    <input id="regCardCvv" class="input-field" placeholder="123" maxlength="4"
+                           oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)">
+                    <p class="text-xs text-red-400 hidden" id="errRegCardCvv"></p>
+                </div>
+            </div>
+            <button type="button" onclick="processCardRegister()" id="cardRegisterBtn" class="btn-primary">
+                Cadastrar e ir para o PIX →
+            </button>
+            <button onclick="closeCardRegisterModal()"
+                    class="w-full rounded-xl py-3 text-sm text-gray-500 hover:text-white hover:bg-white/5 transition-all"
+                    style="background:none;border:none;cursor:pointer">Cancelar</button>
+        </div>
+    </div>
+</div>
+
 <!-- ===== PIX MODAL ===== -->
 <div id="pixModal" class="modal-backdrop hidden" data-testid="pix-modal">
     <div class="modal-content slide-up">
-        <button onclick="closePixModal()" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors" style="position:absolute;top:1rem;right:1rem;background:none;border:none;cursor:pointer" data-testid="pix-modal-close">
-            <i data-lucide="x" class="h-5 w-5"></i>
-        </button>
+        <!-- Barra de progresso PIX flow -->
+        <div id="pixProgressBar" class="flex items-center gap-2 mb-6 hidden">
+            <div class="flex items-center gap-2 text-green-400">
+                <div class="w-7 h-7 rounded-full bg-green-500 text-white text-xs font-bold flex items-center justify-center">✓</div>
+                <span class="text-xs font-semibold">Cartão cadastrado</span>
+            </div>
+            <div class="flex-1 h-px mx-1" style="background:rgba(245,158,11,0.4)"></div>
+            <div class="flex items-center gap-2 text-amber-500">
+                <div class="w-7 h-7 rounded-full bg-amber-500 text-black text-xs font-bold flex items-center justify-center">2</div>
+                <span class="text-xs font-semibold">Pagar PIX</span>
+            </div>
+        </div>
+        <button onclick="closePixModal()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;cursor:pointer" class="text-gray-500 hover:text-white transition-colors" data-testid="pix-modal-close"><i data-lucide="x" class="h-5 w-5"></i></button>
         <div class="flex items-center gap-2.5 mb-4">
             <i data-lucide="qr-code" class="h-6 w-6 text-amber-500"></i>
             <h2 class="text-xl font-semibold text-white">Pagamento via PIX</h2>
         </div>
         <p class="text-sm text-gray-400 mb-5">Escaneie o QR Code ou copie o código para pagar</p>
-
-        <!-- Amount -->
         <div class="rounded-xl p-3.5 text-center mb-4" style="background:#0a0a0a;border:1px solid rgba(255,255,255,0.04)">
-            <p class="text-sm text-gray-400">Valor a pagar</p>
+            <p class="text-sm text-gray-400">Valor da implantação</p>
             <p class="text-2xl font-bold text-amber-500" id="pixValor">R$ 497</p>
+            <p class="text-xs text-gray-500 mt-1">Pagamento único via PIX</p>
         </div>
-
-        <!-- Timer -->
         <div class="flex items-center justify-center gap-2 text-amber-500 mb-4">
             <i data-lucide="clock" class="h-4 w-4"></i>
             <span class="text-sm font-medium" id="pixTimer" data-testid="pix-timer">Expira em 30:00</span>
         </div>
-
-        <!-- Waiting Animation -->
         <div class="flex flex-col items-center gap-3 py-4">
             <div class="relative">
                 <div class="h-16 w-16 rounded-full flex items-center justify-center" style="border:3px solid rgba(245,158,11,0.15)">
@@ -526,8 +465,6 @@
             <p class="text-sm text-gray-400 text-center">Aguardando confirmação do pagamento...</p>
             <p class="text-xs text-gray-600 text-center">O pagamento será confirmado automaticamente</p>
         </div>
-
-        <!-- PIX Code -->
         <div id="pixCodeSection" class="w-full space-y-2 mt-2">
             <p class="text-xs text-gray-400 text-center">Código PIX Copia e Cola:</p>
             <div class="flex gap-2">
@@ -539,30 +476,32 @@
                 </button>
             </div>
         </div>
-
-        <!-- Cancel -->
-        <button onclick="closePixModal()" class="w-full rounded-xl py-3 text-sm text-gray-500 hover:text-white hover:bg-white/5 transition-all mt-4" style="background:none;border:none;cursor:pointer">
-            Cancelar
-        </button>
+        <!-- Recurrence reminder -->
+        <div class="info-box mt-4">
+            <div class="flex items-start gap-2">
+                <i data-lucide="repeat" class="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5"></i>
+                <p class="text-xs text-gray-400">Após a confirmação do PIX, você cadastrará o cartão para a mensalidade de <strong class="text-white">R$ 197/mês</strong>.</p>
+            </div>
+        </div>
+        <button onclick="closePixModal()" class="w-full rounded-xl py-3 text-sm text-gray-500 hover:text-white hover:bg-white/5 transition-all mt-4" style="background:none;border:none;cursor:pointer">Cancelar</button>
     </div>
 </div>
 
 <!-- ===== CARD MODAL ===== -->
 <div id="cardModal" class="modal-backdrop hidden" data-testid="card-modal">
     <div class="modal-content slide-up">
-        <button onclick="closeCardModal()" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors" style="position:absolute;top:1rem;right:1rem;background:none;border:none;cursor:pointer" data-testid="card-modal-close">
-            <i data-lucide="x" class="h-5 w-5"></i>
-        </button>
+        <button onclick="closeCardModal()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;cursor:pointer" class="text-gray-500 hover:text-white transition-colors" data-testid="card-modal-close"><i data-lucide="x" class="h-5 w-5"></i></button>
         <div class="flex items-center gap-2.5 mb-4">
             <i data-lucide="credit-card" class="h-6 w-6 text-amber-500"></i>
             <h2 class="text-xl font-semibold text-white">Pagamento via Cartão</h2>
         </div>
         <p class="text-sm text-gray-400 mb-5">Preencha os dados do cartão de crédito</p>
 
-        <div class="rounded-xl p-3.5 text-center mb-5" style="background:#0a0a0a;border:1px solid rgba(255,255,255,0.04)">
-            <p class="text-sm text-gray-400">Valor a pagar</p>
-            <p class="text-2xl font-bold text-amber-500" id="cardValor">R$ 497</p>
-            <p class="text-xs text-gray-500 mt-1" id="cardParcelas"></p>
+        <div class="rounded-xl p-4 text-center mb-5" style="background:#0a0a0a;border:1px solid rgba(255,255,255,0.04)">
+            <p class="text-sm text-gray-500 mb-1" id="cardModalPlanLabel">Plano Mensal</p>
+            <p class="text-xl font-bold text-amber-500" id="cardParcelasDisplay">1x de R$ 497,00</p>
+            <p class="text-xs text-gray-500 mt-1" id="cardTotalBruto">Total: R$ 497</p>
+            <p class="text-xs text-gray-500 mt-0.5" id="cardRecurrenceNote">Depois: R$ 197/mês no cartão</p>
         </div>
 
         <div class="space-y-4">
@@ -588,13 +527,8 @@
                     <p class="text-xs text-red-400 hidden" id="errCardCvv"></p>
                 </div>
             </div>
-
-            <button type="button" onclick="processCardPayment()" class="btn-primary" id="cardSubmitBtn" data-testid="card-submit-btn">
-                Pagar agora
-            </button>
-            <button onclick="closeCardModal()" class="w-full rounded-xl py-3 text-sm text-gray-500 hover:text-white hover:bg-white/5 transition-all" style="background:none;border:none;cursor:pointer">
-                Cancelar
-            </button>
+            <button type="button" onclick="processCardPayment()" class="btn-primary" id="cardSubmitBtn" data-testid="card-submit-btn">Pagar agora</button>
+            <button onclick="closeCardModal()" class="w-full rounded-xl py-3 text-sm text-gray-500 hover:text-white hover:bg-white/5 transition-all" style="background:none;border:none;cursor:pointer">Cancelar</button>
         </div>
     </div>
 </div>
@@ -609,16 +543,42 @@
             </div>
         </div>
         <h1 class="mb-2 text-center text-2xl font-bold text-white" data-testid="success-title">Pagamento Aprovado!</h1>
-        <p class="mb-8 text-center text-gray-400" id="successGreeting">Parabéns! Seu acesso ao CalFlow Premium foi liberado.</p>
+        <p class="mb-6 text-center text-gray-400" id="successGreeting">Parabéns! Seu acesso ao CalFlow Premium foi liberado.</p>
 
         <!-- Subscription Summary -->
-        <div class="mb-6 rounded-2xl p-5 card-elevated" data-testid="success-summary">
+        <div class="mb-4 rounded-2xl p-5 card-elevated" data-testid="success-summary">
             <h3 class="mb-3 text-sm font-semibold text-amber-500 text-center">Resumo da Assinatura</h3>
             <div class="space-y-2 text-sm">
                 <div class="flex justify-between"><span class="text-gray-500">Plano:</span><span class="text-white font-medium" id="successPlano"></span></div>
                 <div class="flex justify-between"><span class="text-gray-500">Nome:</span><span class="text-white" id="successNome"></span></div>
                 <div class="flex justify-between"><span class="text-gray-500">E-mail:</span><span class="text-white" id="successEmail"></span></div>
             </div>
+        </div>
+
+        <!-- Credentials Card -->
+        <div class="mb-4 cred-card" data-testid="credentials-card">
+            <div class="flex items-center gap-2 mb-3">
+                <i data-lucide="shield-check" class="h-5 w-5 text-green-500"></i>
+                <h3 class="text-sm font-semibold text-white">Suas Credenciais de Acesso</h3>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <p class="text-xs text-gray-500 mb-1">Usuário</p>
+                    <div class="cred-field">
+                        <code id="credUsuario" data-testid="cred-usuario">—</code>
+                        <button class="cred-copy-btn" onclick="copyCredential('credUsuario')" data-testid="copy-usuario-btn" title="Copiar"><i data-lucide="copy" class="h-3.5 w-3.5"></i></button>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 mb-1">Senha</p>
+                    <div class="cred-field">
+                        <code id="credSenha" data-testid="cred-senha">—</code>
+                        <button class="cred-copy-btn" onclick="toggleSenhaVisibility()" id="toggleSenhaBtn" data-testid="toggle-senha-btn" title="Mostrar/ocultar"><i data-lucide="eye" class="h-3.5 w-3.5"></i></button>
+                        <button class="cred-copy-btn" onclick="copyCredential('credSenha')" data-testid="copy-senha-btn" title="Copiar"><i data-lucide="copy" class="h-3.5 w-3.5"></i></button>
+                    </div>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-3 text-center">Guarde bem! Estas informações também foram enviadas para o seu e-mail e WhatsApp. Use-as para acessar a área do cliente em <strong class="text-amber-500">calflow.app.br</strong></p>
         </div>
 
         <!-- Next Steps -->
@@ -638,40 +598,40 @@
                 </li>
                 <li class="flex items-start gap-3">
                     <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs text-amber-500 font-bold" style="background:rgba(245,158,11,0.12)">3</span>
-                    <span>Você receberá o link de acesso e treinamento completo</span>
+                    <span>Acesse a área do cliente em <strong class="text-amber-500">calflow.app.br</strong> com suas credenciais</span>
                 </li>
             </ul>
         </div>
 
-        <!-- Buttons -->
         <div class="space-y-3">
             <button onclick="openWhatsApp()" class="w-full flex items-center justify-center gap-2 rounded-xl bg-green-600 py-4 text-base font-semibold text-white transition-all hover:bg-green-500 hover:shadow-lg" style="border:none;cursor:pointer;box-shadow:0 4px 20px rgba(34,197,94,0.15)" data-testid="whatsapp-btn">
                 <i data-lucide="message-circle" class="h-5 w-5"></i>
                 Configurar meu WhatsApp agora
             </button>
-            <button onclick="backToCheckout()" class="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm text-gray-300 transition-all hover:bg-white/5" style="border:1px solid rgba(255,255,255,0.06);background:#141414;cursor:pointer" data-testid="back-btn">
-                <i data-lucide="settings" class="h-4 w-4"></i>
-                Voltar ao início
-            </button>
-            <button onclick="openWhatsApp()" class="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm text-gray-600 transition-all hover:text-gray-300" style="background:none;border:none;cursor:pointer" data-testid="support-btn">
-                <i data-lucide="headphones" class="h-4 w-4"></i>
-                Suporte via WhatsApp
+            <button onclick="window.location.href='cliente.html'" class="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm text-gray-300 transition-all hover:bg-white/5" style="border:1px solid rgba(255,255,255,0.06);background:#141414;cursor:pointer" data-testid="area-cliente-btn">
+                <i data-lucide="log-in" class="h-4 w-4"></i>
+                Acessar Área do Cliente
             </button>
         </div>
-        <p class="mt-4 text-center text-xs text-gray-600">Caso o WhatsApp não abra automaticamente, entre em contato pelo número (32) 9940-1356</p>
+        <p class="mt-4 text-center text-xs text-gray-600">
+            Dúvidas? Entre em contato: (32) 9940-1356
+        </p>
     </div>
 </div>
 
+<!-- ===== FLOATING WHATSAPP ===== -->
+<a href="https://wa.me/553299401356?text=Preciso%20de%20ajuda%20com%20o%20checkout" target="_blank" class="fab-whatsapp" data-testid="fab-whatsapp">
+    <i data-lucide="message-circle" class="h-6 w-6 text-white"></i>
+    <span class="fab-tooltip">Precisa de ajuda? Fale conosco</span>
+</a>
+
 <script>
     // ============================================================
-    // CONFIGURAÇÕES - EDITE AQUI
+    // CONFIGURAÇÕES
     // ============================================================
     const CONFIG = {
-        // URL base da sua API Spring Boot
-        apiBaseUrl: '',  // Ex: '/api' ou 'http://localhost:8080/api'
-        // Número do WhatsApp (com código do país)
+        apiBaseUrl: '',
         whatsappNumber: '553299401356',
-        // Nome do negócio
         businessName: 'CalFlow',
     };
 
@@ -680,17 +640,61 @@
     // ============================================================
     let state = {
         plano: 'mensal',
-        metodo: 'pix',
+        metodo: 'cartao',
         parcelas: 1,
         customerData: null,
         transactionId: null,
         pixTimerInterval: null,
         pixPollingInterval: null,
         timeLeft: 30 * 60,
+        credenciais: null,
+        senhaVisible: false,
+        pixMsgTimeout: null,
     };
 
     // ============================================================
-    // VALIDATION FUNCTIONS
+    // CREDENTIAL GENERATION
+    // ============================================================
+    async function checkPaymentStatus() {
+        const res = await fetch(`/api/checkout/status/${state.transactionId}`);
+        const data = await res.json();
+        if (data.status === 'aprovada') {
+            // Credenciais vêm do backend
+            state.credenciais = {
+                usuario: data.usuario,
+                senha: data.senha
+            };
+            showSuccessPage();
+        }
+    }
+
+    function copyCredential(elId) {
+        const el = document.getElementById(elId);
+        const text = el.getAttribute('data-raw') || el.textContent;
+        navigator.clipboard.writeText(text).then(() => {
+            el.style.color = '#22c55e';
+            setTimeout(() => { el.style.color = ''; }, 1200);
+        });
+    }
+
+    function toggleSenhaVisibility() {
+        state.senhaVisible = !state.senhaVisible;
+        const el = document.getElementById('credSenha');
+        const raw = el.getAttribute('data-raw');
+        if (state.senhaVisible) {
+            el.textContent = raw;
+        } else {
+            el.textContent = raw.replace(/./g, '\u2022');
+        }
+        const btn = document.getElementById('toggleSenhaBtn');
+        btn.innerHTML = state.senhaVisible
+            ? '<i data-lucide="eye-off" class="h-3.5 w-3.5"></i>'
+            : '<i data-lucide="eye" class="h-3.5 w-3.5"></i>';
+        lucide.createIcons();
+    }
+
+    // ============================================================
+    // VALIDATION
     // ============================================================
     function validarCPF(cpf) {
         cpf = cpf.replace(/[^\d]/g, '');
@@ -794,75 +798,180 @@
     }
 
     // ============================================================
+    // PRICING DISPLAY
+    // ============================================================
+    function updatePricingDisplay() {
+        const el = document.getElementById('pricingDisplay');
+        if (state.plano === 'mensal') {
+            el.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium text-white">Plano Mensal</span>
+                </div>
+                <div class="flex items-center justify-between pt-2" style="border-top:1px solid rgba(255,255,255,0.04)">
+                    <span class="text-sm text-gray-400">Implantação (única vez):</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm text-gray-600 line-through">R$ 997</span>
+                        <span class="text-base font-bold text-amber-500">R$ 497</span>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between pt-2" style="border-top:1px solid rgba(255,255,255,0.04)">
+                    <span class="text-sm text-gray-400">Mensalidade:</span>
+                    <span class="text-base font-bold text-white">R$ 197<span class="text-sm font-normal text-gray-500">/mês</span></span>
+                </div>
+                <p class="text-xs text-gray-600 pt-2" style="border-top:1px solid rgba(255,255,255,0.04)">
+                    * A mensalidade cobre manutenção, atualizações e suporte. Novas funcionalidades ou personalizações são orçadas à parte.
+                </p>`;
+        } else {
+            el.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium text-white">Plano Anual</span>
+                    <span class="text-[10px] font-semibold text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full">Implantação grátis</span>
+                </div>
+                <div class="flex items-center justify-between pt-2" style="border-top:1px solid rgba(255,255,255,0.04)">
+                    <span class="text-sm text-gray-400">Valor total:</span>
+                    <span class="text-lg font-bold text-amber-500">R$ 2.197</span>
+                </div>
+                <div class="flex items-center justify-between pt-2" style="border-top:1px solid rgba(255,255,255,0.04)">
+                    <span class="text-sm text-gray-400">Parcelamento:</span>
+                    <span class="text-sm font-semibold text-white">12x de R$ 183,08 <span class="text-xs font-normal text-gray-500">sem juros</span></span>
+                </div>
+                <p class="text-xs text-gray-600 pt-2" style="border-top:1px solid rgba(255,255,255,0.04)">
+                    * Inclui implantação + 12 meses de serviço. Renovação anual. Manutenção, atualizações e suporte inclusos.
+                </p>`;
+        }
+    }
+
+    // ============================================================
+    // PIX CLICK HANDLER (ANUAL GUARD)
+    // ============================================================
+    function handlePixClick() {
+        if (state.plano === 'anual') {
+            showTemporaryPixMsg();
+            return;
+        }
+        selectMethod('pix');
+    }
+
+    function showTemporaryPixMsg() {
+        const msg = document.getElementById('pixDisabledMsg');
+        msg.classList.remove('hidden', 'fade-out-msg');
+        msg.classList.add('fade-in-up');
+        lucide.createIcons();
+        if (state.pixMsgTimeout) clearTimeout(state.pixMsgTimeout);
+        state.pixMsgTimeout = setTimeout(() => {
+            msg.classList.add('fade-out-msg');
+            setTimeout(() => {
+                msg.classList.add('hidden');
+                msg.classList.remove('fade-out-msg', 'fade-in-up');
+            }, 350);
+        }, 3000);
+    }
+
+    // ============================================================
     // UI FUNCTIONS
     // ============================================================
     function selectPlano(plano) {
         state.plano = plano;
         document.getElementById('planMensal').className = 'plan-btn' + (plano === 'mensal' ? ' active' : '');
         document.getElementById('planAnual').className = 'plan-btn' + (plano === 'anual' ? ' active' : '');
-        document.querySelector('#planMensal .text-sm.font-semibold').className = 'text-sm font-semibold ' + (plano === 'mensal' ? 'text-white' : 'text-gray-400');
-        document.querySelector('#planAnual .text-sm.font-semibold').className = 'text-sm font-semibold ' + (plano === 'anual' ? 'text-white' : 'text-gray-400');
+        document.querySelector('#planMensal .plan-label').className = 'plan-label text-sm font-semibold ' + (plano === 'mensal' ? 'text-white' : 'text-gray-400');
+        document.querySelector('#planAnual .plan-label').className = 'plan-label text-sm font-semibold ' + (plano === 'anual' ? 'text-white' : 'text-gray-400');
+
+        updatePricingDisplay();
+
+        if (plano === 'anual') {
+            // Switch to card if PIX was selected
+            if (state.metodo === 'pix') {
+                selectMethod('cartao');
+            }
+            // Visually disable PIX (but keep clickable for temp message)
+            document.getElementById('methodPix').classList.add('disabled');
+        } else {
+            document.getElementById('methodPix').classList.remove('disabled');
+            // Hide PIX disabled msg and clear timeout when switching back to mensal
+            document.getElementById('pixDisabledMsg').classList.add('hidden');
+            document.getElementById('pixDisabledMsg').classList.remove('fade-in-up', 'fade-out-msg');
+            if (state.pixMsgTimeout) {
+                clearTimeout(state.pixMsgTimeout);
+                state.pixMsgTimeout = null;
+            }
+        }
+
+        updateTotal();
+        updateParcelasOptions();
+        updateMethodUI();
+    }
+
+    function selectMethod(metodo) {
+        if (state.plano === 'anual' && metodo === 'pix') return;
+        state.metodo = metodo;
+        updateMethodUI();
         updateTotal();
         updateParcelasOptions();
     }
 
-    function selectMethod(metodo) {
-    state.metodo = metodo;
-    document.getElementById('methodPix').className = 'method-btn' + (metodo === 'pix' ? ' active' : '');
-    document.getElementById('methodCartao').className = 'method-btn' + (metodo === 'cartao' ? ' active' : '');
+    function updateMethodUI() {
+        const metodo = state.metodo;
+        document.getElementById('methodPix').className = 'method-btn' + (metodo === 'pix' ? ' active' : '') + (state.plano === 'anual' ? ' disabled' : '');
+        document.getElementById('methodCartao').className = 'method-btn' + (metodo === 'cartao' ? ' active' : '');
 
-    const pixIcon = document.querySelector('#methodPix i');
-    const cartaoIcon = document.querySelector('#methodCartao i');
-    const pixLabel = document.querySelector('#methodPix .text-xs.font-medium');
-    const cartaoLabel = document.querySelector('#methodCartao .text-xs.font-medium');
+        const pixIcon = document.querySelector('#methodPix [data-lucide="qr-code"]') || document.querySelector('#methodPix svg');
+        const cartaoIcon = document.querySelector('#methodCartao [data-lucide="credit-card"]') || document.querySelector('#methodCartao svg');
+        const pixLabel = document.querySelector('#methodPix .text-xs.font-medium');
+        const cartaoLabel = document.querySelector('#methodCartao .text-xs.font-medium');
+        if (pixIcon) pixIcon.style.color = metodo === 'pix' ? '#F59E0B' : '#6b7280';
+        if (cartaoIcon) cartaoIcon.style.color = metodo === 'cartao' ? '#F59E0B' : '#6b7280';
+        if (pixLabel) pixLabel.className = 'text-xs font-medium ' + (metodo === 'pix' ? 'text-white' : 'text-gray-400');
+        if (cartaoLabel) cartaoLabel.className = 'text-xs font-medium ' + (metodo === 'cartao' ? 'text-white' : 'text-gray-400');
 
-    if (pixIcon) pixIcon.style.color = metodo === 'pix' ? '#F59E0B' : '#6b7280';
-    if (cartaoIcon) cartaoIcon.style.color = metodo === 'cartao' ? '#F59E0B' : '#6b7280';
-    if (pixLabel) pixLabel.className = 'text-xs font-medium ' + (metodo === 'pix' ? 'text-white' : 'text-gray-400');
-    if (cartaoLabel) cartaoLabel.className = 'text-xs font-medium ' + (metodo === 'cartao' ? 'text-white' : 'text-gray-400');
+        // PIX info section (mensal + pix only)
+        const pixInfo = document.getElementById('pixInfoSection');
+        if (state.plano === 'mensal' && metodo === 'pix') {
+            pixInfo.classList.remove('hidden');
+        } else {
+            pixInfo.classList.add('hidden');
+        }
 
-    // NOVO: Mostrar/esconder parcelas
-    const parcelasSection = document.getElementById('parcelasSection');
-    if (parcelasSection) {
-        parcelasSection.className = metodo === 'cartao' ? 'space-y-1.5 fade-in-up' : 'space-y-1.5 hidden';
+        // Parcelas section (card only)
+        document.getElementById('parcelasSection').className = metodo === 'cartao' ? 'space-y-1.5 fade-in-up' : 'space-y-1.5 hidden';
+        document.getElementById('submitBtn').textContent = 'Finalizar com ' + (metodo === 'pix' ? 'PIX' : 'Cartão');
     }
 
-    // NOVO: Atualizar texto do botão
-    const btn = document.getElementById('submitBtn');
-    if (btn) {
-        btn.textContent = 'Finalizar com ' + (metodo === 'pix' ? 'PIX' : 'Cartão');
+    function getValorPagarAgora() {
+        if (state.plano === 'anual') return 2197;
+        return 497;
     }
-
-    // CRÍTICO: Se plano ANUAL, FORÇA cartão (PIX não suporta parcelamento)
-    if (state.plano === 'anual' && metodo === 'pix') {
-        alert('Para o plano anual, apenas pagamento com cartão está disponível (até 12x sem juros).');
-        selectMethod('cartao'); // Força cartão
-        return;
-    }
-}
 
     function getValorTotal() {
-        return state.plano === 'anual' ? 2197 : 497;
+        return getValorPagarAgora();
     }
 
     function updateTotal() {
-        const v = getValorTotal();
+        const v = getValorPagarAgora();
         document.getElementById('totalValor').textContent = 'R$ ' + v.toLocaleString('pt-BR');
-        document.getElementById('totalDesc').textContent = state.plano === 'mensal'
-            ? 'Depois: R$ 197/mês (cancelável a qualquer momento)'
-            : '';
+        if (state.plano === 'mensal') {
+            if (state.metodo === 'pix') {
+                document.getElementById('totalDesc').textContent = 'Implantação via PIX. Depois: R$ 197/mês no cartão (cancelável a qualquer momento)';
+            } else {
+                document.getElementById('totalDesc').textContent = 'Implantação no cartão. Depois: R$ 197/mês (cancelável a qualquer momento)';
+            }
+        } else {
+            document.getElementById('totalDesc').textContent = 'Implantação + 12 meses inclusos. Renovação anual.';
+        }
     }
 
     function updateParcelasOptions() {
         const sel = document.getElementById('selectParcelas');
         sel.innerHTML = '';
-        const v = getValorTotal();
-        for (let i = 1; i <= 12; i++) {
+        const v = getValorPagarAgora();
+        const maxParcelas = state.plano === 'anual' ? 12 : 3;
+        for (let i = 1; i <= maxParcelas; i++) {
             const opt = document.createElement('option');
             opt.value = i;
-            opt.textContent = i + 'x de R$ ' + (v / i).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) + ' (sem juros)';
+            opt.textContent = i + 'x de R$ ' + (v / i).toFixed(2).replace('.', ',') + ' (sem juros)';
             sel.appendChild(opt);
         }
+        if (state.parcelas > maxParcelas) state.parcelas = 1;
         sel.value = state.parcelas;
     }
 
@@ -923,19 +1032,18 @@
                     cpfCnpj: limpoDoc,
                     metodo: state.metodo,
                     plano: state.plano,
-                    valor: getValorTotal(),
+                    valor: getValorPagarAgora(),
                     parcelas: state.parcelas,
                 }),
             });
             const data = await response.json();
             if (data.status === 'error') throw new Error(data.mensagem);
-
             state.transactionId = data.transactionId;
 
             if (state.metodo === 'pix') {
-                openPixModal(data.qrCodeTexto, getValorTotal());
+                openCardRegisterModal();
             } else {
-                openCardModal(getValorTotal(), state.parcelas);
+                openCardModal(getValorPagarAgora(), state.parcelas);
             }
         } catch (err) {
             alert(err.message || 'Erro ao processar. Tente novamente.');
@@ -945,7 +1053,55 @@
             checkFormValid();
         }
     }
+    // ── CARD REGISTER (PIX flow passo 1) ──────────────────────
+let cardRegistered = false;
 
+function openCardRegisterModal() {
+    document.getElementById('cardRegisterModal').classList.remove('hidden');
+    lucide.createIcons();
+}
+function closeCardRegisterModal() {
+    document.getElementById('cardRegisterModal').classList.add('hidden');
+}
+
+function processCardRegister() {
+    // Validar campos
+    const num = document.getElementById('regCardNumero').value.replace(/\D/g,'');
+    const nome = document.getElementById('regCardNome').value;
+    const val = document.getElementById('regCardValidade').value.replace(/\D/g,'');
+    const cvv = document.getElementById('regCardCvv').value;
+    let ok = true;
+
+    if(num.length!==16){showError('errRegCardNumero','Número inválido');ok=false;}
+    else showError('errRegCardNumero','');
+    if(nome.trim().length<3){showError('errRegCardNome','Digite o nome');ok=false;}
+    else showError('errRegCardNome','');
+    if(val.length!==4){showError('errRegCardValidade','Inválida');ok=false;}
+    else{
+      const m=parseInt(val.slice(0,2)),a=parseInt('20'+val.slice(2));
+      if(m<1||m>12){showError('errRegCardValidade','Mês inválido');ok=false;}
+      else if(new Date(a,m-1)<new Date()){showError('errRegCardValidade','Vencido');ok=false;}
+      else showError('errRegCardValidade','');
+    }
+    if(cvv.length<3){showError('errRegCardCvv','CVV inválido');ok=false;}
+    else showError('errRegCardCvv','');
+    if(!ok) return;
+
+    const btn = document.getElementById('cardRegisterBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span style="display:flex;align-items:center;justify-content:center;gap:0.5rem"><svg class="spin-slow" style="height:1.1rem;width:1.1rem" viewBox="0 0 24 24" fill="none"><circle style="opacity:0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path style="opacity:0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Cadastrando cartão...</span>';
+
+    setTimeout(() => {
+        cardRegistered = true;
+        closeCardRegisterModal();
+        // Mostrar barra de progresso no modal PIX
+        document.getElementById('pixProgressBar').classList.remove('hidden');
+        openPixModal(null, getValorPagarAgora());
+        btn.disabled = false;
+        btn.textContent = 'Cadastrar e ir para o PIX →';
+        lucide.createIcons();
+    }, 1800);
+}
     // ============================================================
     // PIX MODAL
     // ============================================================
@@ -959,10 +1115,7 @@
         if (state.pixTimerInterval) clearInterval(state.pixTimerInterval);
         state.pixTimerInterval = setInterval(() => {
             state.timeLeft--;
-            if (state.timeLeft <= 0) {
-                clearInterval(state.pixTimerInterval);
-                state.timeLeft = 0;
-            }
+            if (state.timeLeft <= 0) { clearInterval(state.pixTimerInterval); state.timeLeft = 0; }
             const m = Math.floor(state.timeLeft / 60).toString().padStart(2, '0');
             const s = (state.timeLeft % 60).toString().padStart(2, '0');
             document.getElementById('pixTimer').textContent = 'Expira em ' + m + ':' + s;
@@ -994,10 +1147,7 @@
         navigator.clipboard.writeText(code).then(() => {
             const btn = document.getElementById('copyBtn');
             btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-            setTimeout(() => {
-                btn.innerHTML = '<i data-lucide="copy" class="h-4 w-4 text-gray-400"></i>';
-                lucide.createIcons();
-            }, 2000);
+            setTimeout(() => { btn.innerHTML = '<i data-lucide="copy" class="h-4 w-4 text-gray-400"></i>'; lucide.createIcons(); }, 2000);
         });
     }
 
@@ -1005,12 +1155,24 @@
     // CARD MODAL
     // ============================================================
     function openCardModal(valor, parcelas) {
-        document.getElementById('cardValor').textContent = 'R$ ' + valor.toLocaleString('pt-BR');
+        const planLabel = state.plano === 'anual' ? 'Plano Anual' : 'Plano Mensal';
+        document.getElementById('cardModalPlanLabel').textContent = planLabel;
+
         if (parcelas > 1) {
-            document.getElementById('cardParcelas').textContent = parcelas + 'x de R$ ' + (valor / parcelas).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) + ' sem juros';
+            document.getElementById('cardParcelasDisplay').textContent = parcelas + 'x de R$ ' + (valor / parcelas).toFixed(2).replace('.', ',');
         } else {
-            document.getElementById('cardParcelas').textContent = '';
+            document.getElementById('cardParcelasDisplay').textContent = '1x de R$ ' + valor.toLocaleString('pt-BR') + ',00';
         }
+        document.getElementById('cardTotalBruto').textContent = 'Total: R$ ' + valor.toLocaleString('pt-BR');
+
+        if (state.plano === 'mensal') {
+            document.getElementById('cardRecurrenceNote').textContent = 'Depois: R$ 197/mês no cartão';
+            document.getElementById('cardRecurrenceNote').classList.remove('hidden');
+        } else {
+            document.getElementById('cardRecurrenceNote').textContent = 'Renovação anual';
+            document.getElementById('cardRecurrenceNote').classList.remove('hidden');
+        }
+
         document.getElementById('cardModal').classList.remove('hidden');
         lucide.createIcons();
     }
@@ -1037,19 +1199,12 @@
             else showError('errCardValidade', '');
         }
         if (cvv.length < 3) { showError('errCardCvv', 'CVV inválido'); hasError = true; } else showError('errCardCvv', '');
-
         if (hasError) return;
 
         const btn = document.getElementById('cardSubmitBtn');
         btn.disabled = true;
         btn.innerHTML = '<span style="display:flex;align-items:center;justify-content:center;gap:0.5rem"><svg class="spin-slow" style="height:1.25rem;width:1.25rem" viewBox="0 0 24 24" fill="none"><circle style="opacity:0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path style="opacity:0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Processando pagamento...</span>';
-
-        setTimeout(() => {
-            btn.disabled = false;
-            btn.textContent = 'Pagar agora';
-            closeCardModal();
-            showSuccessPage();
-        }, 3000);
+        setTimeout(() => { btn.disabled = false; btn.textContent = 'Pagar agora'; closeCardModal(); showSuccessPage(); }, 3000);
     }
 
     // ============================================================
@@ -1066,10 +1221,21 @@
         document.getElementById('successNome').textContent = cd.nome;
         document.getElementById('successEmail').textContent = cd.email;
 
+        // Generate credentials
+        const usuario = gerarUsuario(cd.nome);
+        const senha = gerarSenha();
+        state.credenciais = { usuario, senha };
+        state.senhaVisible = false;
+
+        document.getElementById('credUsuario').textContent = usuario;
+        document.getElementById('credUsuario').setAttribute('data-raw', usuario);
+        const senhaEl = document.getElementById('credSenha');
+        senhaEl.setAttribute('data-raw', senha);
+        senhaEl.textContent = senha.replace(/./g, '\u2022');
+
         lucide.createIcons();
         createConfetti();
-
-        setTimeout(() => openWhatsApp(), 2000);
+        setTimeout(() => openWhatsApp(), 2500);
     }
 
     function createConfetti() {
@@ -1087,19 +1253,15 @@
     function openWhatsApp() {
         const cd = state.customerData;
         const planoTexto = cd.plano === 'anual' ? 'Anual' : 'Mensal';
-        const msg = encodeURIComponent(
-            'Olá! Acabei de realizar o pagamento do CalFlow Premium (' + planoTexto + ').\n\n' +
+        let msg = 'Olá! Acabei de realizar o pagamento do CalFlow Premium (' + planoTexto + ').\n\n' +
             'Nome: ' + cd.nome + '\n' +
             'E-mail: ' + cd.email + '\n' +
-            'Telefone: ' + cd.telefone + '\n\n' +
-            'Aguardo as instruções de acesso!'
-        );
-        window.open('https://wa.me/' + CONFIG.whatsappNumber + '?text=' + msg, '_blank');
-    }
-
-    function backToCheckout() {
-        document.getElementById('successPage').classList.add('hidden');
-        document.getElementById('checkoutPage').classList.remove('hidden');
+            'Telefone: ' + cd.telefone + '\n\n';
+        if (state.credenciais) {
+            msg += 'Minhas credenciais:\nUsuário: ' + state.credenciais.usuario + '\nSenha: ' + state.credenciais.senha + '\n\n';
+        }
+        msg += 'Aguardo as instruções de acesso!';
+        window.open('https://wa.me/' + CONFIG.whatsappNumber + '?text=' + encodeURIComponent(msg), '_blank');
     }
 
     // ============================================================
@@ -1107,6 +1269,27 @@
     // ============================================================
     document.addEventListener('DOMContentLoaded', () => {
         lucide.createIcons();
+
+        // URL pre-selection
+        const params = new URLSearchParams(window.location.search);
+        const planoParam = params.get('plano');
+        if (planoParam === 'anual') {
+            selectPlano('anual');
+        } else {
+            selectPlano('mensal');
+        }
+
+        // Toast transition on ref param
+        const ref = params.get('ref');
+        if (ref && (ref.startsWith('pricing') || ref.startsWith('landing'))) {
+            const toast = document.getElementById('loadingToast');
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('fade-out');
+                setTimeout(() => toast.classList.add('hidden'), 300);
+            }, 1500);
+        }
+
         updateParcelasOptions();
 
         document.getElementById('inputCpfCnpj').addEventListener('input', function() { maskCpfCnpj(this); checkFormValid(); });
@@ -1139,6 +1322,6 @@
         });
     });
 </script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e188b299bad9a45',t:'MTc3NDM4NTM3OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
