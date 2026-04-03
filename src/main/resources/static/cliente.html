@@ -1,0 +1,2044 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CalFlow - Área do Cliente</title>
+    <!-- FAVICON -->
+    <link rel="apple-touch-icon" sizes="180x180" href="images/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png">
+    <link rel="manifest" href="images/site.webmanifest">
+
+    <meta name="description" content="Área do Cliente CalFlow - Gerencie seu sistema de agendamento via WhatsApp.">
+    <meta name="theme-color" content="#F59E0B">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"DM Sans"', 'system-ui', 'sans-serif'] },
+                    colors: {
+                        surface: '#141414',
+                        amber: { 400: '#FBBF24', 500: '#F59E0B', 600: '#D97706' }
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://unpkg.com/lucide@latest" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'DM Sans', system-ui, sans-serif; background: #0a0a0a; color: #fff; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 10px; }
+        html { scroll-behavior: smooth; }
+
+        .input-base {
+            background: #0a0a0a; border: 1px solid rgba(255,255,255,0.08); border-radius: 0.75rem;
+            padding: 0.7rem 1rem; color: #fff; font-size: 0.875rem; font-family: inherit;
+            transition: border-color 0.2s; outline: none; width: 100%;
+        }
+        .input-base:focus { border-color: #F59E0B; }
+        .input-base::placeholder { color: #525252; }
+
+        .btn-amber {
+            background: #F59E0B; color: #000; font-weight: 700; border: none; border-radius: 9999px;
+            padding: 0.75rem 2rem; cursor: pointer; transition: all 0.2s; font-family: inherit; font-size: 0.875rem;
+        }
+        .btn-amber:hover { background: #FBBF24; box-shadow: 0 0 20px rgba(245,158,11,0.4); transform: scale(1.02); }
+
+        .btn-outline {
+            background: transparent; color: #fff; font-weight: 600; border: 1px solid #333; border-radius: 9999px;
+            padding: 0.65rem 1.5rem; cursor: pointer; transition: all 0.2s; font-family: inherit; font-size: 0.875rem;
+        }
+        .btn-outline:hover { border-color: rgba(245,158,11,0.5); background: rgba(255,255,255,0.03); }
+
+        .card-base {
+            background: #141414; border: 1px solid rgba(255,255,255,0.06); border-radius: 1rem;
+            transition: all 0.3s;
+        }
+        .card-base:hover { border-color: rgba(245,158,11,0.15); }
+
+        /* Toggle Switch */
+        .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute; cursor: pointer; inset: 0; background: #333; border-radius: 24px; transition: 0.3s;
+        }
+        .toggle-slider:before {
+            content: ''; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px;
+            background: #fff; border-radius: 50%; transition: 0.3s;
+        }
+        .toggle-switch input:checked + .toggle-slider { background: #F59E0B; }
+        .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px; height: 100vh; position: fixed; left: 0; top: 0; z-index: 40;
+            background: #0f0f0f; border-right: 1px solid rgba(255,255,255,0.06);
+            display: flex; flex-direction: column; transition: transform 0.3s;
+        }
+        .sidebar-link {
+            display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 1.25rem;
+            color: #737373; font-size: 0.875rem; cursor: pointer; transition: all 0.2s;
+            border-radius: 0.5rem; margin: 0 0.75rem;
+        }
+        .sidebar-link:hover { color: #fff; background: rgba(255,255,255,0.04); }
+        .sidebar-link.active { color: #F59E0B; background: rgba(245,158,11,0.08); font-weight: 600; }
+        .main-content { margin-left: 260px; min-height: 100vh; padding: 2rem; }
+
+        /* Toast */
+        .toast-container { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; }
+        .toast {
+            padding: 0.85rem 1.25rem; border-radius: 0.75rem; font-size: 0.85rem; font-weight: 500;
+            display: flex; align-items: center; gap: 0.5rem; animation: slideIn 0.3s ease; min-width: 280px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .toast-success { background: #141414; color: #22c55e; border-color: rgba(34,197,94,0.2); }
+        .toast-error { background: #141414; color: #ef4444; border-color: rgba(239,68,68,0.2); }
+        .toast-info { background: #141414; color: #F59E0B; border-color: rgba(245,158,11,0.2); }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 50;
+            display: flex; align-items: center; justify-content: center; padding: 1rem;
+            backdrop-filter: blur(4px); animation: fadeIn 0.2s;
+        }
+        .modal-content {
+            background: #141414; border: 1px solid rgba(255,255,255,0.08); border-radius: 1.25rem;
+            padding: 2rem; max-width: 520px; width: 100%; max-height: 85vh; overflow-y: auto;
+            animation: scaleIn 0.2s;
+        }
+
+        /* Animations */
+        @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes shake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-8px); } 40%,80% { transform: translateX(8px); } }
+        @keyframes pulse-green { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .shake { animation: shake 0.4s ease; }
+        .pulse-green { animation: pulse-green 2s infinite; }
+
+        /* Screen transitions */
+        .screen { display: none; animation: fadeIn 0.3s ease; }
+        .screen.active { display: block; }
+
+        /* Section transitions */
+        .section-panel { display: none; animation: fadeIn 0.25s ease; }
+        .section-panel.active { display: block; }
+
+        /* Mobile */
+        .mobile-header { display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 45; background: #0f0f0f; border-bottom: 1px solid rgba(255,255,255,0.06); padding: 0.75rem 1rem; }
+        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 35; }
+
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); z-index: 45; }
+            .sidebar.open { transform: translateX(0); }
+            .sidebar-overlay.open { display: block; }
+            .mobile-header { display: flex; align-items: center; justify-content: space-between; }
+            .main-content { margin-left: 0; padding: 1rem; padding-top: 4.5rem; }
+        }
+
+        /* Badge */
+        .badge-pulse { position: relative; }
+        .badge-pulse::after {
+            content: ''; position: absolute; top: -2px; right: -2px; width: 10px; height: 10px;
+            background: #22c55e; border-radius: 50%; animation: pulse-green 2s infinite;
+        }
+
+        /* QR code area */
+        #qrcode-container canvas, #qrcode-container img { border-radius: 0.75rem; }
+
+        /* Admin badge */
+        .admin-badge {
+            background: rgba(239,68,68,0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.2);
+            padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em;
+        }
+
+        /* Table */
+        .table-row { transition: background 0.2s; }
+        .table-row:hover { background: rgba(255,255,255,0.02); }
+    </style>
+</head>
+<body>
+
+<!-- ====== TOAST CONTAINER ====== -->
+<div class="toast-container" id="toastContainer" data-testid="toast-container"></div>
+
+<!-- ====== MODAL CONTAINER ====== -->
+<div id="modalContainer" data-testid="modal-container"></div>
+
+<!-- ========================================================== -->
+<!-- TELA 1 — LOGIN                                             -->
+<!-- ========================================================== -->
+<div id="screen-login" class="screen active" data-testid="screen-login">
+    <div class="min-h-screen flex items-center justify-center px-4" style="background: radial-gradient(ellipse at center, rgba(245,158,11,0.04) 0%, transparent 60%)">
+        <div class="w-full max-w-md">
+            <div class="text-center mb-8">
+                <img src="images/CalFlow.jpeg" alt="CalFlow" class="h-16 rounded-xl mx-auto mb-6" data-testid="login-logo">
+                <h1 class="text-2xl font-bold mb-1" data-testid="login-title">Área do Cliente</h1>
+                <p class="text-sm text-neutral-500">Acesse com suas credenciais de acesso</p>
+            </div>
+            <div class="card-base p-8" style="border-color: rgba(245,158,11,0.1);" data-testid="login-card">
+                <div id="loginError" class="hidden mb-4 p-3 rounded-lg text-sm font-medium text-red-400" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.15)" data-testid="login-error">
+                    <span class="flex items-center gap-2"><i data-lucide="alert-circle" style="width:16px;height:16px"></i> <span id="loginErrorText">Usuário ou senha incorretos</span></span>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-neutral-400 mb-1.5 font-medium">Usuário</label>
+                        <input type="text" id="loginUser" class="input-base" placeholder="seu_usuario" autocomplete="username" data-testid="login-user-input">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-neutral-400 mb-1.5 font-medium">Senha</label>
+                        <div class="relative">
+                            <input type="password" id="loginPass" class="input-base pr-10" placeholder="********" autocomplete="current-password" data-testid="login-pass-input">
+                            <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white transition-colors" data-testid="login-toggle-password">
+                                <i data-lucide="eye" id="eyeIcon" style="width:18px;height:18px"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 mt-1">
+                        <input type="checkbox" id="rememberCheck" checked class="accent-amber-500 w-4 h-4 cursor-pointer" data-testid="remember-check">
+                        <label for="rememberCheck" class="text-xs text-neutral-500 cursor-pointer select-none">Lembrar acesso neste dispositivo</label>
+                    </div>
+                    <button onclick="doLogin()" class="btn-amber w-full mt-2" data-testid="login-submit-btn">Entrar</button>
+                </div>
+                <div class="mt-6 text-center">
+                    <a href="https://wa.me/553299401356?text=Esqueci+minha+senha+do+CalFlow" target="_blank" class="text-xs text-neutral-500 hover:text-amber-500 transition-colors" data-testid="login-forgot-link">Esqueceu a senha? Fale via WhatsApp &rarr;</a>
+                </div>
+            </div>
+            <div class="text-center mt-8 space-y-2">
+                <p class="text-xs text-neutral-600">&copy; 2026 CalFlow. Todos os direitos reservados.</p>
+                <a href="/landing.html" class="text-xs text-neutral-500 hover:text-amber-500 transition-colors" data-testid="login-back-link">&larr; Voltar ao site</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================== -->
+<!-- TELA 2/3 — DASHBOARD (Cliente + Admin)                     -->
+<!-- ========================================================== -->
+<div id="screen-dashboard" class="screen" data-testid="screen-dashboard">
+
+    <!-- Mobile Header -->
+    <div class="mobile-header" data-testid="mobile-header">
+        <button onclick="toggleMobileSidebar()" data-testid="burger-menu-btn">
+            <i data-lucide="menu" style="width:24px;height:24px;color:#fff"></i>
+        </button>
+        <img src="images/CalFlow.jpeg" alt="CalFlow" class="h-8 rounded-lg">
+        <button onclick="doLogout()" class="text-neutral-500 hover:text-white transition-colors" data-testid="mobile-logout-btn">
+            <i data-lucide="log-out" style="width:20px;height:20px"></i>
+        </button>
+    </div>
+
+    <!-- Sidebar Overlay (mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMobileSidebar()" data-testid="sidebar-overlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar" data-testid="sidebar">
+        <div class="p-5 border-b border-white/5">
+            <img src="images/CalFlow.jpeg" alt="CalFlow" class="h-10 rounded-lg mb-4" data-testid="sidebar-logo">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-500 font-bold text-sm" id="sidebarAvatar" data-testid="sidebar-avatar">JS</div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold truncate" id="sidebarNegocio" data-testid="sidebar-negocio">Barbearia do João</p>
+                    <p class="text-xs text-neutral-500 truncate" id="sidebarNome" data-testid="sidebar-nome">João Silva</p>
+                </div>
+            </div>
+            <div id="adminBadgeArea" class="hidden mt-3"><span class="admin-badge" data-testid="admin-badge">MODO ADMIN</span></div>
+        </div>
+
+        <nav class="flex-1 py-4 overflow-y-auto" id="sidebarNav" data-testid="sidebar-nav">
+            <!-- Populated by JS -->
+        </nav>
+
+        <div class="p-4 border-t border-white/5">
+            <button onclick="doLogout()" class="sidebar-link w-full text-red-400 hover:text-red-300 hover:bg-red-500/5" data-testid="sidebar-logout-btn">
+                <i data-lucide="log-out" style="width:18px;height:18px"></i> Sair
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent" data-testid="main-content">
+
+        <!-- ===== DASHBOARD HOME ===== -->
+        <div id="section-dashboard" class="section-panel active" data-testid="section-dashboard">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+                <div>
+                    <h2 class="text-2xl font-bold" id="greetingText" data-testid="greeting-text">Bom dia, João!</h2>
+                    <p class="text-sm text-neutral-500 mt-1">Veja o resumo do seu negócio hoje</p>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold badge-pulse" style="background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.15)" data-testid="status-badge">
+                    <span class="w-2 h-2 rounded-full bg-green-500 pulse-green"></span> Sistema ativo
+                </div>
+            </div>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div class="card-base p-5" data-testid="metric-agendamentos">
+                    <div class="flex items-center gap-2 mb-3"><div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:rgba(245,158,11,0.1)"><i data-lucide="calendar" style="width:16px;height:16px;color:#F59E0B"></i></div><span class="text-xs text-neutral-500">Agendamentos hoje</span></div>
+                    <p class="text-2xl font-bold">8</p>
+                </div>
+                <div class="card-base p-5" data-testid="metric-confirmados">
+                    <div class="flex items-center gap-2 mb-3"><div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:rgba(34,197,94,0.1)"><i data-lucide="check-circle" style="width:16px;height:16px;color:#22c55e"></i></div><span class="text-xs text-neutral-500">Confirmados (semana)</span></div>
+                    <p class="text-2xl font-bold">34</p>
+                </div>
+                <div class="card-base p-5" data-testid="metric-faltas">
+                    <div class="flex items-center gap-2 mb-3"><div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:rgba(239,68,68,0.1)"><i data-lucide="x-circle" style="width:16px;height:16px;color:#ef4444"></i></div><span class="text-xs text-neutral-500">Faltas hoje</span></div>
+                    <p class="text-2xl font-bold">0 <span class="text-sm text-neutral-500 font-normal">de 8</span></p>
+                </div>
+                <div class="card-base p-5" data-testid="metric-receita">
+                    <div class="flex items-center gap-2 mb-3"><div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:rgba(245,158,11,0.1)"><i data-lucide="wallet" style="width:16px;height:16px;color:#F59E0B"></i></div><span class="text-xs text-neutral-500">Receita hoje</span></div>
+                    <p class="text-2xl font-bold">R$ 680</p>
+                </div>
+            </div>
+            <div class="card-base p-6" data-testid="upcoming-appointments">
+                <h3 class="text-lg font-semibold mb-4 flex items-center gap-2"><i data-lucide="clock" style="width:18px;height:18px;color:#F59E0B"></i> Próximos agendamentos</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead><tr class="text-left text-neutral-500 text-xs border-b border-white/5"><th class="pb-3 font-medium">Horário</th><th class="pb-3 font-medium">Cliente</th><th class="pb-3 font-medium">Serviço</th><th class="pb-3 font-medium">Status</th><th class="pb-3 font-medium text-right">Valor</th></tr></thead>
+                        <tbody>
+                        <tr class="table-row border-b border-white/5"><td class="py-3 font-medium">14:00</td><td class="py-3 text-neutral-300">Carlos M.</td><td class="py-3 text-neutral-400">Corte</td><td class="py-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(34,197,94,0.1);color:#22c55e">Confirmado</span></td><td class="py-3 text-right font-medium">R$ 45,00</td></tr>
+                        <tr class="table-row border-b border-white/5"><td class="py-3 font-medium">15:00</td><td class="py-3 text-neutral-300">Ana P.</td><td class="py-3 text-neutral-400">Barba</td><td class="py-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(245,158,11,0.1);color:#F59E0B">Pendente</span></td><td class="py-3 text-right font-medium">R$ 35,00</td></tr>
+                        <tr class="table-row border-b border-white/5"><td class="py-3 font-medium">15:30</td><td class="py-3 text-neutral-300">Pedro L.</td><td class="py-3 text-neutral-400">Corte + Barba</td><td class="py-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(34,197,94,0.1);color:#22c55e">Confirmado</span></td><td class="py-3 text-right font-medium">R$ 70,00</td></tr>
+                        <tr class="table-row border-b border-white/5"><td class="py-3 font-medium">16:00</td><td class="py-3 text-neutral-300">Lucas R.</td><td class="py-3 text-neutral-400">Corte</td><td class="py-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(34,197,94,0.1);color:#22c55e">Confirmado</span></td><td class="py-3 text-right font-medium">R$ 45,00</td></tr>
+                        <tr class="table-row"><td class="py-3 font-medium">17:00</td><td class="py-3 text-neutral-300">Fernanda S.</td><td class="py-3 text-neutral-400">Corte + Barba</td><td class="py-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(245,158,11,0.1);color:#F59E0B">Pendente</span></td><td class="py-3 text-right font-medium">R$ 70,00</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== QR CODE ===== -->
+        <div id="section-qrcode" class="section-panel" data-testid="section-qrcode">
+            <h2 class="text-2xl font-bold mb-2">Conexão WhatsApp</h2>
+            <p class="text-sm text-neutral-500 mb-8">Conecte seu WhatsApp Business ao CalFlow para ativar o atendimento automático.</p>
+            <div class="max-w-lg mx-auto">
+                <div class="card-base p-8 text-center" data-testid="qrcode-card">
+                    <!-- Estado 1: Carregando -->
+                    <div id="qr-state-loading" data-testid="qr-state-loading">
+                        <div class="w-16 h-16 mx-auto mb-4 rounded-full border-4 border-amber-500/30 border-t-amber-500 animate-spin"></div>
+                        <p class="text-sm text-neutral-400">Buscando QR Code...</p>
+                    </div>
+                    <!-- Estado 2: QR Code exibido -->
+                    <div id="qr-state-scanning" class="hidden" data-testid="qr-state-scanning">
+                        <div class="bg-white rounded-xl p-3 inline-block mb-4">
+                            <div id="qrcode-container" style="width:240px;height:240px;margin:0 auto;" data-testid="qrcode-container"></div>
+                        </div>
+                        <p class="text-sm text-amber-500 font-semibold mb-1" id="qrcode-countdown" data-testid="qrcode-countdown">Expira em: 00:60</p>
+                        <p class="text-xs text-neutral-500 mb-4">Abra o WhatsApp &rarr; Menu (&vellip;) &rarr; Aparelhos Conectados &rarr; Conectar</p>
+                        <div class="flex flex-col gap-2">
+                            <button onclick="regenerateQRCode()" class="btn-outline text-sm w-full" data-testid="qr-regenerate-btn">
+                                <i data-lucide="refresh-cw" style="width:14px;height:14px;display:inline;vertical-align:middle"></i> Gerar Novo QR Code
+                            </button>
+                            <button onclick="simulateConnection()" class="text-xs text-neutral-600 hover:text-amber-500 transition-colors py-2" data-testid="qr-simulate-btn">
+                                [Demo] Simular Conexão
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Estado 3: Conectado -->
+                    <div id="qr-state-connected" class="hidden" data-testid="qr-state-connected">
+                        <div class="w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center" style="background:rgba(34,197,94,0.1)">
+                            <i data-lucide="check-circle" style="width:40px;height:40px;color:#22c55e"></i>
+                        </div>
+                        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold mb-4 pulse-green" style="background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.2)" data-testid="qr-connected-badge">
+                            <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span> WhatsApp Conectado
+                        </div>
+                        <p class="text-sm text-neutral-400 mb-6">Seu bot está ativo e atendendo clientes!</p>
+                        <button onclick="disconnectWhatsApp()" class="btn-outline text-sm text-neutral-500" data-testid="qr-disconnect-btn">Desconectar</button>
+                    </div>
+                    <!-- Estado 4: Desconectado/Erro -->
+                    <div id="qr-state-disconnected" class="hidden" data-testid="qr-state-disconnected">
+                        <div class="w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center" style="background:rgba(245,158,11,0.1)">
+                            <i data-lucide="wifi-off" style="width:40px;height:40px;color:#F59E0B"></i>
+                        </div>
+                        <p class="text-lg font-semibold mb-2">WhatsApp desconectado</p>
+                        <p class="text-sm text-neutral-500 mb-6">Reconecte para continuar atendendo seus clientes.</p>
+                        <button onclick="reconnectWhatsApp()" class="btn-amber" data-testid="qr-reconnect-btn">Reconectar</button>
+                    </div>
+                </div>
+                <!-- Instance info -->
+                <div class="mt-6 space-y-2" id="qrInstanceInfo" data-testid="qr-instance-info">
+                    <div class="flex items-center justify-between p-3 rounded-lg" style="background:rgba(255,255,255,0.02)">
+                        <p class="text-xs text-neutral-500">Instância Evolution</p>
+                        <p class="text-xs font-mono text-amber-500" id="qrInstanceName" data-testid="qr-instance-name">calflow_demo</p>
+                    </div>
+                    <div class="flex items-center justify-between p-3 rounded-lg" style="background:rgba(255,255,255,0.02)">
+                        <p class="text-xs text-neutral-500">Webhook</p>
+                        <p class="text-xs font-mono text-neutral-400" id="qrWebhookUrl" data-testid="qr-webhook-url">/api/webhook/whatsapp/demo</p>
+                    </div>
+                    <div class="flex items-center justify-between p-3 rounded-lg" style="background:rgba(255,255,255,0.02)">
+                        <p class="text-xs text-neutral-500">Status detalhado</p>
+                        <p class="text-xs font-medium" id="qrStatusDetail" data-testid="qr-status-detail" style="color:#F59E0B">Aguardando escaneamento</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== AGENDAMENTOS ===== -->
+        <div id="section-agendamentos" class="section-panel" data-testid="section-agendamentos">
+            <h2 class="text-2xl font-bold mb-2">Agendamentos</h2>
+            <p class="text-sm text-neutral-500 mb-8">Gerencie todos os agendamentos do seu negócio.</p>
+            <div class="card-base p-6">
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                    <div class="flex items-center gap-2">
+                        <button class="btn-outline text-xs px-3 py-1.5" data-testid="filter-hoje">Hoje</button>
+                        <button class="btn-outline text-xs px-3 py-1.5" data-testid="filter-semana">Esta semana</button>
+                        <button class="btn-outline text-xs px-3 py-1.5" data-testid="filter-mes">Este mês</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm" data-testid="agendamentos-table">
+                        <thead><tr class="text-left text-neutral-500 text-xs border-b border-white/5"><th class="pb-3 font-medium">Data</th><th class="pb-3 font-medium">Horário</th><th class="pb-3 font-medium">Cliente</th><th class="pb-3 font-medium">Serviço</th><th class="pb-3 font-medium">Profissional</th><th class="pb-3 font-medium">Status</th><th class="pb-3 font-medium text-right">Valor</th></tr></thead>
+                        <tbody>
+                        <tr class="table-row border-b border-white/5"><td class="py-3">25/01/2026</td><td class="py-3 font-medium">09:00</td><td class="py-3 text-neutral-300">Maria L.</td><td class="py-3 text-neutral-400">Corte + Barba</td><td class="py-3 text-neutral-400">João</td><td class="py-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(34,197,94,0.1);color:#22c55e">Confirmado</span></td><td class="py-3 text-right font-medium">R$ 70,00</td></tr>
+                        <tr class="table-row border-b border-white/5"><td class="py-3">25/01/2026</td><td class="py-3 font-medium">10:00</td><td class="py-3 text-neutral-300">Carlos M.</td><td class="py-3 text-neutral-400">Corte</td><td class="py-3 text-neutral-400">João</td><td class="py-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(34,197,94,0.1);color:#22c55e">Confirmado</span></td><td class="py-3 text-right font-medium">R$ 45,00</td></tr>
+                        <tr class="table-row border-b border-white/5"><td class="py-3">25/01/2026</td><td class="py-3 font-medium">11:00</td><td class="py-3 text-neutral-300">Fernanda S.</td><td class="py-3 text-neutral-400">Barba</td><td class="py-3 text-neutral-400">João</td><td class="py-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(245,158,11,0.1);color:#F59E0B">Pendente</span></td><td class="py-3 text-right font-medium">R$ 35,00</td></tr>
+                        <tr class="table-row border-b border-white/5"><td class="py-3">25/01/2026</td><td class="py-3 font-medium">14:00</td><td class="py-3 text-neutral-300">Pedro L.</td><td class="py-3 text-neutral-400">Corte</td><td class="py-3 text-neutral-400">João</td><td class="py-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(239,68,68,0.1);color:#ef4444">Cancelado</span></td><td class="py-3 text-right font-medium text-neutral-600 line-through">R$ 45,00</td></tr>
+                        <tr class="table-row"><td class="py-3">25/01/2026</td><td class="py-3 font-medium">15:00</td><td class="py-3 text-neutral-300">Ana P.</td><td class="py-3 text-neutral-400">Corte + Barba</td><td class="py-3 text-neutral-400">João</td><td class="py-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(34,197,94,0.1);color:#22c55e">Confirmado</span></td><td class="py-3 text-right font-medium">R$ 70,00</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- Google Calendar Embed -->
+            <div class="card-base p-6 mt-6" id="googleCalendarCard" data-testid="google-calendar-card">
+                <h3 class="text-base font-semibold mb-4 flex items-center gap-2"><i data-lucide="calendar-check" style="width:18px;height:18px;color:#F59E0B"></i> Calendário Google</h3>
+                <div id="googleCalendarContent" data-testid="google-calendar-content">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== HORÁRIOS ===== -->
+        <div id="section-horarios" class="section-panel" data-testid="section-horarios">
+            <h2 class="text-2xl font-bold mb-2">Horários de Funcionamento</h2>
+            <p class="text-sm text-neutral-500 mb-8">Configure os dias e horários que seu negócio atende.</p>
+            <div class="card-base p-6 mb-6" data-testid="horarios-card">
+                <h3 class="text-base font-semibold mb-4 flex items-center gap-2"><i data-lucide="clock" style="width:18px;height:18px;color:#F59E0B"></i> Dias da Semana</h3>
+                <div class="space-y-3" id="diasSemanaContainer" data-testid="dias-semana-container">
+                    <!-- Segunda -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between p-4 rounded-lg" style="background:rgba(255,255,255,0.02)">
+                            <p class="font-semibold text-sm">Segunda-feira</p>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-neutral-500" id="label-segunda">Aberto</span>
+                                <label class="toggle-switch"><input type="checkbox" checked onchange="toggleDia(this,'segunda')"><span class="toggle-slider"></span></label>
+                            </div>
+                        </div>
+                        <div id="horarios-segunda" class="flex items-center gap-4 px-4 pb-2">
+                            <div class="flex-1"><p class="text-xs text-neutral-500 mb-1">Abertura</p><input type="time" class="input-base w-full" value="09:00" data-testid="horario-segunda-abertura"></div>
+                            <div class="text-neutral-600 text-sm mt-4">&rarr;</div>
+                            <div class="flex-1"><p class="text-xs text-neutral-500 mb-1">Fechamento</p><input type="time" class="input-base w-full" value="18:00" data-testid="horario-segunda-fechamento"></div>
+                        </div>
+                    </div>
+                    <!-- Terca -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between p-4 rounded-lg" style="background:rgba(255,255,255,0.02)">
+                            <p class="font-semibold text-sm">Terça-feira</p>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-neutral-500" id="label-terca">Aberto</span>
+                                <label class="toggle-switch"><input type="checkbox" checked onchange="toggleDia(this,'terca')"><span class="toggle-slider"></span></label>
+                            </div>
+                        </div>
+                        <div id="horarios-terca" class="flex items-center gap-4 px-4 pb-2">
+                            <div class="flex-1"><p class="text-xs text-neutral-500 mb-1">Abertura</p><input type="time" class="input-base w-full" value="09:00" data-testid="horario-terca-abertura"></div>
+                            <div class="text-neutral-600 text-sm mt-4">&rarr;</div>
+                            <div class="flex-1"><p class="text-xs text-neutral-500 mb-1">Fechamento</p><input type="time" class="input-base w-full" value="18:00" data-testid="horario-terca-fechamento"></div>
+                        </div>
+                    </div>
+                    <!-- Quarta -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between p-4 rounded-lg" style="background:rgba(255,255,255,0.02)">
+                            <p class="font-semibold text-sm">Quarta-feira</p>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-neutral-500" id="label-quarta">Aberto</span>
+                                <label class="toggle-switch"><input type="checkbox" checked onchange="toggleDia(this,'quarta')"><span class="toggle-slider"></span></label>
+                            </div>
+                        </div>
+                        <div id="horarios-quarta" class="flex items-center gap-4 px-4 pb-2">
+                            <div class="flex-1"><p class="text-xs text-neutral-500 mb-1">Abertura</p><input type="time" class="input-base w-full" value="09:00" data-testid="horario-quarta-abertura"></div>
+                            <div class="text-neutral-600 text-sm mt-4">&rarr;</div>
+                            <div class="flex-1"><p class="text-xs text-neutral-500 mb-1">Fechamento</p><input type="time" class="input-base w-full" value="18:00" data-testid="horario-quarta-fechamento"></div>
+                        </div>
+                    </div>
+                    <!-- Quinta -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between p-4 rounded-lg" style="background:rgba(255,255,255,0.02)">
+                            <p class="font-semibold text-sm">Quinta-feira</p>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-neutral-500" id="label-quinta">Aberto</span>
+                                <label class="toggle-switch"><input type="checkbox" checked onchange="toggleDia(this,'quinta')"><span class="toggle-slider"></span></label>
+                            </div>
+                        </div>
+                        <div id="horarios-quinta" class="flex items-center gap-4 px-4 pb-2">
+                            <div class="flex-1"><p class="text-xs text-neutral-500 mb-1">Abertura</p><input type="time" class="input-base w-full" value="09:00" data-testid="horario-quinta-abertura"></div>
+                            <div class="text-neutral-600 text-sm mt-4">&rarr;</div>
+                            <div class="flex-1"><p class="text-xs text-neutral-500 mb-1">Fechamento</p><input type="time" class="input-base w-full" value="18:00" data-testid="horario-quinta-fechamento"></div>
+                        </div>
+                    </div>
+                    <!-- Sexta -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between p-4 rounded-lg" style="background:rgba(255,255,255,0.02)">
+                            <p class="font-semibold text-sm">Sexta-feira</p>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-neutral-500" id="label-sexta">Aberto</span>
+                                <label class="toggle-switch"><input type="checkbox" checked onchange="toggleDia(this,'sexta')"><span class="toggle-slider"></span></label>
+                            </div>
+                        </div>
+                        <div id="horarios-sexta" class="flex items-center gap-4 px-4 pb-2">
+                            <div class="flex-1"><p class="text-xs text-neutral-500 mb-1">Abertura</p><input type="time" class="input-base w-full" value="09:00" data-testid="horario-sexta-abertura"></div>
+                            <div class="text-neutral-600 text-sm mt-4">&rarr;</div>
+                            <div class="flex-1"><p class="text-xs text-neutral-500 mb-1">Fechamento</p><input type="time" class="input-base w-full" value="18:00" data-testid="horario-sexta-fechamento"></div>
+                        </div>
+                    </div>
+                    <!-- Sabado -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between p-4 rounded-lg" style="background:rgba(255,255,255,0.02)">
+                            <p class="font-semibold text-sm">Sábado</p>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-neutral-500" id="label-sabado">Aberto</span>
+                                <label class="toggle-switch"><input type="checkbox" checked onchange="toggleDia(this,'sabado')"><span class="toggle-slider"></span></label>
+                            </div>
+                        </div>
+                        <div id="horarios-sabado" class="flex items-center gap-4 px-4 pb-2">
+                            <div class="flex-1"><p class="text-xs text-neutral-500 mb-1">Abertura</p><input type="time" class="input-base w-full" value="09:00" data-testid="horario-sabado-abertura"></div>
+                            <div class="text-neutral-600 text-sm mt-4">&rarr;</div>
+                            <div class="flex-1"><p class="text-xs text-neutral-500 mb-1">Fechamento</p><input type="time" class="input-base w-full" value="14:00" data-testid="horario-sabado-fechamento"></div>
+                        </div>
+                    </div>
+                    <!-- Domingo -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between p-4 rounded-lg" style="background:rgba(255,255,255,0.02)">
+                            <p class="font-semibold text-sm">Domingo</p>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-neutral-500" id="label-domingo">Fechado</span>
+                                <label class="toggle-switch"><input type="checkbox" onchange="toggleDia(this,'domingo')"><span class="toggle-slider"></span></label>
+                            </div>
+                        </div>
+                        <div id="horarios-domingo" class="flex items-center gap-4 px-4 pb-2" style="display:none">
+                            <div class="flex-1"><p class="text-xs text-neutral-500 mb-1">Abertura</p><input type="time" class="input-base w-full" value="09:00" data-testid="horario-domingo-abertura"></div>
+                            <div class="text-neutral-600 text-sm mt-4">&rarr;</div>
+                            <div class="flex-1"><p class="text-xs text-neutral-500 mb-1">Fechamento</p><input type="time" class="input-base w-full" value="13:00" data-testid="horario-domingo-fechamento"></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Intervalo de Almoco -->
+                <div class="mt-6 pt-6 border-t border-white/5">
+                    <div class="flex items-center justify-between mb-4">
+                        <div><p class="font-semibold text-sm">Intervalo de almoço</p><p class="text-xs text-neutral-500 mt-0.5">Bloqueia horários durante o intervalo</p></div>
+                        <label class="toggle-switch"><input type="checkbox" checked id="toggleAlmoco" onchange="toggleAlmoco(this)"><span class="toggle-slider"></span></label>
+                    </div>
+                    <div id="horarios-almoco" class="flex items-center gap-4 px-0">
+                        <div class="flex-1"><p class="text-xs text-neutral-500 mb-1">Início</p><input type="time" class="input-base w-full" value="12:00" data-testid="horario-almoco-inicio"></div>
+                        <div class="text-neutral-600 text-sm mt-4">&rarr;</div>
+                        <div class="flex-1"><p class="text-xs text-neutral-500 mb-1">Fim</p><input type="time" class="input-base w-full" value="13:00" data-testid="horario-almoco-fim"></div>
+                    </div>
+                </div>
+                <button onclick="salvarHorarios()" class="btn-amber w-full mt-6" data-testid="salvar-horarios-btn">Salvar Horários</button>
+            </div>
+            <!-- Ferias/Folgas -->
+            <div class="card-base p-6" data-testid="folgas-card">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-semibold flex items-center gap-2"><i data-lucide="calendar-off" style="width:18px;height:18px;color:#F59E0B"></i> Férias e Folgas</h3>
+                    <button onclick="openModalFolga()" class="btn-outline text-xs px-3 py-1.5" data-testid="add-folga-btn">+ Adicionar</button>
+                </div>
+                <div id="folgasList" data-testid="folgas-list">
+                    <div class="flex items-center justify-between p-3 rounded-lg mb-2" style="background:rgba(255,255,255,0.02)">
+                        <div><p class="text-sm font-medium">24/12/2026 - 02/01/2027</p><p class="text-xs text-neutral-500">Recesso de fim de ano</p></div>
+                        <button onclick="removeFolga(this)" class="text-neutral-500 hover:text-red-400 transition-colors" data-testid="remove-folga-btn"><i data-lucide="trash-2" style="width:16px;height:16px"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== SERVICOS ===== -->
+        <div id="section-servicos" class="section-panel" data-testid="section-servicos">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+                <div><h2 class="text-2xl font-bold mb-1">Serviços e Preços</h2><p class="text-sm text-neutral-500">Gerencie os serviços oferecidos pelo seu negócio.</p></div>
+                <button onclick="openModalServico()" class="btn-amber text-sm" data-testid="add-servico-btn">+ Adicionar Serviço</button>
+            </div>
+            <div class="space-y-3" id="servicosList" data-testid="servicos-list">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- ===== FUNCIONARIOS ===== -->
+        <div id="section-funcionarios" class="section-panel" data-testid="section-funcionarios">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+                <div><h2 class="text-2xl font-bold mb-1">Funcionários</h2><p class="text-sm text-neutral-500">Gerencie os profissionais do seu negócio.</p></div>
+                <button onclick="openModalFuncionario()" class="btn-amber text-sm" data-testid="add-funcionario-btn">+ Adicionar Funcionário</button>
+            </div>
+            <div class="grid sm:grid-cols-2 gap-4" id="funcionariosList" data-testid="funcionarios-list">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- ===== PAGAMENTOS ===== -->
+        <div id="section-pagamentos" class="section-panel" data-testid="section-pagamentos">
+            <h2 class="text-2xl font-bold mb-2">Pagamentos</h2>
+            <p class="text-sm text-neutral-500 mb-8">Configure a integração com Mercado Pago e gerencie recebimentos.</p>
+            <div id="pagamentoConfig" class="card-base p-6 mb-6" data-testid="pagamento-config-card">
+                <div id="pagamentoNaoConfigurado" data-testid="pagamento-nao-configurado">
+                    <div class="flex items-start gap-4 p-4 rounded-xl mb-6" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15)">
+                        <i data-lucide="alert-triangle" style="width:20px;height:20px;color:#F59E0B;flex-shrink:0;margin-top:2px"></i>
+                        <div><p class="text-sm font-semibold text-amber-500">Integração não configurada</p><p class="text-xs text-neutral-500 mt-1">Configure o Mercado Pago para receber pagamentos via PIX automaticamente.</p></div>
+                    </div>
+                </div>
+                <h3 class="text-base font-semibold mb-4 flex items-center gap-2"><i data-lucide="settings" style="width:18px;height:18px;color:#F59E0B"></i> Configuração do Mercado Pago</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-neutral-400 mb-1.5 font-medium">Access Token do Mercado Pago <a href="https://www.mercadopago.com.br/developers/pt/docs/your-integrations/credentials" target="_blank" class="text-amber-500 hover:text-amber-400 transition-colors">Como obter &rarr;</a></label>
+                        <div class="relative">
+                            <input type="password" class="input-base pr-10" placeholder="APP_USR-0000000000000000-000000-..." id="mpToken" data-testid="mp-token-input">
+                            <button type="button" onclick="toggleField('mpToken')" class="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white transition-colors"><i data-lucide="eye" style="width:16px;height:16px"></i></button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-neutral-400 mb-1.5 font-medium">Chave PIX do negócio</label>
+                        <input type="text" class="input-base" placeholder="email@seunegocio.com ou CPF/CNPJ" id="mpChavePix" data-testid="mp-chave-pix-input">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nome que aparece no PIX</label>
+                        <input type="text" class="input-base" placeholder="Barbearia do João" id="mpNomePix" data-testid="mp-nome-pix-input">
+                    </div>
+                    <div class="flex items-center justify-between p-3 rounded-lg" style="background:rgba(255,255,255,0.02)">
+                        <div><p class="text-sm font-medium">Exigir pagamento para confirmar</p><p class="text-xs text-neutral-500">O agendamento só é confirmado após o pagamento</p></div>
+                        <label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span></label>
+                    </div>
+                    <div class="flex items-center justify-between p-3 rounded-lg" style="background:rgba(255,255,255,0.02)">
+                        <div><p class="text-sm font-medium">Enviar PIX automático após agendamento</p><p class="text-xs text-neutral-500">O link de pagamento é enviado automaticamente via WhatsApp</p></div>
+                        <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                    </div>
+                    <button onclick="salvarPagamentos()" class="btn-amber w-full" data-testid="salvar-pagamentos-btn">Salvar e Testar Integração</button>
+                </div>
+            </div>
+            <div class="card-base p-6" data-testid="pagamento-historico-card">
+                <h3 class="text-base font-semibold mb-4 flex items-center gap-2"><i data-lucide="receipt" style="width:18px;height:18px;color:#F59E0B"></i> Histórico de Recebimentos</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm" data-testid="pagamentos-table">
+                        <thead><tr class="text-left text-neutral-500 text-xs border-b border-white/5"><th class="pb-3 font-medium">Data</th><th class="pb-3 font-medium">Cliente</th><th class="pb-3 font-medium">Serviço</th><th class="pb-3 font-medium">Valor</th><th class="pb-3 font-medium text-right">Status</th></tr></thead>
+                        <tbody>
+                        <tr class="table-row border-b border-white/5"><td class="py-3">23/01/2026</td><td class="py-3 text-neutral-300">Carlos M.</td><td class="py-3 text-neutral-400">Corte</td><td class="py-3 font-medium">R$ 45,00</td><td class="py-3 text-right"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(34,197,94,0.1);color:#22c55e">Recebido</span></td></tr>
+                        <tr class="table-row border-b border-white/5"><td class="py-3">22/01/2026</td><td class="py-3 text-neutral-300">Ana P.</td><td class="py-3 text-neutral-400">Corte + Barba</td><td class="py-3 font-medium">R$ 70,00</td><td class="py-3 text-right"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(34,197,94,0.1);color:#22c55e">Recebido</span></td></tr>
+                        <tr class="table-row"><td class="py-3">21/01/2026</td><td class="py-3 text-neutral-300">Pedro L.</td><td class="py-3 text-neutral-400">Barba</td><td class="py-3 font-medium">R$ 35,00</td><td class="py-3 text-right"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(245,158,11,0.1);color:#F59E0B">Pendente</span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== LEMBRETES ===== -->
+        <div id="section-lembretes" class="section-panel" data-testid="section-lembretes">
+            <h2 class="text-2xl font-bold mb-2">Lembretes Automáticos</h2>
+            <p class="text-sm text-neutral-500 mb-8">Configure as mensagens automáticas enviadas aos seus clientes.</p>
+            <div class="space-y-4">
+                <div class="card-base p-6" data-testid="lembrete-24h">
+                    <div class="flex items-center justify-between mb-4">
+                        <div><p class="font-semibold text-sm">Lembrete 24h antes</p><p class="text-xs text-neutral-500 mt-0.5">Enviado um dia antes do agendamento</p></div>
+                        <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                    </div>
+                    <textarea class="input-base h-24 resize-none" data-testid="lembrete-24h-msg">Olá {nome_cliente}! Lembrete: você tem {servico} amanhã às {hora} com {profissional}. Valor: {valor}. Confirme respondendo SIM.</textarea>
+                    <div class="flex flex-wrap gap-1.5 mt-3" data-testid="lembrete-vars">
+                        <button onclick="insertVar(this,'{nome_cliente}')" class="text-xs px-2 py-1 rounded-md bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors cursor-pointer">{nome_cliente}</button>
+                        <button onclick="insertVar(this,'{servico}')" class="text-xs px-2 py-1 rounded-md bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors cursor-pointer">{servico}</button>
+                        <button onclick="insertVar(this,'{data}')" class="text-xs px-2 py-1 rounded-md bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors cursor-pointer">{data}</button>
+                        <button onclick="insertVar(this,'{hora}')" class="text-xs px-2 py-1 rounded-md bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors cursor-pointer">{hora}</button>
+                        <button onclick="insertVar(this,'{profissional}')" class="text-xs px-2 py-1 rounded-md bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors cursor-pointer">{profissional}</button>
+                        <button onclick="insertVar(this,'{valor}')" class="text-xs px-2 py-1 rounded-md bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors cursor-pointer">{valor}</button>
+                    </div>
+                </div>
+                <div class="card-base p-6" data-testid="lembrete-1h">
+                    <div class="flex items-center justify-between mb-4">
+                        <div><p class="font-semibold text-sm">Lembrete 1h antes</p><p class="text-xs text-neutral-500 mt-0.5">Enviado uma hora antes do agendamento</p></div>
+                        <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                    </div>
+                    <textarea class="input-base h-24 resize-none" data-testid="lembrete-1h-msg">Olá {nome_cliente}! Falta 1 hora para seu {servico} às {hora}. Estamos te esperando!</textarea>
+                </div>
+                <div class="card-base p-6" data-testid="lembrete-confirmacao">
+                    <div class="flex items-center justify-between mb-4">
+                        <div><p class="font-semibold text-sm">Confirmação após agendamento</p><p class="text-xs text-neutral-500 mt-0.5">Enviado logo após o cliente agendar</p></div>
+                        <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                    </div>
+                    <textarea class="input-base h-24 resize-none" data-testid="lembrete-confirmacao-msg">Agendamento confirmado! {servico} no dia {data} às {hora} com {profissional}. Valor: {valor}. Até lá!</textarea>
+                </div>
+                <div class="card-base p-6" data-testid="lembrete-agradecimento">
+                    <div class="flex items-center justify-between mb-4">
+                        <div><p class="font-semibold text-sm">Agradecimento pós-atendimento</p><p class="text-xs text-neutral-500 mt-0.5">Enviado após o horário do serviço</p></div>
+                        <label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span></label>
+                    </div>
+                    <textarea class="input-base h-24 resize-none" data-testid="lembrete-agradecimento-msg">Obrigado pela visita, {nome_cliente}! Esperamos que tenha gostado. Agende seu próximo horário pelo WhatsApp!</textarea>
+                </div>
+            </div>
+            <button onclick="salvarLembretes()" class="btn-amber w-full mt-6" data-testid="salvar-lembretes-btn">Salvar Configurações de Lembretes</button>
+        </div>
+
+        <!-- ===== CONFIGURACOES ===== -->
+        <div id="section-configuracoes" class="section-panel" data-testid="section-configuracoes">
+            <h2 class="text-2xl font-bold mb-2">Configurações Gerais</h2>
+            <p class="text-sm text-neutral-500 mb-8">Personalize as informações do seu negócio e do bot.</p>
+            <div class="space-y-6">
+                <div class="card-base p-6" data-testid="config-negocio-card">
+                    <h3 class="text-base font-semibold mb-4 flex items-center gap-2"><i data-lucide="store" style="width:18px;height:18px;color:#F59E0B"></i> Dados do Negócio</h3>
+                    <div class="space-y-4">
+                        <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nome do negócio</label><input type="text" class="input-base" id="configNomeNegocio" data-testid="config-nome-negocio"></div>
+                        <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Endereço</label><input type="text" class="input-base" placeholder="Rua, número, bairro, cidade" id="configEndereco" data-testid="config-endereco"></div>
+                        <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">WhatsApp de atendimento</label><input type="text" class="input-base" placeholder="(32) 99999-0000" id="configWhatsApp" data-testid="config-whatsapp"></div>
+                        <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Google Calendar ID</label><div class="flex gap-2"><input type="text" class="input-base flex-1" id="configGoogleCalendarId" placeholder="exemplo@group.calendar.google.com" data-testid="config-google-calendar-id"><a href="https://support.google.com/calendar/answer/37082" target="_blank" class="text-xs text-amber-500 hover:text-amber-400 transition-colors whitespace-nowrap self-center">Como obter &rarr;</a></div></div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Intervalo entre agendamentos</label><select class="input-base" id="configIntervalo" data-testid="config-intervalo"><option value="15">15 minutos</option><option value="30" selected>30 minutos</option><option value="45">45 minutos</option><option value="60">60 minutos</option></select></div>
+                            <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Antecedência mínima</label><select class="input-base" id="configAntecedencia" data-testid="config-antecedencia"><option value="1">1 hora</option><option value="2" selected>2 horas</option><option value="4">4 horas</option><option value="12">12 horas</option><option value="24">24 horas</option></select></div>
+                        </div>
+                        <div class="flex items-center justify-between p-3 rounded-lg" style="background:rgba(255,255,255,0.02)"><div><p class="text-sm font-medium">Confirmar agendamento manualmente</p><p class="text-xs text-neutral-500">Cada agendamento precisa da sua confirmação</p></div><label class="toggle-switch"><input type="checkbox" id="configConfirmarManual" data-testid="config-confirmar-manual"><span class="toggle-slider"></span></label></div>
+                        <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Saudação inicial do bot</label><textarea class="input-base h-20 resize-none" id="configSaudacao" data-testid="config-saudacao">Olá! Bem-vindo(a) ao {nome_negocio}. Como posso ajudar?</textarea></div>
+                        <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Mensagem de encerramento</label><textarea class="input-base h-20 resize-none" id="configEncerramento" data-testid="config-encerramento">Obrigado pelo contato! Até a próxima.</textarea></div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Fuso horário</label><select class="input-base" id="configFuso" data-testid="config-fuso"><option value="America/Sao_Paulo" selected>América/São Paulo (BRT)</option><option value="America/Manaus">América/Manaus (AMT)</option><option value="America/Belem">América/Belém (BRT)</option></select></div>
+                            <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Idioma</label><select class="input-base" id="configIdioma" data-testid="config-idioma"><option value="pt-BR" selected>Português (Brasil)</option><option value="en">English</option><option value="es">Español</option></select></div>
+                        </div>
+                        <button onclick="salvarConfiguracoes()" class="btn-amber w-full" data-testid="salvar-config-btn">Salvar Configurações</button>
+                    </div>
+                </div>
+                <div class="card-base p-6" data-testid="config-assinatura-card">
+                    <h3 class="text-base font-semibold mb-4 flex items-center gap-2"><i data-lucide="credit-card" style="width:18px;height:18px;color:#F59E0B"></i> Minha Assinatura</h3>
+                    <div class="grid grid-cols-3 gap-4 mb-4">
+                        <div class="p-3 rounded-lg" style="background:rgba(255,255,255,0.02)"><p class="text-xs text-neutral-500">Plano</p><p class="text-sm font-semibold mt-1" id="configPlano" data-testid="config-plano">Mensal</p></div>
+                        <div class="p-3 rounded-lg" style="background:rgba(255,255,255,0.02)"><p class="text-xs text-neutral-500">Renovação</p><p class="text-sm font-semibold mt-1" id="configRenovacao" data-testid="config-renovacao">25/02/2026</p></div>
+                        <div class="p-3 rounded-lg" style="background:rgba(255,255,255,0.02)"><p class="text-xs text-neutral-500">Status</p><p class="text-sm font-semibold mt-1 text-green-500" id="configStatus" data-testid="config-status">Ativo</p></div>
+                    </div>
+                    <a href="https://wa.me/553299401356?text=Olá!+Quero+gerenciar+minha+assinatura+CalFlow." target="_blank" class="btn-outline w-full text-center block text-sm" data-testid="gerenciar-assinatura-btn">Gerenciar Assinatura</a>
+                </div>
+                <div class="card-base p-6" data-testid="config-seguranca-card">
+                    <h3 class="text-base font-semibold mb-4 flex items-center gap-2"><i data-lucide="shield" style="width:18px;height:18px;color:#F59E0B"></i> Segurança</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between p-3 rounded-lg" style="background:rgba(255,255,255,0.02)">
+                            <div><p class="text-sm font-medium">Meu usuário</p><p class="text-xs text-neutral-500 mt-0.5" id="configUserDisplay" data-testid="config-user-display">joao4821</p></div>
+                            <button onclick="copyToClipboard(document.getElementById('configUserDisplay').textContent)" class="text-neutral-500 hover:text-white transition-colors" data-testid="copy-user-btn"><i data-lucide="copy" style="width:16px;height:16px"></i></button>
+                        </div>
+                        <button onclick="openModalAlterarSenha()" class="btn-outline w-full text-sm" data-testid="alterar-senha-btn">Alterar Senha</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== ADMIN: TODOS OS CLIENTES ===== -->
+        <div id="section-admin-clientes" class="section-panel" data-testid="section-admin-clientes">
+            <h2 class="text-2xl font-bold mb-2">Todos os Clientes</h2>
+            <p class="text-sm text-neutral-500 mb-8">Gerencie todos os clientes cadastrados no CalFlow.</p>
+            <div class="card-base p-6">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm" id="adminClientesTable" data-testid="admin-clientes-table">
+                        <thead><tr class="text-left text-neutral-500 text-xs border-b border-white/5"><th class="pb-3 font-medium">Usuário</th><th class="pb-3 font-medium">Nome</th><th class="pb-3 font-medium">Negócio</th><th class="pb-3 font-medium">Instância</th><th class="pb-3 font-medium">Plano</th><th class="pb-3 font-medium">Status</th><th class="pb-3 font-medium text-right">Ações</th></tr></thead>
+                        <tbody id="adminClientesTbody" data-testid="admin-clientes-tbody">
+                        <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== ADMIN: CRIAR CLIENTE ===== -->
+        <div id="section-admin-criar" class="section-panel" data-testid="section-admin-criar">
+            <h2 class="text-2xl font-bold mb-2">Criar Novo Cliente</h2>
+            <p class="text-sm text-neutral-500 mb-8">Cadastre um novo cliente no sistema CalFlow.</p>
+            <div class="card-base p-6 max-w-2xl">
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nome completo</label><input type="text" class="input-base" id="novoNome" placeholder="Nome completo" data-testid="novo-nome-input"></div>
+                        <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nome do negócio</label><input type="text" class="input-base" id="novoNegocio" placeholder="Nome do negócio" data-testid="novo-negocio-input"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">WhatsApp</label><input type="text" class="input-base" id="novoWhatsApp" placeholder="(32) 99999-0000" data-testid="novo-whatsapp-input"></div>
+                        <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">E-mail</label><input type="email" class="input-base" id="novoEmail" placeholder="email@exemplo.com" data-testid="novo-email-input"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Plano</label><select class="input-base" id="novoPlano" data-testid="novo-plano-select"><option value="Mensal">Mensal</option><option value="Anual">Anual</option></select></div>
+                        <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Data de início</label><input type="date" class="input-base" id="novoDataInicio" data-testid="novo-data-inicio-input"></div>
+                    </div>
+                    <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Observações</label><textarea class="input-base h-20 resize-none" id="novoObs" placeholder="Observações sobre o cliente..." data-testid="novo-obs-input"></textarea></div>
+                    <div class="flex items-center gap-3 p-3 rounded-lg" style="background:rgba(255,255,255,0.02)">
+                        <label class="toggle-switch"><input type="checkbox" checked id="novoGerarCredenciais"><span class="toggle-slider"></span></label>
+                        <p class="text-sm">Gerar credenciais automaticamente</p>
+                    </div>
+                    <button onclick="criarCliente()" class="btn-amber w-full" data-testid="criar-cliente-btn">Cadastrar Cliente</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== ADMIN: CONFIG GLOBAIS ===== -->
+        <div id="section-admin-config" class="section-panel" data-testid="section-admin-config">
+            <h2 class="text-2xl font-bold mb-2">Configurações Globais</h2>
+            <p class="text-sm text-neutral-500 mb-8">Ajuste os valores e parâmetros globais do CalFlow.</p>
+            <div class="card-base p-6 max-w-2xl">
+                <div class="space-y-4">
+                    <div class="grid grid-cols-3 gap-4">
+                        <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Plano Mensal (R$)</label><input type="number" class="input-base" value="197" data-testid="global-preco-mensal"></div>
+                        <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Plano Anual (R$)</label><input type="number" class="input-base" value="2197" data-testid="global-preco-anual"></div>
+                        <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Implantação (R$)</label><input type="number" class="input-base" value="497" data-testid="global-preco-implantacao"></div>
+                    </div>
+                    <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Telefone de suporte</label><input type="text" class="input-base" value="(32) 9940-1356" data-testid="global-telefone-suporte"></div>
+                    <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Mensagem de boas-vindas padrão do bot</label><textarea class="input-base h-24 resize-none" data-testid="global-msg-boas-vindas">Olá! Bem-vindo(a). Escolha uma opção:
+
+1 - Agendar horário
+2 - Consultar agenda
+3 - Cancelar agendamento</textarea></div>
+                    <div class="border-t border-white/5 pt-4 mt-4">
+                        <h4 class="text-sm font-semibold mb-3 text-amber-500">Evolution API</h4>
+                        <div class="space-y-4">
+                            <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">URL da Evolution API</label><input type="text" class="input-base" id="globalEvolutionUrl" placeholder="https://api.evolution.example.com" data-testid="global-evolution-url"></div>
+                            <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Evolution API Key</label><div class="relative"><input type="password" class="input-base pr-10" id="globalEvolutionKey" placeholder="Chave de acesso da API" data-testid="global-evolution-key"><button type="button" onclick="toggleField('globalEvolutionKey')" class="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white transition-colors"><i data-lucide="eye" style="width:16px;height:16px"></i></button></div></div>
+                            <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">URL base do sistema</label><input type="text" class="input-base" id="globalBaseUrl" placeholder="https://calflow.app.br" data-testid="global-base-url"></div>
+                            <button onclick="testarEvolutionAPI()" class="btn-outline w-full text-sm" data-testid="testar-evolution-btn">Testar conexão Evolution API</button>
+                        </div>
+                    </div>
+                    <button onclick="salvarConfigGlobais()" class="btn-amber w-full mt-4" data-testid="salvar-config-globais-btn">Salvar Configurações Globais</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== ADMIN: LOGS ===== -->
+        <div id="section-admin-logs" class="section-panel" data-testid="section-admin-logs">
+            <h2 class="text-2xl font-bold mb-2">Logs do Sistema</h2>
+            <p class="text-sm text-neutral-500 mb-8">Acompanhe as atividades e eventos do sistema.</p>
+            <div class="card-base p-6">
+                <div class="space-y-2 font-mono text-xs" data-testid="logs-container">
+                    <p class="text-green-500">[2026-01-25 09:01:12] Sistema iniciado com sucesso</p>
+                    <p class="text-neutral-400">[2026-01-25 09:05:33] Novo agendamento: Carlos M. - Corte - 14:00</p>
+                    <p class="text-neutral-400">[2026-01-25 09:12:45] Lembrete enviado para Maria L. (amanhã 09:00)</p>
+                    <p class="text-amber-500">[2026-01-25 09:15:00] Pagamento PIX pendente: Ana P. - R$ 35,00</p>
+                    <p class="text-neutral-400">[2026-01-25 09:20:18] Pagamento confirmado: Carlos M. - R$ 45,00</p>
+                    <p class="text-neutral-400">[2026-01-25 09:30:00] Webhook recebido: status atualizado</p>
+                    <p class="text-red-400">[2026-01-25 09:35:12] Erro: tentativa de agendamento em horário indisponível</p>
+                    <p class="text-neutral-400">[2026-01-25 09:40:00] Backup automático realizado</p>
+                    <p class="text-green-500">[2026-01-25 10:00:00] Instância WhatsApp reconectada</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<!-- ====== WHATSAPP FLOAT ====== -->
+<a href="https://wa.me/553299401356?text=Preciso+de+suporte+CalFlow" target="_blank" class="fixed bottom-6 right-6 z-50 bg-green-500 text-white p-4 rounded-full shadow-[0_0_24px_rgba(34,197,94,0.4)] hover:scale-110 transition-transform group" data-testid="whatsapp-float-btn">
+    <i data-lucide="message-circle" style="width:28px;height:28px"></i>
+    <span class="absolute bottom-full right-0 mb-2 px-3 py-1.5 rounded-lg text-xs font-medium text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" style="background:#141414;border:1px solid rgba(255,255,255,0.06)">Fale conosco no WhatsApp</span>
+</a>
+
+<!-- ====== JAVASCRIPT ====== -->
+<script>
+    // ===========================
+    // DATA & STATE
+    // ===========================
+    const USUARIOS = {
+        "joao4821": { senha: "Kf7#mP2q", tipo: "cliente", nome: "João Silva", negocio: "Barbearia do João", plano: "Mensal", status: "ativo" },
+        "maria9234": { senha: "Xp3@nK8w", tipo: "cliente", nome: "Maria Souza", negocio: "Studio Bella", plano: "Anual", status: "ativo" },
+        "admin": { senha: "CalFlow@2026Admin", tipo: "admin", nome: "Luan (Admin)", negocio: "CalFlow", plano: "Master", status: "ativo" }
+    };
+
+    let usuarioAtual = null;
+    let qrTimerInterval = null;
+    let pollingInterval = null;
+    let qrState = 'loading';
+
+    const SERVICOS_DEFAULT = [
+        { id: 1, nome: 'Corte de cabelo', duracao: 45, preco: 45, ativo: true, pixAntecipado: true },
+        { id: 2, nome: 'Barba', duracao: 30, preco: 35, ativo: true, pixAntecipado: true },
+        { id: 3, nome: 'Corte + Barba', duracao: 60, preco: 70, ativo: true, pixAntecipado: true }
+    ];
+
+    const FUNCIONARIOS_DEFAULT = [
+        { id: 1, nome: 'Proprietário', funcao: 'Barbeiro', ativo: true, servicos: [1, 2, 3] }
+    ];
+
+    const HORARIOS_DEFAULT = {
+        segunda: { ativo: true, abertura: '09:00', fechamento: '18:00' },
+        terca: { ativo: true, abertura: '09:00', fechamento: '18:00' },
+        quarta: { ativo: true, abertura: '09:00', fechamento: '18:00' },
+        quinta: { ativo: true, abertura: '09:00', fechamento: '18:00' },
+        sexta: { ativo: true, abertura: '09:00', fechamento: '18:00' },
+        sabado: { ativo: true, abertura: '09:00', fechamento: '14:00' },
+        domingo: { ativo: false, abertura: '09:00', fechamento: '13:00' },
+        almoco: { ativo: true, inicio: '12:00', fim: '13:00' }
+    };
+
+    const LEMBRETES_DEFAULT = {
+        lembrete24h: { ativo: true, msg: 'Olá {nome_cliente}! Lembrete: você tem {servico} amanhã às {hora} com {profissional}. Valor: {valor}. Confirme respondendo SIM.' },
+        lembrete1h: { ativo: true, msg: 'Olá {nome_cliente}! Falta 1 hora para seu {servico} às {hora}. Estamos te esperando!' },
+        confirmacao: { ativo: true, msg: 'Agendamento confirmado! {servico} no dia {data} às {hora} com {profissional}. Valor: {valor}. Até lá!' },
+        agradecimento: { ativo: false, msg: 'Obrigado pela visita, {nome_cliente}! Esperamos que tenha gostado. Agende seu próximo horário pelo WhatsApp!' }
+    };
+
+    let servicos = [];
+    let funcionarios = [];
+
+    // ===========================
+    // CRÍTICO 1: USER DATA ISOLATION
+    // ===========================
+    function storageKey(key) {
+        return 'calflow_' + (usuarioAtual ? usuarioAtual.usuario : 'anon') + '_' + key;
+    }
+
+    function getUD(key, defaultValue) {
+        try {
+            const v = localStorage.getItem(storageKey(key));
+            return v !== null ? JSON.parse(v) : defaultValue;
+        } catch(e) { return defaultValue; }
+    }
+
+    function setUD(key, value) {
+        try { localStorage.setItem(storageKey(key), JSON.stringify(value)); }
+        catch(e) {}
+    }
+
+    function showSaveIndicator(sectionTitle) {
+        const indicator = document.createElement('span');
+        indicator.className = 'text-xs font-semibold ml-2';
+        indicator.style.color = '#22c55e';
+        indicator.textContent = '✓ Salvo';
+        indicator.dataset.testid = 'save-indicator';
+        sectionTitle.appendChild(indicator);
+        setTimeout(() => indicator.remove(), 2500);
+    }
+
+    // ===========================
+    // INIT
+    // ===========================
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        // CRÍTICO 3: Check remember me first
+        const remembered = localStorage.getItem('calflow_remember');
+        if (remembered) {
+            try {
+                const d = JSON.parse(remembered);
+                const u = USUARIOS[d.usuario];
+                if (u && u.senha === d.senha) {
+                    usuarioAtual = { ...u, usuario: d.usuario };
+                    sessionStorage.setItem('calflow_user', JSON.stringify({ usuario: d.usuario }));
+                    enterDashboard();
+                    return;
+                }
+            } catch(e) { localStorage.removeItem('calflow_remember'); }
+        }
+        checkSession();
+        document.getElementById('loginPass').addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });
+        document.getElementById('loginUser').addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });
+    });
+
+    function checkSession() {
+        const saved = sessionStorage.getItem('calflow_user');
+        if (saved) {
+            try {
+                const data = JSON.parse(saved);
+                const u = USUARIOS[data.usuario];
+                if (u) {
+                    usuarioAtual = { ...u, usuario: data.usuario };
+                    enterDashboard();
+                }
+            } catch(e) { sessionStorage.removeItem('calflow_user'); }
+        }
+    }
+
+    // ===========================
+    // LOGIN / LOGOUT
+    // ===========================
+    function doLogin() {
+        const user = document.getElementById('loginUser').value.trim();
+        const pass = document.getElementById('loginPass').value;
+        const errorDiv = document.getElementById('loginError');
+        const errorText = document.getElementById('loginErrorText');
+
+        if (!user || !pass) {
+            errorText.textContent = 'Preencha todos os campos';
+            errorDiv.classList.remove('hidden');
+            errorDiv.parentElement.classList.add('shake');
+            setTimeout(() => errorDiv.parentElement.classList.remove('shake'), 500);
+            return;
+        }
+
+        const u = USUARIOS[user];
+        if (!u || u.senha !== pass) {
+            errorText.textContent = 'Usuário ou senha incorretos';
+            errorDiv.classList.remove('hidden');
+            errorDiv.parentElement.classList.add('shake');
+            setTimeout(() => errorDiv.parentElement.classList.remove('shake'), 500);
+            return;
+        }
+
+        errorDiv.classList.add('hidden');
+        usuarioAtual = { ...u, usuario: user };
+        sessionStorage.setItem('calflow_user', JSON.stringify({ usuario: user }));
+
+        // CRÍTICO 3: Remember me
+        const rememberCheck = document.getElementById('rememberCheck');
+        if (rememberCheck && rememberCheck.checked) {
+            localStorage.setItem('calflow_remember', JSON.stringify({ usuario: user, senha: pass }));
+        }
+
+        enterDashboard();
+    }
+
+    function doLogout() {
+        clearAllTimers();
+        const hasRemember = localStorage.getItem('calflow_remember');
+        if (hasRemember) {
+            openConfirmModal('Sair do sistema', 'Deseja manter o acesso salvo neste dispositivo?',
+                function() {
+                    // Sair e manter
+                    sessionStorage.removeItem('calflow_user');
+                    usuarioAtual = null;
+                    goToLogin();
+                },
+                'Manter salvo',
+                'Remover acesso',
+                function() {
+                    // Sair e remover
+                    localStorage.removeItem('calflow_remember');
+                    sessionStorage.removeItem('calflow_user');
+                    usuarioAtual = null;
+                    goToLogin();
+                }
+            );
+        } else {
+            sessionStorage.removeItem('calflow_user');
+            usuarioAtual = null;
+            goToLogin();
+        }
+    }
+
+    function goToLogin() {
+        document.getElementById('screen-dashboard').classList.remove('active');
+        document.getElementById('screen-login').classList.add('active');
+        document.getElementById('loginUser').value = '';
+        document.getElementById('loginPass').value = '';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function enterDashboard() {
+        document.getElementById('screen-login').classList.remove('active');
+        document.getElementById('screen-dashboard').classList.add('active');
+        loadUserData();
+        setupDashboard();
+    }
+
+    // ===========================
+    // LOAD/SAVE USER DATA
+    // ===========================
+    function loadUserData() {
+        servicos = getUD('servicos', [...SERVICOS_DEFAULT]);
+        funcionarios = getUD('funcionarios', [...FUNCIONARIOS_DEFAULT]);
+    }
+
+    // ===========================
+    // DASHBOARD SETUP
+    // ===========================
+    function setupDashboard() {
+        const initials = usuarioAtual.nome.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        document.getElementById('sidebarAvatar').textContent = initials;
+        document.getElementById('sidebarNegocio').textContent = usuarioAtual.negocio;
+        document.getElementById('sidebarNome').textContent = usuarioAtual.nome;
+
+        const hora = new Date().getHours();
+        const saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
+        const primeiroNome = usuarioAtual.nome.split(' ')[0];
+        document.getElementById('greetingText').textContent = saudacao + ', ' + primeiroNome + '!';
+
+        // Load config from user data
+        const config = getUD('configuracoes', {});
+        document.getElementById('configNomeNegocio').value = config.nomeNegocio || usuarioAtual.negocio;
+        document.getElementById('configPlano').textContent = usuarioAtual.plano;
+        document.getElementById('configUserDisplay').textContent = usuarioAtual.usuario;
+        if (document.getElementById('configEndereco')) document.getElementById('configEndereco').value = config.endereco || '';
+        if (document.getElementById('configWhatsApp')) document.getElementById('configWhatsApp').value = config.whatsapp || '';
+        if (document.getElementById('configSaudacao')) document.getElementById('configSaudacao').value = config.saudacao || 'Olá! Bem-vindo(a) ao {nome_negocio}. Como posso ajudar?';
+        if (document.getElementById('configEncerramento')) document.getElementById('configEncerramento').value = config.encerramento || 'Obrigado pelo contato! Até a próxima.';
+        if (document.getElementById('configFuso')) document.getElementById('configFuso').value = config.fuso || 'America/Sao_Paulo';
+        if (document.getElementById('configIdioma')) document.getElementById('configIdioma').value = config.idioma || 'pt-BR';
+        if (document.getElementById('configGoogleCalendarId')) document.getElementById('configGoogleCalendarId').value = config.googleCalendarId || '';
+        if (document.getElementById('configIntervalo')) document.getElementById('configIntervalo').value = config.intervalo || '30';
+        if (document.getElementById('configAntecedencia')) document.getElementById('configAntecedencia').value = config.antecedencia || '2';
+        if (document.getElementById('configConfirmarManual')) document.getElementById('configConfirmarManual').checked = config.confirmarManual || false;
+
+        // Load pagamentos
+        const pag = getUD('pagamentos', {});
+        if (document.getElementById('mpToken')) document.getElementById('mpToken').value = pag.token || '';
+        if (document.getElementById('mpChavePix')) document.getElementById('mpChavePix').value = pag.chavePix || '';
+        if (document.getElementById('mpNomePix')) document.getElementById('mpNomePix').value = pag.nomePix || '';
+
+        // Load lembretes
+        const lem = getUD('lembretes', LEMBRETES_DEFAULT);
+        const lem24 = document.querySelector('[data-testid="lembrete-24h-msg"]');
+        if (lem24) lem24.value = lem.lembrete24h ? lem.lembrete24h.msg : LEMBRETES_DEFAULT.lembrete24h.msg;
+        const lem1h = document.querySelector('[data-testid="lembrete-1h-msg"]');
+        if (lem1h) lem1h.value = lem.lembrete1h ? lem.lembrete1h.msg : LEMBRETES_DEFAULT.lembrete1h.msg;
+        const lemConf = document.querySelector('[data-testid="lembrete-confirmacao-msg"]');
+        if (lemConf) lemConf.value = lem.confirmacao ? lem.confirmacao.msg : LEMBRETES_DEFAULT.confirmacao.msg;
+        const lemAgr = document.querySelector('[data-testid="lembrete-agradecimento-msg"]');
+        if (lemAgr) lemAgr.value = lem.agradecimento ? lem.agradecimento.msg : LEMBRETES_DEFAULT.agradecimento.msg;
+
+        // Load horários
+        const hor = getUD('horarios', HORARIOS_DEFAULT);
+        loadHorariosUI(hor);
+
+        // Admin badge
+        if (usuarioAtual.tipo === 'admin') {
+            document.getElementById('adminBadgeArea').classList.remove('hidden');
+        } else {
+            document.getElementById('adminBadgeArea').classList.add('hidden');
+        }
+
+        buildSidebarNav();
+        renderServicos();
+        renderFuncionarios();
+        renderDashboardMetrics();
+        if (usuarioAtual.tipo === 'admin') renderAdminClientes();
+
+        showSection('dashboard');
+        setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 100);
+    }
+
+    function loadHorariosUI(hor) {
+        const dias = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
+        dias.forEach(dia => {
+            const d = hor[dia] || HORARIOS_DEFAULT[dia];
+            const horariosDiv = document.getElementById('horarios-' + dia);
+            const label = document.getElementById('label-' + dia);
+            const toggleInput = horariosDiv ? horariosDiv.previousElementSibling.querySelector('input[type="checkbox"]') : null;
+            if (toggleInput) toggleInput.checked = d.ativo;
+            if (horariosDiv) horariosDiv.style.display = d.ativo ? 'flex' : 'none';
+            if (label) label.textContent = d.ativo ? 'Aberto' : 'Fechado';
+            const aberturaInput = document.querySelector('[data-testid="horario-' + dia + '-abertura"]');
+            const fechamentoInput = document.querySelector('[data-testid="horario-' + dia + '-fechamento"]');
+            if (aberturaInput) aberturaInput.value = d.abertura || '09:00';
+            if (fechamentoInput) fechamentoInput.value = d.fechamento || '18:00';
+        });
+        // Almoco
+        const almoco = hor.almoco || HORARIOS_DEFAULT.almoco;
+        const almocoToggle = document.getElementById('toggleAlmoco');
+        if (almocoToggle) almocoToggle.checked = almoco.ativo;
+        const almocoDiv = document.getElementById('horarios-almoco');
+        if (almocoDiv) almocoDiv.style.display = almoco.ativo ? 'flex' : 'none';
+        const almocoInicio = document.querySelector('[data-testid="horario-almoco-inicio"]');
+        const almocoFim = document.querySelector('[data-testid="horario-almoco-fim"]');
+        if (almocoInicio) almocoInicio.value = almoco.inicio || '12:00';
+        if (almocoFim) almocoFim.value = almoco.fim || '13:00';
+    }
+
+    // ===========================
+    // CORREÇÃO 6: DASHBOARD METRICS FROM USER DATA
+    // ===========================
+    function renderDashboardMetrics() {
+        const agendamentos = getUD('agendamentos', []);
+        const hoje = new Date().toISOString().split('T')[0];
+        const hojeAgendamentos = agendamentos.filter(a => a.data === hoje);
+        const confirmados = agendamentos.filter(a => a.status === 'Confirmado');
+        const faltasHoje = hojeAgendamentos.filter(a => a.status === 'Falta');
+        const receitaHoje = hojeAgendamentos.filter(a => a.status === 'Confirmado').reduce((sum, a) => sum + (a.valor || 0), 0);
+
+        // Update metric cards
+        const metricAgend = document.querySelector('[data-testid="metric-agendamentos"] p.text-2xl');
+        if (metricAgend) metricAgend.textContent = hojeAgendamentos.length;
+        const metricConf = document.querySelector('[data-testid="metric-confirmados"] p.text-2xl');
+        if (metricConf) metricConf.textContent = confirmados.length;
+        const metricFaltas = document.querySelector('[data-testid="metric-faltas"] p.text-2xl');
+        if (metricFaltas) metricFaltas.innerHTML = faltasHoje.length + ' <span class="text-sm text-neutral-500 font-normal">de ' + hojeAgendamentos.length + '</span>';
+        const metricReceita = document.querySelector('[data-testid="metric-receita"] p.text-2xl');
+        if (metricReceita) metricReceita.textContent = 'R$ ' + receitaHoje.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+        // Update upcoming appointments table
+        renderUpcomingAppointments(agendamentos);
+
+        // Update agendamentos section table
+        renderAgendamentosTable(agendamentos);
+
+        // Update Google Calendar
+        renderGoogleCalendar();
+    }
+
+    function renderUpcomingAppointments(agendamentos) {
+        const tbody = document.querySelector('[data-testid="upcoming-appointments"] tbody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        if (agendamentos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-neutral-500 text-sm">Nenhum agendamento encontrado</td></tr>';
+            return;
+        }
+
+        const proximos = agendamentos.slice(0, 5);
+        proximos.forEach(a => {
+            const statusStyle = a.status === 'Confirmado' ? 'background:rgba(34,197,94,0.1);color:#22c55e' :
+                                a.status === 'Cancelado' ? 'background:rgba(239,68,68,0.1);color:#ef4444' :
+                                'background:rgba(245,158,11,0.1);color:#F59E0B';
+            const valorClass = a.status === 'Cancelado' ? 'text-neutral-600 line-through' : 'font-medium';
+            tbody.innerHTML += '<tr class="table-row border-b border-white/5"><td class="py-3 font-medium">' + (a.hora || '') + '</td>' +
+                '<td class="py-3 text-neutral-300">' + (a.cliente || '') + '</td>' +
+                '<td class="py-3 text-neutral-400">' + (a.servico || '') + '</td>' +
+                '<td class="py-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="' + statusStyle + '">' + (a.status || 'Pendente') + '</span></td>' +
+                '<td class="py-3 text-right ' + valorClass + '">R$ ' + ((a.valor || 0).toFixed(2).replace('.', ',')) + '</td></tr>';
+        });
+    }
+
+    function renderAgendamentosTable(agendamentos) {
+        const tbody = document.querySelector('[data-testid="agendamentos-table"] tbody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        if (agendamentos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-neutral-500 text-sm">Nenhum agendamento encontrado</td></tr>';
+            return;
+        }
+
+        agendamentos.forEach(a => {
+            const statusStyle = a.status === 'Confirmado' ? 'background:rgba(34,197,94,0.1);color:#22c55e' :
+                                a.status === 'Cancelado' ? 'background:rgba(239,68,68,0.1);color:#ef4444' :
+                                'background:rgba(245,158,11,0.1);color:#F59E0B';
+            const valorClass = a.status === 'Cancelado' ? 'text-neutral-600 line-through' : 'font-medium';
+            tbody.innerHTML += '<tr class="table-row border-b border-white/5"><td class="py-3">' + (a.data || '') + '</td>' +
+                '<td class="py-3 font-medium">' + (a.hora || '') + '</td>' +
+                '<td class="py-3 text-neutral-300">' + (a.cliente || '') + '</td>' +
+                '<td class="py-3 text-neutral-400">' + (a.servico || '') + '</td>' +
+                '<td class="py-3 text-neutral-400">' + (a.profissional || '') + '</td>' +
+                '<td class="py-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="' + statusStyle + '">' + (a.status || 'Pendente') + '</span></td>' +
+                '<td class="py-3 text-right ' + valorClass + '">R$ ' + ((a.valor || 0).toFixed(2).replace('.', ',')) + '</td></tr>';
+        });
+    }
+
+    // ===========================
+    // CORREÇÃO 7: GOOGLE CALENDAR
+    // ===========================
+    function renderGoogleCalendar() {
+        const container = document.getElementById('googleCalendarContent');
+        if (!container) return;
+        const config = getUD('configuracoes', {});
+        const calendarId = config.googleCalendarId;
+        if (!calendarId) {
+            container.innerHTML = '<div class="text-center py-6"><p class="text-sm text-neutral-500 mb-3">Configure seu Google Calendar ID em Configurações para ver o calendário sincronizado aqui.</p>' +
+                '<button onclick="showSection(\'configuracoes\')" class="btn-outline text-sm">Configurar</button></div>';
+        } else {
+            const embedUrl = 'https://calendar.google.com/calendar/embed?' +
+                'src=' + encodeURIComponent(calendarId) +
+                '&ctz=America%2FSao_Paulo&mode=WEEK&showTitle=0&showNav=1' +
+                '&showDate=1&showPrint=0&showTabs=0&showCalendars=0';
+            container.innerHTML = '<iframe src="' + embedUrl + '" style="width:100%;height:500px;border:none;border-radius:1rem;filter:invert(0.9) hue-rotate(180deg);" frameborder="0" scrolling="no" data-testid="google-calendar-iframe"></iframe>';
+        }
+        setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 50);
+    }
+
+    // ===========================
+    // SIDEBAR NAV
+    // ===========================
+    function buildSidebarNav() {
+        const nav = document.getElementById('sidebarNav');
+        let links = [
+            { id: 'dashboard', icon: 'home', label: 'Dashboard' },
+            { id: 'qrcode', icon: 'qr-code', label: 'QR Code' },
+            { id: 'agendamentos', icon: 'calendar', label: 'Agendamentos' },
+            { id: 'horarios', icon: 'clock', label: 'Horários' },
+            { id: 'servicos', icon: 'tag', label: 'Serviços e Preços' },
+            { id: 'funcionarios', icon: 'users', label: 'Funcionários' },
+            { id: 'pagamentos', icon: 'wallet', label: 'Pagamentos' },
+            { id: 'lembretes', icon: 'bell', label: 'Lembretes' },
+            { id: 'configuracoes', icon: 'settings', label: 'Configurações' }
+        ];
+
+        if (usuarioAtual.tipo === 'admin') {
+            links.push({ divider: true });
+            links.push({ id: 'admin-clientes', icon: 'users', label: 'Todos os Clientes' });
+            links.push({ id: 'admin-criar', icon: 'user-plus', label: 'Criar Cliente' });
+            links.push({ id: 'admin-config', icon: 'sliders', label: 'Config. Globais' });
+            links.push({ id: 'admin-logs', icon: 'terminal', label: 'Logs do Sistema' });
+        }
+
+        nav.innerHTML = '';
+        links.forEach(link => {
+            if (link.divider) {
+                nav.innerHTML += '<div class="border-t border-white/5 my-3 mx-3"></div><p class="text-xs text-neutral-600 font-semibold px-5 mb-2 tracking-wider">ADMIN</p>';
+                return;
+            }
+            const activeClass = link.id === 'dashboard' ? ' active' : '';
+            nav.innerHTML += '<div class="sidebar-link' + activeClass + '" onclick="showSection(\'' + link.id + '\')" data-section="' + link.id + '" data-testid="nav-' + link.id + '">' +
+                '<i data-lucide="' + link.icon + '" style="width:18px;height:18px"></i> ' + link.label + '</div>';
+        });
+
+        setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 50);
+    }
+
+    // ===========================
+    // SECTION NAVIGATION
+    // ===========================
+    function showSection(sectionId) {
+        if (qrState !== 'connected') clearAllTimers();
+        document.querySelectorAll('.section-panel').forEach(s => s.classList.remove('active'));
+        const target = document.getElementById('section-' + sectionId);
+        if (target) target.classList.add('active');
+        document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+        const navItem = document.querySelector('[data-section="' + sectionId + '"]');
+        if (navItem) navItem.classList.add('active');
+        closeMobileSidebar();
+        if (sectionId === 'qrcode') initQRSection();
+        if (sectionId === 'agendamentos') renderGoogleCalendar();
+        setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 50);
+    }
+
+    // ===========================
+    // MOBILE SIDEBAR
+    // ===========================
+    function toggleMobileSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('sidebarOverlay').classList.toggle('open');
+    }
+    function closeMobileSidebar() {
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('sidebarOverlay').classList.remove('open');
+    }
+
+    // ===========================
+    // QR CODE SECTION (CRÍTICO 4)
+    // ===========================
+    const USE_EVOLUTION_API = false; // Set to true when backend Spring Boot is available
+
+    function initQRSection() {
+        // Update instance info
+        const instanceName = 'calflow_' + (usuarioAtual ? usuarioAtual.usuario : 'demo');
+        const instEl = document.getElementById('qrInstanceName');
+        if (instEl) instEl.textContent = instanceName;
+        const webhookEl = document.getElementById('qrWebhookUrl');
+        if (webhookEl) webhookEl.textContent = '/api/webhook/whatsapp/' + (usuarioAtual ? usuarioAtual.usuario : 'demo');
+
+        setQRState('loading');
+        setTimeout(() => {
+            setQRState('scanning');
+            loadQRCode();
+        }, 1500);
+    }
+
+    function setQRState(state) {
+        qrState = state;
+        document.getElementById('qr-state-loading').classList.add('hidden');
+        document.getElementById('qr-state-scanning').classList.add('hidden');
+        document.getElementById('qr-state-connected').classList.add('hidden');
+        document.getElementById('qr-state-disconnected').classList.add('hidden');
+        const el = document.getElementById('qr-state-' + state);
+        if (el) el.classList.remove('hidden');
+        // Update status detail
+        const statusDetail = document.getElementById('qrStatusDetail');
+        if (statusDetail) {
+            const labels = { loading: 'Criando instância...', scanning: 'Aguardando escaneamento', connected: 'Conectado', disconnected: 'Desconectado' };
+            const colors = { loading: '#F59E0B', scanning: '#F59E0B', connected: '#22c55e', disconnected: '#ef4444' };
+            statusDetail.textContent = labels[state] || state;
+            statusDetail.style.color = colors[state] || '#F59E0B';
+        }
+        if (state === 'connected' || state === 'disconnected' || state === 'loading') {
+            clearAllTimers();
+        }
+    }
+
+    function clearAllTimers() {
+        if (qrTimerInterval) { clearInterval(qrTimerInterval); qrTimerInterval = null; }
+        if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
+    }
+
+    function loadQRCode() {
+        clearAllTimers();
+        const container = document.getElementById('qrcode-container');
+        container.innerHTML = '';
+
+        if (USE_EVOLUTION_API) {
+            // MODO PRODUÇÃO: Fetch from Evolution API
+            // const instanceName = 'calflow_' + usuarioAtual.usuario;
+            // const token = sessionStorage.getItem('calflow_token');
+            // fetch('/api/evolution/qrcode/' + instanceName, { headers: { 'Authorization': 'Bearer ' + token } })
+            //     .then(r => r.json())
+            //     .then(data => {
+            //         if (data.base64) {
+            //             container.innerHTML = '<img src="' + data.base64 + '" style="width:234px;height:234px;border-radius:0.75rem">';
+            //         }
+            //     })
+            //     .catch(e => { container.innerHTML = '<p class="text-sm text-red-400">Erro ao buscar QR Code</p>'; });
+            // startPolling();
+        }
+
+        // MODO DEMO: Generate QR via QRCode.js
+        const text = 'calflow://connect?user=' + (usuarioAtual ? usuarioAtual.usuario : 'demo') + '&session=' + Date.now();
+        try {
+            new QRCode(container, {
+                text: text, width: 234, height: 234,
+                colorDark: '#000000', colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        } catch(e) {
+            container.innerHTML = '<p class="text-sm text-red-400">Erro ao gerar QR Code</p>';
+        }
+        iniciarCountdownQR();
+    }
+
+    /* PRODUÇÃO: Polling de status da Evolution API
+    function startPolling() {
+        const instanceName = 'calflow_' + usuarioAtual.usuario;
+        const token = sessionStorage.getItem('calflow_token');
+        pollingInterval = setInterval(() => {
+            fetch('/api/evolution/status/' + instanceName, { headers: { 'Authorization': 'Bearer ' + token } })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.state === 'open') { setQRState('connected'); showToast('WhatsApp conectado com sucesso!', 'success'); }
+                    else if (data.state === 'close') { setQRState('disconnected'); }
+                    else if (data.state === 'connecting') { /* keep scanning */ /* }
+                })
+                .catch(e => {});
+        }, 5000);
+    }
+    */
+
+    function iniciarCountdownQR() {
+        clearAllTimers();
+        let countdown = 60;
+        const el = document.getElementById('qrcode-countdown');
+        if (el) el.textContent = 'Expira em: 01:00';
+        qrTimerInterval = setInterval(() => {
+            countdown--;
+            if (el) {
+                const min = Math.floor(countdown / 60);
+                const sec = countdown % 60;
+                el.textContent = 'Expira em: ' + String(min).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+            }
+            if (countdown <= 0) {
+                clearInterval(qrTimerInterval); qrTimerInterval = null;
+                const container = document.getElementById('qrcode-container');
+                if (container) container.innerHTML = '';
+                loadQRCode();
+            }
+        }, 1000);
+    }
+
+    function regenerateQRCode() {
+        clearAllTimers();
+        const container = document.getElementById('qrcode-container');
+        if (container) container.innerHTML = '';
+        loadQRCode();
+        showToast('Novo QR Code gerado', 'info');
+    }
+
+    function simulateConnection() {
+        clearAllTimers();
+        setQRState('connected');
+        showToast('WhatsApp conectado com sucesso!', 'success');
+    }
+
+    function disconnectWhatsApp() {
+        openConfirmModal('Desconectar WhatsApp', 'Tem certeza que deseja desconectar? O bot irá parar de atender seus clientes.', function() {
+            setQRState('disconnected');
+            showToast('WhatsApp desconectado', 'error');
+        });
+    }
+
+    function reconnectWhatsApp() {
+        setQRState('loading');
+        setTimeout(() => { setQRState('scanning'); loadQRCode(); }, 1500);
+    }
+
+    // ===========================
+    // HORÁRIOS (CRÍTICO 2: SAVE)
+    // ===========================
+    function toggleDia(checkbox, diaId) {
+        const horariosDiv = document.getElementById('horarios-' + diaId);
+        const label = document.getElementById('label-' + diaId);
+        if (checkbox.checked) {
+            horariosDiv.style.display = 'flex';
+            if (label) label.textContent = 'Aberto';
+        } else {
+            horariosDiv.style.display = 'none';
+            if (label) label.textContent = 'Fechado';
+        }
+    }
+
+    function toggleAlmoco(checkbox) {
+        const div = document.getElementById('horarios-almoco');
+        div.style.display = checkbox.checked ? 'flex' : 'none';
+    }
+
+    function salvarHorarios() {
+        const dias = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
+        const horarios = {};
+        dias.forEach(dia => {
+            const horariosDiv = document.getElementById('horarios-' + dia);
+            const ativo = horariosDiv ? horariosDiv.style.display !== 'none' : false;
+            const abertura = document.querySelector('[data-testid="horario-' + dia + '-abertura"]');
+            const fechamento = document.querySelector('[data-testid="horario-' + dia + '-fechamento"]');
+            horarios[dia] = { ativo, abertura: abertura ? abertura.value : '09:00', fechamento: fechamento ? fechamento.value : '18:00' };
+        });
+        const almocoInicio = document.querySelector('[data-testid="horario-almoco-inicio"]');
+        const almocoFim = document.querySelector('[data-testid="horario-almoco-fim"]');
+        const almocoToggle = document.getElementById('toggleAlmoco');
+        horarios.almoco = { ativo: almocoToggle ? almocoToggle.checked : true, inicio: almocoInicio ? almocoInicio.value : '12:00', fim: almocoFim ? almocoFim.value : '13:00' };
+        setUD('horarios', horarios);
+        showToast('Horários salvos com sucesso!', 'success');
+        const title = document.querySelector('[data-testid="section-horarios"] h2');
+        if (title) showSaveIndicator(title);
+    }
+
+    // ===========================
+    // FOLGAS (with persistence)
+    // ===========================
+    function openModalFolga() {
+        const html = '<h3 class="text-lg font-bold mb-4">Adicionar Folga ou Recesso</h3>' +
+            '<div class="space-y-4">' +
+            '<div class="grid grid-cols-2 gap-4">' +
+            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Data início</label><input type="date" class="input-base" id="folgaInicio"></div>' +
+            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Data fim</label><input type="date" class="input-base" id="folgaFim"></div>' +
+            '</div>' +
+            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Motivo (opcional)</label><input type="text" class="input-base" id="folgaMotivo" placeholder="Ex: Recesso, férias..."></div>' +
+            '<button onclick="addFolga()" class="btn-amber w-full">Adicionar</button>' +
+            '</div>';
+        openModal(html);
+    }
+
+    function addFolga() {
+        const inicio = document.getElementById('folgaInicio').value;
+        const fim = document.getElementById('folgaFim').value;
+        const motivo = document.getElementById('folgaMotivo').value || 'Sem motivo';
+        if (!inicio || !fim) { showToast('Preencha as datas', 'error'); return; }
+        const folgas = getUD('folgas', []);
+        folgas.push({ inicio, fim, motivo });
+        setUD('folgas', folgas);
+        renderFolgas();
+        closeModal();
+        showToast('Folga adicionada!', 'success');
+    }
+
+    function renderFolgas() {
+        const list = document.getElementById('folgasList');
+        if (!list) return;
+        const folgas = getUD('folgas', []);
+        list.innerHTML = '';
+        folgas.forEach((f, i) => {
+            list.innerHTML += '<div class="flex items-center justify-between p-3 rounded-lg mb-2" style="background:rgba(255,255,255,0.02)">' +
+                '<div><p class="text-sm font-medium">' + formatDate(f.inicio) + ' - ' + formatDate(f.fim) + '</p><p class="text-xs text-neutral-500">' + f.motivo + '</p></div>' +
+                '<button onclick="removeFolga(' + i + ')" class="text-neutral-500 hover:text-red-400 transition-colors"><i data-lucide="trash-2" style="width:16px;height:16px"></i></button></div>';
+        });
+        if (folgas.length === 0) {
+            list.innerHTML = '<p class="text-sm text-neutral-500 text-center py-4">Nenhuma folga cadastrada</p>';
+        }
+        setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 50);
+    }
+
+    function removeFolga(index) {
+        const folgas = getUD('folgas', []);
+        folgas.splice(index, 1);
+        setUD('folgas', folgas);
+        renderFolgas();
+        showToast('Folga removida', 'info');
+    }
+
+    // ===========================
+    // SERVICOS CRUD (with persistence)
+    // ===========================
+    function renderServicos() {
+        const list = document.getElementById('servicosList');
+        if (!list) return;
+        list.innerHTML = '';
+        servicos.forEach((s, i) => {
+            list.innerHTML += '<div class="card-base p-5 flex flex-wrap items-center justify-between gap-4" data-testid="servico-item-' + s.id + '">' +
+                '<div class="flex items-center gap-4 flex-1 min-w-0">' +
+                '<div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(245,158,11,0.1)"><i data-lucide="scissors" style="width:18px;height:18px;color:#F59E0B"></i></div>' +
+                '<div class="min-w-0"><p class="text-sm font-semibold">' + s.nome + '</p><p class="text-xs text-neutral-500">' + s.duracao + ' min &bull; R$ ' + s.preco.toFixed(2).replace('.', ',') + '</p></div>' +
+                '</div>' +
+                '<div class="flex items-center gap-3">' +
+                '<label class="toggle-switch"><input type="checkbox" ' + (s.ativo ? 'checked' : '') + ' onchange="toggleServico(' + i + ', this.checked)"><span class="toggle-slider"></span></label>' +
+                '<button onclick="openEditServico(' + i + ')" class="text-neutral-500 hover:text-amber-500 transition-colors"><i data-lucide="edit-2" style="width:16px;height:16px"></i></button>' +
+                '<button onclick="deleteServico(' + i + ')" class="text-neutral-500 hover:text-red-400 transition-colors"><i data-lucide="trash-2" style="width:16px;height:16px"></i></button>' +
+                '</div></div>';
+        });
+        setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 50);
+    }
+
+    function openModalServico() {
+        const html = '<h3 class="text-lg font-bold mb-4">Adicionar Serviço</h3>' +
+            '<div class="space-y-4">' +
+            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nome do serviço</label><input type="text" class="input-base" id="svcNome" placeholder="Ex: Corte de cabelo"></div>' +
+            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Descrição (opcional)</label><textarea class="input-base h-16 resize-none" id="svcDesc" placeholder="Descrição do serviço..."></textarea></div>' +
+            '<div class="grid grid-cols-2 gap-4">' +
+            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Duração (minutos)</label><select class="input-base" id="svcDuracao"><option value="15">15 min</option><option value="30">30 min</option><option value="45" selected>45 min</option><option value="60">60 min</option><option value="90">90 min</option><option value="120">120 min</option></select></div>' +
+            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Preço (R$)</label><input type="number" class="input-base" id="svcPreco" placeholder="0,00" step="0.01"></div>' +
+            '</div>' +
+            '<div class="flex items-center justify-between p-3 rounded-lg" style="background:rgba(255,255,255,0.02)"><p class="text-sm">Aceitar PIX antecipado</p><label class="toggle-switch"><input type="checkbox" checked id="svcPix"><span class="toggle-slider"></span></label></div>' +
+            '<button onclick="addServico()" class="btn-amber w-full">Adicionar Serviço</button>' +
+            '</div>';
+        openModal(html);
+    }
+
+    function addServico() {
+        const nome = document.getElementById('svcNome').value.trim();
+        const preco = parseFloat(document.getElementById('svcPreco').value);
+        const duracao = parseInt(document.getElementById('svcDuracao').value);
+        const pix = document.getElementById('svcPix').checked;
+        if (!nome || isNaN(preco)) { showToast('Preencha nome e preço', 'error'); return; }
+        servicos.push({ id: Date.now(), nome, duracao, preco, ativo: true, pixAntecipado: pix });
+        setUD('servicos', servicos);
+        renderServicos();
+        closeModal();
+        showToast('Serviço adicionado!', 'success');
+    }
+
+    function openEditServico(index) {
+        const s = servicos[index];
+        const html = '<h3 class="text-lg font-bold mb-4">Editar Serviço</h3>' +
+            '<div class="space-y-4">' +
+            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nome do serviço</label><input type="text" class="input-base" id="svcEditNome" value="' + s.nome + '"></div>' +
+            '<div class="grid grid-cols-2 gap-4">' +
+            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Duração (min)</label><select class="input-base" id="svcEditDuracao"><option value="15"' + (s.duracao===15?' selected':'') + '>15</option><option value="30"' + (s.duracao===30?' selected':'') + '>30</option><option value="45"' + (s.duracao===45?' selected':'') + '>45</option><option value="60"' + (s.duracao===60?' selected':'') + '>60</option><option value="90"' + (s.duracao===90?' selected':'') + '>90</option><option value="120"' + (s.duracao===120?' selected':'') + '>120</option></select></div>' +
+            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Preço (R$)</label><input type="number" class="input-base" id="svcEditPreco" value="' + s.preco + '" step="0.01"></div>' +
+            '</div>' +
+            '<button onclick="saveEditServico(' + index + ')" class="btn-amber w-full">Salvar Alterações</button>' +
+            '</div>';
+        openModal(html);
+    }
+
+    function saveEditServico(index) {
+        servicos[index].nome = document.getElementById('svcEditNome').value.trim();
+        servicos[index].preco = parseFloat(document.getElementById('svcEditPreco').value);
+        servicos[index].duracao = parseInt(document.getElementById('svcEditDuracao').value);
+        setUD('servicos', servicos);
+        renderServicos();
+        closeModal();
+        showToast('Serviço atualizado!', 'success');
+    }
+
+    function toggleServico(index, val) { servicos[index].ativo = val; setUD('servicos', servicos); showToast(val ? 'Serviço ativado' : 'Serviço desativado', 'info'); }
+
+    function deleteServico(index) {
+        openConfirmModal('Excluir Serviço', 'Tem certeza que deseja excluir "' + servicos[index].nome + '"?', function() {
+            servicos.splice(index, 1);
+            setUD('servicos', servicos);
+            renderServicos();
+            showToast('Serviço excluído', 'info');
+        });
+    }
+
+    // ===========================
+    // FUNCIONARIOS CRUD (with persistence)
+    // ===========================
+    function renderFuncionarios() {
+        const list = document.getElementById('funcionariosList');
+        if (!list) return;
+        list.innerHTML = '';
+        const colors = ['#F59E0B', '#22c55e', '#3b82f6', '#a855f7', '#ef4444'];
+        funcionarios.forEach((f, i) => {
+            const color = colors[i % colors.length];
+            const initials = f.nome.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            list.innerHTML += '<div class="card-base p-5" data-testid="funcionario-item-' + f.id + '">' +
+                '<div class="flex items-center gap-4 mb-4">' +
+                '<div class="w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm" style="background:' + color + '20;color:' + color + '">' + initials + '</div>' +
+                '<div><p class="text-sm font-semibold">' + f.nome + '</p><p class="text-xs text-neutral-500">' + f.funcao + '</p></div>' +
+                '<span class="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background:' + (f.ativo ? 'rgba(34,197,94,0.1);color:#22c55e' : 'rgba(239,68,68,0.1);color:#ef4444') + '">' + (f.ativo ? 'Ativo' : 'Inativo') + '</span>' +
+                '</div>' +
+                '<div class="flex gap-2">' +
+                '<button onclick="openEditFuncionario(' + i + ')" class="btn-outline text-xs flex-1 py-1.5">Editar</button>' +
+                '<button onclick="toggleFuncionario(' + i + ')" class="btn-outline text-xs flex-1 py-1.5">' + (f.ativo ? 'Desativar' : 'Ativar') + '</button>' +
+                '</div></div>';
+        });
+        setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 50);
+    }
+
+    function openModalFuncionario() {
+        let svcChecks = '';
+        servicos.forEach(s => {
+            svcChecks += '<label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" value="' + s.id + '" class="funcSvcCheck accent-amber-500"> ' + s.nome + '</label>';
+        });
+        const html = '<h3 class="text-lg font-bold mb-4">Adicionar Funcionário</h3>' +
+            '<div class="space-y-4">' +
+            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nome completo</label><input type="text" class="input-base" id="funcNome" placeholder="Nome do profissional"></div>' +
+            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Função/Especialidade</label><input type="text" class="input-base" id="funcFuncao" placeholder="Ex: Barbeiro, Cabeleireiro"></div>' +
+            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Serviços que realiza</label><div class="space-y-2 mt-1">' + svcChecks + '</div></div>' +
+            '<button onclick="addFuncionario()" class="btn-amber w-full">Adicionar</button>' +
+            '</div>';
+        openModal(html);
+    }
+
+    function addFuncionario() {
+        const nome = document.getElementById('funcNome').value.trim();
+        const funcao = document.getElementById('funcFuncao').value.trim();
+        if (!nome || !funcao) { showToast('Preencha nome e função', 'error'); return; }
+        const svcIds = Array.from(document.querySelectorAll('.funcSvcCheck:checked')).map(c => parseInt(c.value));
+        funcionarios.push({ id: Date.now(), nome, funcao, ativo: true, servicos: svcIds });
+        setUD('funcionarios', funcionarios);
+        renderFuncionarios();
+        closeModal();
+        showToast('Funcionário adicionado!', 'success');
+    }
+
+    function openEditFuncionario(index) {
+        const f = funcionarios[index];
+        const html = '<h3 class="text-lg font-bold mb-4">Editar Funcionário</h3>' +
+            '<div class="space-y-4">' +
+            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nome</label><input type="text" class="input-base" id="funcEditNome" value="' + f.nome + '"></div>' +
+            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Função</label><input type="text" class="input-base" id="funcEditFuncao" value="' + f.funcao + '"></div>' +
+            '<button onclick="saveEditFuncionario(' + index + ')" class="btn-amber w-full">Salvar</button>' +
+            '</div>';
+        openModal(html);
+    }
+
+    function saveEditFuncionario(index) {
+        funcionarios[index].nome = document.getElementById('funcEditNome').value.trim();
+        funcionarios[index].funcao = document.getElementById('funcEditFuncao').value.trim();
+        setUD('funcionarios', funcionarios);
+        renderFuncionarios();
+        closeModal();
+        showToast('Funcionário atualizado!', 'success');
+    }
+
+    function toggleFuncionario(index) {
+        funcionarios[index].ativo = !funcionarios[index].ativo;
+        setUD('funcionarios', funcionarios);
+        renderFuncionarios();
+        showToast(funcionarios[index].ativo ? 'Funcionário ativado' : 'Funcionário desativado', 'info');
+    }
+
+    // ===========================
+    // PAGAMENTOS / LEMBRETES / CONFIG (CRÍTICO 2: REAL SAVE)
+    // ===========================
+    function salvarPagamentos() {
+        const pag = {
+            token: document.getElementById('mpToken').value,
+            chavePix: document.getElementById('mpChavePix').value,
+            nomePix: document.getElementById('mpNomePix').value
+        };
+        setUD('pagamentos', pag);
+        showToast('Configurações de pagamento salvas!', 'success');
+        const title = document.querySelector('[data-testid="section-pagamentos"] h2');
+        if (title) showSaveIndicator(title);
+    }
+
+    function salvarLembretes() {
+        const lem = {
+            lembrete24h: { ativo: true, msg: document.querySelector('[data-testid="lembrete-24h-msg"]').value },
+            lembrete1h: { ativo: true, msg: document.querySelector('[data-testid="lembrete-1h-msg"]').value },
+            confirmacao: { ativo: true, msg: document.querySelector('[data-testid="lembrete-confirmacao-msg"]').value },
+            agradecimento: { ativo: false, msg: document.querySelector('[data-testid="lembrete-agradecimento-msg"]').value }
+        };
+        setUD('lembretes', lem);
+        showToast('Configurações de lembretes salvas!', 'success');
+        const title = document.querySelector('[data-testid="section-lembretes"] h2');
+        if (title) showSaveIndicator(title);
+    }
+
+    function salvarConfiguracoes() {
+        const config = {
+            nomeNegocio: document.getElementById('configNomeNegocio').value,
+            endereco: document.getElementById('configEndereco') ? document.getElementById('configEndereco').value : '',
+            whatsapp: document.getElementById('configWhatsApp') ? document.getElementById('configWhatsApp').value : '',
+            saudacao: document.getElementById('configSaudacao') ? document.getElementById('configSaudacao').value : '',
+            encerramento: document.getElementById('configEncerramento') ? document.getElementById('configEncerramento').value : '',
+            fuso: document.getElementById('configFuso') ? document.getElementById('configFuso').value : 'America/Sao_Paulo',
+            idioma: document.getElementById('configIdioma') ? document.getElementById('configIdioma').value : 'pt-BR',
+            googleCalendarId: document.getElementById('configGoogleCalendarId') ? document.getElementById('configGoogleCalendarId').value : '',
+            intervalo: document.getElementById('configIntervalo') ? document.getElementById('configIntervalo').value : '30',
+            antecedencia: document.getElementById('configAntecedencia') ? document.getElementById('configAntecedencia').value : '2',
+            confirmarManual: document.getElementById('configConfirmarManual') ? document.getElementById('configConfirmarManual').checked : false
+        };
+        setUD('configuracoes', config);
+        if (usuarioAtual) {
+            usuarioAtual.negocio = config.nomeNegocio;
+            document.getElementById('sidebarNegocio').textContent = config.nomeNegocio;
+        }
+        showToast('Configurações salvas!', 'success');
+        const title = document.querySelector('[data-testid="section-configuracoes"] h2');
+        if (title) showSaveIndicator(title);
+    }
+
+    function insertVar(btn, variable) {
+        const textarea = btn.closest('.card-base').querySelector('textarea');
+        if (textarea) {
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            textarea.value = textarea.value.substring(0, start) + variable + textarea.value.substring(end);
+            textarea.focus();
+            textarea.setSelectionRange(start + variable.length, start + variable.length);
+        }
+    }
+
+    // ===========================
+    // ADMIN FUNCTIONS (CORREÇÃO 9)
+    // ===========================
+    function renderAdminClientes() {
+        const tbody = document.getElementById('adminClientesTbody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        Object.keys(USUARIOS).forEach(user => {
+            if (user === 'admin') return;
+            const u = USUARIOS[user];
+            const instanceName = 'calflow_' + user;
+            tbody.innerHTML += '<tr class="table-row border-b border-white/5" data-testid="admin-row-' + user + '">' +
+                '<td class="py-3 font-medium text-amber-500">' + user + '</td>' +
+                '<td class="py-3 text-neutral-300">' + u.nome + '</td>' +
+                '<td class="py-3 text-neutral-400">' + u.negocio + '</td>' +
+                '<td class="py-3 font-mono text-xs text-neutral-500">' + instanceName + '</td>' +
+                '<td class="py-3"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(245,158,11,0.1);color:#F59E0B">' + u.plano + '</span></td>' +
+                '<td class="py-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background:' + (u.status === 'ativo' ? 'rgba(34,197,94,0.1);color:#22c55e' : 'rgba(239,68,68,0.1);color:#ef4444') + '">' + u.status.charAt(0).toUpperCase() + u.status.slice(1) + '</span></td>' +
+                '<td class="py-3 text-right"><div class="flex items-center justify-end gap-2">' +
+                '<button onclick="impersonarCliente(\'' + user + '\')" class="text-neutral-500 hover:text-amber-500 transition-colors" title="Entrar como cliente"><i data-lucide="log-in" style="width:16px;height:16px"></i></button>' +
+                '<button onclick="openEditCliente(\'' + user + '\')" class="text-neutral-500 hover:text-blue-400 transition-colors" title="Editar"><i data-lucide="edit-2" style="width:16px;height:16px"></i></button>' +
+                '<button onclick="resetarSenhaCliente(\'' + user + '\')" class="text-neutral-500 hover:text-amber-500 transition-colors" title="Resetar senha"><i data-lucide="key" style="width:16px;height:16px"></i></button>' +
+                '<button onclick="verDadosCliente(\'' + user + '\')" class="text-neutral-500 hover:text-green-400 transition-colors" title="Ver dados"><i data-lucide="database" style="width:16px;height:16px"></i></button>' +
+                '<button onclick="toggleClienteStatus(\'' + user + '\')" class="text-neutral-500 hover:text-red-400 transition-colors" title="Suspender/Ativar"><i data-lucide="shield-off" style="width:16px;height:16px"></i></button>' +
+                '</div></td></tr>';
+        });
+        setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 50);
+    }
+
+    function resetarSenhaCliente(user) {
+        const novaSenha = generatePassword();
+        USUARIOS[user].senha = novaSenha;
+        const html = '<h3 class="text-lg font-bold mb-4">Senha Resetada</h3>' +
+            '<div class="p-4 rounded-lg mb-4" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15)">' +
+            '<p class="text-xs text-amber-500 font-semibold mb-2">Nova senha para: ' + user + '</p>' +
+            '<p class="text-lg font-mono font-bold text-center py-2">' + novaSenha + '</p></div>' +
+            '<button onclick="copyToClipboard(\'' + novaSenha + '\'); closeModal();" class="btn-amber w-full">Copiar Senha e Fechar</button>';
+        openModal(html);
+    }
+
+    function verDadosCliente(user) {
+        const prefix = 'calflow_' + user + '_';
+        const dados = {};
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.startsWith(prefix)) {
+                const shortKey = key.replace(prefix, '');
+                try { dados[shortKey] = JSON.parse(localStorage.getItem(key)); }
+                catch(e) { dados[shortKey] = localStorage.getItem(key); }
+            }
+        }
+
+        let resumo = '';
+        if (Object.keys(dados).length === 0) {
+            resumo = '<p class="text-sm text-neutral-500 text-center py-4">Nenhum dado salvo para este cliente.</p>';
+        } else {
+            Object.keys(dados).forEach(key => {
+                const val = dados[key];
+                let display = '';
+                if (Array.isArray(val)) display = val.length + ' item(ns)';
+                else if (typeof val === 'object') display = Object.keys(val).length + ' campo(s)';
+                else display = String(val).substring(0, 50);
+                resumo += '<div class="flex items-center justify-between p-2 rounded-lg mb-1" style="background:rgba(255,255,255,0.02)"><span class="text-xs font-mono text-amber-500">' + key + '</span><span class="text-xs text-neutral-400">' + display + '</span></div>';
+            });
+        }
+
+        const html = '<h3 class="text-lg font-bold mb-4">Dados de: ' + user + '</h3>' +
+            '<div class="max-h-96 overflow-y-auto">' + resumo + '</div>' +
+            '<button onclick="closeModal()" class="btn-outline w-full mt-4">Fechar</button>';
+        openModal(html);
+    }
+
+    function impersonarCliente(user) {
+        const u = USUARIOS[user];
+        if (!u) return;
+        usuarioAtual = { ...u, usuario: user };
+        sessionStorage.setItem('calflow_user', JSON.stringify({ usuario: user }));
+        loadUserData();
+        setupDashboard();
+        showToast('Acessando como: ' + u.nome, 'info');
+    }
+
+    function openEditCliente(user) {
+        const u = USUARIOS[user];
+        const html = '<h3 class="text-lg font-bold mb-4">Editar Cliente</h3>' +
+            '<div class="space-y-4">' +
+            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nome</label><input type="text" class="input-base" id="editClienteNome" value="' + u.nome + '"></div>' +
+            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Negócio</label><input type="text" class="input-base" id="editClienteNegocio" value="' + u.negocio + '"></div>' +
+            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Plano</label><select class="input-base" id="editClientePlano"><option value="Mensal"' + (u.plano==='Mensal'?' selected':'') + '>Mensal</option><option value="Anual"' + (u.plano==='Anual'?' selected':'') + '>Anual</option></select></div>' +
+            '<button onclick="saveEditCliente(\'' + user + '\')" class="btn-amber w-full">Salvar Alterações</button>' +
+            '</div>';
+        openModal(html);
+    }
+
+    function saveEditCliente(user) {
+        USUARIOS[user].nome = document.getElementById('editClienteNome').value;
+        USUARIOS[user].negocio = document.getElementById('editClienteNegocio').value;
+        USUARIOS[user].plano = document.getElementById('editClientePlano').value;
+        renderAdminClientes();
+        closeModal();
+        showToast('Cliente atualizado!', 'success');
+    }
+
+    function toggleClienteStatus(user) {
+        const u = USUARIOS[user];
+        const newStatus = u.status === 'ativo' ? 'suspenso' : 'ativo';
+        openConfirmModal(
+            (newStatus === 'suspenso' ? 'Suspender' : 'Ativar') + ' Cliente',
+            'Deseja ' + (newStatus === 'suspenso' ? 'suspender' : 'ativar') + ' o cliente ' + u.nome + '?',
+            function() {
+                USUARIOS[user].status = newStatus;
+                renderAdminClientes();
+                showToast('Status alterado para: ' + newStatus, 'info');
+            }
+        );
+    }
+
+    function criarCliente() {
+        const nome = document.getElementById('novoNome').value.trim();
+        const negocio = document.getElementById('novoNegocio').value.trim();
+        const plano = document.getElementById('novoPlano').value;
+        if (!nome || !negocio) { showToast('Preencha nome e negócio', 'error'); return; }
+
+        const autoGen = document.getElementById('novoGerarCredenciais').checked;
+        let usuario, senha;
+        if (autoGen) {
+            usuario = nome.split(' ')[0].toLowerCase() + Math.floor(1000 + Math.random() * 9000);
+            senha = generatePassword();
+        } else {
+            usuario = nome.split(' ')[0].toLowerCase() + '1234';
+            senha = 'CalFlow@123';
+        }
+
+        USUARIOS[usuario] = { senha, tipo: 'cliente', nome, negocio, plano, status: 'ativo' };
+        renderAdminClientes();
+
+        const html = '<h3 class="text-lg font-bold mb-4 text-green-500">Cliente Cadastrado!</h3>' +
+            '<div class="space-y-3 mb-4">' +
+            '<div class="p-3 rounded-lg" style="background:rgba(255,255,255,0.02)"><p class="text-xs text-neutral-500">Nome</p><p class="text-sm font-semibold">' + nome + '</p></div>' +
+            '<div class="p-3 rounded-lg" style="background:rgba(255,255,255,0.02)"><p class="text-xs text-neutral-500">Negócio</p><p class="text-sm font-semibold">' + negocio + '</p></div>' +
+            '<div class="p-3 rounded-lg" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15)"><p class="text-xs text-amber-500 font-semibold">Credenciais de Acesso</p><p class="text-sm font-mono mt-1">Usuário: <strong>' + usuario + '</strong></p><p class="text-sm font-mono">Senha: <strong>' + senha + '</strong></p></div>' +
+            '</div>' +
+            '<button onclick="copyToClipboard(\'' + 'Usuário: ' + usuario + ' | Senha: ' + senha + '\'); closeModal();" class="btn-amber w-full">Copiar Credenciais e Fechar</button>';
+        openModal(html);
+
+        document.getElementById('novoNome').value = '';
+        document.getElementById('novoNegocio').value = '';
+        document.getElementById('novoWhatsApp').value = '';
+        document.getElementById('novoEmail').value = '';
+        document.getElementById('novoObs').value = '';
+    }
+
+    function salvarConfigGlobais() {
+        showToast('Configurações globais salvas!', 'success');
+        const title = document.querySelector('[data-testid="section-admin-config"] h2');
+        if (title) showSaveIndicator(title);
+    }
+
+    function testarEvolutionAPI() {
+        const url = document.getElementById('globalEvolutionUrl') ? document.getElementById('globalEvolutionUrl').value : '';
+        if (!url) { showToast('Informe a URL da Evolution API', 'error'); return; }
+        showToast('Testando conexão...', 'info');
+        // In production, this would fetch the real API
+        setTimeout(() => {
+            showToast('Evolution API: Online (simulação)', 'success');
+        }, 1500);
+    }
+
+    function generatePassword() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
+        let pass = '';
+        for (let i = 0; i < 10; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
+        return pass;
+    }
+
+    // ===========================
+    // ALTER SENHA
+    // ===========================
+    function openModalAlterarSenha() {
+        const html = '<h3 class="text-lg font-bold mb-4">Alterar Senha</h3>' +
+            '<div class="space-y-4">' +
+            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Senha atual</label><input type="password" class="input-base" id="senhaAtual" placeholder="Sua senha atual"></div>' +
+            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nova senha</label><input type="password" class="input-base" id="senhaNova" placeholder="Nova senha"></div>' +
+            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Confirmar nova senha</label><input type="password" class="input-base" id="senhaConfirmar" placeholder="Confirme a nova senha"></div>' +
+            '<button onclick="alterarSenha()" class="btn-amber w-full">Alterar Senha</button>' +
+            '</div>';
+        openModal(html);
+    }
+
+    function alterarSenha() {
+        const atual = document.getElementById('senhaAtual').value;
+        const nova = document.getElementById('senhaNova').value;
+        const confirmar = document.getElementById('senhaConfirmar').value;
+        if (!atual || !nova || !confirmar) { showToast('Preencha todos os campos', 'error'); return; }
+        if (atual !== USUARIOS[usuarioAtual.usuario].senha) { showToast('Senha atual incorreta', 'error'); return; }
+        if (nova !== confirmar) { showToast('As senhas não conferem', 'error'); return; }
+        if (nova.length < 6) { showToast('A nova senha deve ter pelo menos 6 caracteres', 'error'); return; }
+        USUARIOS[usuarioAtual.usuario].senha = nova;
+        closeModal();
+        showToast('Senha alterada com sucesso!', 'success');
+    }
+
+    // ===========================
+    // TOAST SYSTEM
+    // ===========================
+    function showToast(message, type) {
+        const container = document.getElementById('toastContainer');
+        const icons = { success: 'check-circle', error: 'alert-circle', info: 'info' };
+        const toast = document.createElement('div');
+        toast.className = 'toast toast-' + type;
+        toast.innerHTML = '<i data-lucide="' + (icons[type] || 'info') + '" style="width:16px;height:16px;flex-shrink:0"></i> ' + message;
+        container.appendChild(toast);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100px)';
+            toast.style.transition = 'all 0.3s';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // ===========================
+    // MODAL SYSTEM (enhanced for logout confirm)
+    // ===========================
+    function openModal(contentHTML) {
+        const container = document.getElementById('modalContainer');
+        container.innerHTML = '<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-content">' + contentHTML + '</div></div>';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function openConfirmModal(title, message, onConfirm, confirmLabel, cancelLabel, onCancel) {
+        const confirmText = confirmLabel || 'Confirmar';
+        const cancelText = cancelLabel || 'Cancelar';
+        const html = '<h3 class="text-lg font-bold mb-2">' + title + '</h3>' +
+            '<p class="text-sm text-neutral-400 mb-6">' + message + '</p>' +
+            '<div class="flex gap-3">' +
+            '<button id="cancelBtn" class="btn-outline flex-1">' + cancelText + '</button>' +
+            '<button id="confirmBtn" class="btn-amber flex-1">' + confirmText + '</button>' +
+            '</div>';
+        openModal(html);
+        document.getElementById('confirmBtn').onclick = function() { closeModal(); onConfirm(); };
+        document.getElementById('cancelBtn').onclick = function() { closeModal(); if (onCancel) onCancel(); };
+    }
+
+    function closeModal() {
+        document.getElementById('modalContainer').innerHTML = '';
+    }
+
+    // ===========================
+    // UTILITIES
+    // ===========================
+    function togglePasswordVisibility() {
+        const input = document.getElementById('loginPass');
+        const icon = document.getElementById('eyeIcon');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.setAttribute('data-lucide', 'eye-off');
+        } else {
+            input.type = 'password';
+            icon.setAttribute('data-lucide', 'eye');
+        }
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function toggleField(id) {
+        const input = document.getElementById(id);
+        input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => showToast('Copiado!', 'success')).catch(() => showToast('Erro ao copiar', 'error'));
+    }
+
+    function formatDate(dateStr) {
+        const parts = dateStr.split('-');
+        return parts[2] + '/' + parts[1] + '/' + parts[0];
+    }
+</script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>

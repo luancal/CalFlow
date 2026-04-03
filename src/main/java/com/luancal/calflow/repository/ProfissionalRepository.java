@@ -9,5 +9,4 @@ import java.util.List;
 public interface ProfissionalRepository extends JpaRepository<Profissional, Long> {
     List<Profissional> findByClinicaIdAndAtivoTrue(Long clinicaId);
     List<Profissional> findByClinicaId(Long clinicaId);
-    List<TipoServico> findByProfissionalId(Long profissionalId);
 }

@@ -1,0 +1,1144 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CalFlow - Automatize Agendamentos via WhatsApp</title>
+    <meta name="description" content="Sistema inteligente de agendamento via WhatsApp para sua empresa. Converta mais clientes 24/7.">
+    <meta name="theme-color" content="#F6AD55">
+
+    <!-- Google Fonts - DM Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"DM Sans"', 'system-ui', 'sans-serif'] },
+                    colors: {
+                        amber: {
+                            400: '#FBBF24',
+                            500: '#F59E0B',
+                            600: '#D97706'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'DM Sans', system-ui, sans-serif;
+            background-color: #0a0a0a;
+            color: #fff;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
+
+        input:focus, select:focus { outline: none; }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
+
+        /* ===== ANIMATIONS ===== */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(24px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes spinSlow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes pulseRing {
+            0%, 100% { transform: scale(0.85); opacity: 0.4; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+        }
+        @keyframes confettiFall {
+            0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .fade-in-up { animation: fadeInUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; opacity: 0; }
+        .slide-up { animation: slideUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+        .spin-slow { animation: spinSlow 1.8s linear infinite; }
+        .pulse-ring { animation: pulseRing 2.2s ease-in-out infinite; }
+        .confetti-particle { animation: confettiFall 3s ease-in-out forwards; }
+
+        /* ===== MODAL ===== */
+        .modal-backdrop {
+            position: fixed; inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            z-index: 50;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .modal-content {
+            position: relative; width: 100%; max-width: 28rem; margin: 1rem;
+            border-radius: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: #141414;
+            padding: 1.75rem;
+            box-shadow:
+                0 0 0 1px rgba(255,255,255,0.03),
+                0 25px 60px -12px rgba(0, 0, 0, 0.7),
+                0 10px 20px -5px rgba(0, 0, 0, 0.4);
+        }
+
+        /* ===== INPUT ===== */
+        .input-field {
+            width: 100%;
+            border-radius: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: #0a0a0a;
+            padding: 0.8rem 1rem;
+            font-size: 0.875rem;
+            color: #fff;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            font-family: 'DM Sans', system-ui, sans-serif;
+        }
+        .input-field::placeholder { color: #4b5563; }
+        .input-field:focus {
+            border-color: #F59E0B;
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1), 0 0 20px rgba(245, 158, 11, 0.05);
+        }
+        .input-field.error { border-color: #ef4444; }
+        .input-field.error:focus { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12); }
+
+        /* ===== BUTTONS ===== */
+        .btn-primary {
+            width: 100%;
+            border-radius: 0.75rem;
+            background: #F59E0B;
+            padding: 0.9rem 1rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #000;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'DM Sans', system-ui, sans-serif;
+        }
+        .btn-primary:hover { background: #FBBF24; box-shadow: 0 4px 20px rgba(245, 158, 11, 0.25); }
+        .btn-primary:active { transform: scale(0.985); }
+        .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+        /* ===== CHECK ICON ===== */
+        .check-icon {
+            display: inline-flex;
+            height: 1.25rem; width: 1.25rem;
+            align-items: center; justify-content: center;
+            border-radius: 50%;
+            background: rgba(34, 197, 94, 0.15);
+            flex-shrink: 0;
+        }
+
+        /* ===== PLAN & METHOD BUTTONS ===== */
+        .plan-btn {
+            position: relative;
+            display: flex; flex-direction: column; align-items: flex-start; gap: 0.3rem;
+            border-radius: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 1rem;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #0a0a0a;
+        }
+        .plan-btn:hover { border-color: rgba(255, 255, 255, 0.12); }
+        .plan-btn.active {
+            border-color: #F59E0B;
+            background: rgba(245, 158, 11, 0.06);
+            box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.15), 0 0 24px rgba(245, 158, 11, 0.05);
+        }
+
+        .method-btn {
+            position: relative;
+            display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+            border-radius: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #0a0a0a;
+        }
+        .method-btn:hover { border-color: rgba(255, 255, 255, 0.12); }
+        .method-btn.active {
+            border-color: #F59E0B;
+            background: rgba(245, 158, 11, 0.06);
+            box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.15), 0 0 24px rgba(245, 158, 11, 0.05);
+        }
+
+        /* ===== CARD COMPONENTS ===== */
+        .card-elevated {
+            background: #141414;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.02),
+                0 4px 24px rgba(0, 0, 0, 0.3),
+                0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-feature {
+            background: #141414;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.25s ease;
+        }
+        .card-feature:hover {
+            border-color: rgba(245, 158, 11, 0.2);
+            box-shadow: 0 4px 20px rgba(245, 158, 11, 0.04);
+            transform: translateY(-1px);
+        }
+
+        .card-checkout {
+            background: #141414;
+            border: 1px solid rgba(245, 158, 11, 0.12);
+            box-shadow:
+                0 0 0 1px rgba(245, 158, 11, 0.04),
+                0 25px 60px -12px rgba(0, 0, 0, 0.5),
+                0 8px 24px -4px rgba(0, 0, 0, 0.3);
+        }
+
+        /* ===== TRUST BADGES ===== */
+        .trust-grid {
+            display: grid;
+            gap: 0.5rem;
+            grid-template-columns: 1fr;
+        }
+        @media (min-width: 640px) {
+            .trust-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        .trust-badge {
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            transition: all 0.2s ease;
+        }
+        .trust-badge:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(34, 197, 94, 0.15);
+        }
+        .trust-badge-full {
+            grid-column: 1 / -1;
+            justify-content: center;
+        }
+
+        .hidden { display: none !important; }
+
+        /* ===== SUBTLE GLOW ===== */
+        .glow-amber {
+            box-shadow: 0 0 40px rgba(245, 158, 11, 0.06);
+        }
+
+        /* Logo container */
+        .logo-container {
+            background: #141414;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border-radius: 1rem;
+            padding: 1rem;
+        }
+
+        /* ===== SELECTION NONE on buttons ===== */
+        button, .plan-btn, .method-btn { user-select: none; -webkit-user-select: none; }
+    </style>
+</head>
+<body>
+<!-- ===== CHECKOUT PAGE ===== -->
+<div id="checkoutPage">
+    <main class="min-h-screen" style="background:#0a0a0a">
+        <div class="mx-auto max-w-5xl px-5 py-8 md:py-12">
+            <!-- Logo -->
+            <div class="mb-10 flex justify-center fade-in-up">
+                <div class="logo-container">
+                    <img
+                            src="/Downloads/CalFlow.jpeg"
+                            alt="CalFlow"
+                            class="h-auto w-44 md:w-48 rounded-lg"
+                            id="logo-img"
+                            style="image-rendering: auto;"
+                            onerror="this.src='https://customer-assets.emergentagent.com/job_booking-system-192/artifacts/4hfildy7_CalFlow.jpeg'"
+                    >
+                </div>
+            </div>
+
+            <!-- Main Grid -->
+            <div class="grid gap-8 lg:grid-cols-2 lg:gap-12">
+                <!-- Left Side -->
+                <div class="order-2 lg:order-1 fade-in-up" style="animation-delay:0.08s">
+                    <div class="mb-8">
+                        <h1 class="mb-3 text-2xl font-bold text-white md:text-3xl" style="text-wrap:balance">
+                            Automatize sua<br>Empresa com WhatsApp
+                        </h1>
+                        <p class="text-base text-gray-400 leading-relaxed">
+                            Sistema inteligente que agenda, lembra e recebe pagamentos dos seus clientes automaticamente pelo WhatsApp, 24 horas por dia.
+                        </p>
+                    </div>
+
+                    <!-- Features -->
+                    <div class="mb-8 grid grid-cols-2 gap-3">
+                        <div class="card-feature rounded-xl p-4" data-testid="feature-agendamentos">
+                            <i data-lucide="calendar" class="mb-2.5 h-6 w-6 text-amber-500"></i>
+                            <h3 class="mb-1 text-sm font-semibold text-white">Agendamentos 24/7</h3>
+                            <p class="text-xs text-gray-500">Clientes agendam a qualquer hora</p>
+                        </div>
+                        <div class="card-feature rounded-xl p-4" data-testid="feature-lembretes">
+                            <i data-lucide="bell" class="mb-2.5 h-6 w-6 text-amber-500"></i>
+                            <h3 class="mb-1 text-sm font-semibold text-white">Lembretes Automáticos</h3>
+                            <p class="text-xs text-gray-500">Reduz faltas em até 80%</p>
+                        </div>
+                        <div class="card-feature rounded-xl p-4" data-testid="feature-pagamentos">
+                            <i data-lucide="credit-card" class="mb-2.5 h-6 w-6 text-amber-500"></i>
+                            <h3 class="mb-1 text-sm font-semibold text-white">Pagamentos Integrados</h3>
+                            <p class="text-xs text-gray-500">Receba antecipado via PIX</p>
+                        </div>
+                        <div class="card-feature rounded-xl p-4" data-testid="feature-atendimento">
+                            <i data-lucide="zap" class="mb-2.5 h-6 w-6 text-amber-500"></i>
+                            <h3 class="mb-1 text-sm font-semibold text-white">Atendimento Automático</h3>
+                            <p class="text-xs text-gray-500">Responde dúvidas automaticamente</p>
+                        </div>
+                    </div>
+
+                    <!-- Trust Badges -->
+                    <div class="card-elevated rounded-xl p-3" data-testid="trust-badges-section">
+                        <div class="trust-grid">
+                            <div class="trust-badge" data-testid="trust-pagamento-seguro">
+                                <i data-lucide="shield-check" class="h-5 w-5 text-green-500 flex-shrink-0"></i>
+                                <span class="text-sm text-gray-300">Pagamento Seguro</span>
+                            </div>
+                            <div class="trust-badge" data-testid="trust-garantia">
+                                <i data-lucide="clock" class="h-5 w-5 text-green-500 flex-shrink-0"></i>
+                                <span class="text-sm text-gray-300">7 dias de garantia</span>
+                            </div>
+                            <div class="trust-badge trust-badge-full" data-testid="trust-suporte-whatsapp">
+                                <i data-lucide="message-circle" class="h-5 w-5 text-green-500 flex-shrink-0"></i>
+                                <span class="text-sm text-gray-300">Suporte via WhatsApp</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Side - Checkout Card -->
+                <div class="order-1 lg:order-2 fade-in-up" style="animation-delay:0.16s">
+                    <div class="card-checkout rounded-2xl p-6 md:p-8 glow-amber">
+                        <!-- Header -->
+                        <div class="mb-6 pb-6" style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                            <div class="mb-2 inline-block rounded-full px-3 py-1" style="background:rgba(245,158,11,0.08)">
+                                <span class="text-xs font-semibold text-amber-500 tracking-wide">OFERTA ESPECIAL</span>
+                            </div>
+                            <h2 class="mb-4 text-xl font-bold text-white" data-testid="checkout-title">CalFlow Premium</h2>
+                            <div class="rounded-xl p-4 space-y-3" style="background:#0a0a0a;border:1px solid rgba(255,255,255,0.04)">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-400">Implantação (única vez):</span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm text-gray-600 line-through">R$ 997</span>
+                                        <span class="text-lg font-bold text-amber-500">R$ 497</span>
+                                    </div>
+                                </div>
+                                <div class="pt-3 flex items-center justify-between" style="border-top:1px solid rgba(255,255,255,0.04)">
+                                    <span class="text-sm text-gray-400">Mensalidade:</span>
+                                    <span class="text-lg font-bold text-white">R$ 197<span class="text-sm font-normal text-gray-500">/mês</span></span>
+                                </div>
+                                <p class="text-xs text-gray-600 pt-2" style="border-top:1px solid rgba(255,255,255,0.04)">
+                                    * A mensalidade cobre manutenção, atualizações e suporte. Novas funcionalidades ou personalizações são orçadas à parte.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Benefits -->
+                        <div class="mb-6">
+                            <p class="mb-3 text-sm font-medium text-gray-300">Incluso no pacote:</p>
+                            <ul class="space-y-2.5 text-sm text-gray-400" data-testid="benefits-list">
+                                <li class="flex items-center gap-2.5">
+                                    <span class="check-icon"><i data-lucide="check" style="width:12px;height:12px;color:#22c55e;stroke-width:3"></i></span>
+                                    Configuração completa do sistema
+                                </li>
+                                <li class="flex items-center gap-2.5">
+                                    <span class="check-icon"><i data-lucide="check" style="width:12px;height:12px;color:#22c55e;stroke-width:3"></i></span>
+                                    Bot de agendamento WhatsApp
+                                </li>
+                                <li class="flex items-center gap-2.5">
+                                    <span class="check-icon"><i data-lucide="check" style="width:12px;height:12px;color:#22c55e;stroke-width:3"></i></span>
+                                    Lembretes automáticos
+                                </li>
+                                <li class="flex items-center gap-2.5">
+                                    <span class="check-icon"><i data-lucide="check" style="width:12px;height:12px;color:#22c55e;stroke-width:3"></i></span>
+                                    Integração com pagamentos
+                                </li>
+                                <li class="flex items-center gap-2.5">
+                                    <span class="check-icon"><i data-lucide="check" style="width:12px;height:12px;color:#22c55e;stroke-width:3"></i></span>
+                                    Suporte prioritário 30 dias
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- FORM -->
+                        <form id="checkoutForm" class="space-y-5" onsubmit="handleSubmit(event)">
+                            <!-- Plan -->
+                            <div class="space-y-3">
+                                <label class="block text-sm font-medium text-gray-300">Escolha seu plano</label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="plan-btn active" onclick="selectPlano('mensal')" id="planMensal" data-testid="plan-mensal-btn">
+                                        <span class="text-sm font-semibold text-white">Mensal</span>
+                                        <span class="text-lg font-bold text-amber-500">R$ 497</span>
+                                        <span class="text-xs text-gray-500">+ R$ 197/mês</span>
+                                    </div>
+                                    <div class="plan-btn" onclick="selectPlano('anual')" id="planAnual" data-testid="plan-anual-btn">
+                                        <span class="absolute -top-2 right-2 rounded-full bg-green-500 px-2 py-0.5 text-[10px] font-semibold text-white" style="position:absolute;top:-0.5rem;right:0.5rem;z-index:2">Implantação grátis</span>
+                                        <span class="text-sm font-semibold text-gray-400">Anual</span>
+                                        <span class="text-lg font-bold text-amber-500">R$ 2.197</span>
+                                        <span class="text-xs text-gray-500">Implantação + 12 meses</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Name -->
+                            <div class="space-y-1.5">
+                                <label class="block text-sm font-medium text-gray-300">Nome completo</label>
+                                <input type="text" id="inputNome" class="input-field" placeholder="João da Silva" required data-testid="input-nome">
+                                <p class="text-xs text-red-400 hidden" id="errNome"></p>
+                            </div>
+
+                            <!-- Email -->
+                            <div class="space-y-1.5">
+                                <label class="block text-sm font-medium text-gray-300">E-mail</label>
+                                <input type="email" id="inputEmail" class="input-field" placeholder="joao@email.com" required data-testid="input-email">
+                                <p class="text-xs text-red-400 hidden" id="errEmail"></p>
+                            </div>
+
+                            <!-- Phone -->
+                            <div class="space-y-1.5">
+                                <label class="block text-sm font-medium text-gray-300">WhatsApp (com DDD)</label>
+                                <input type="tel" id="inputTelefone" class="input-field" placeholder="(32) 99999-9999" required data-testid="input-telefone">
+                                <p class="text-xs text-red-400 hidden" id="errTelefone"></p>
+                            </div>
+
+                            <!-- CPF/CNPJ -->
+                            <div class="space-y-1.5">
+                                <label class="block text-sm font-medium text-gray-300">CPF/CNPJ</label>
+                                <input type="text" id="inputCpfCnpj" class="input-field" placeholder="CPF ou CNPJ" maxlength="18" required data-testid="input-cpfcnpj">
+                                <p class="text-xs text-red-400 hidden" id="errCpfCnpj"></p>
+                            </div>
+
+                            <!-- Payment Methods -->
+                            <div class="space-y-3 pt-2">
+                                <label class="block text-sm font-medium text-gray-300">Forma de pagamento</label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="method-btn active" onclick="selectMethod('pix')" id="methodPix" data-testid="method-pix-btn">
+                                        <span class="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-green-500 px-2 py-0.5 text-[10px] font-semibold text-white" style="position:absolute;top:-0.5rem;left:50%;transform:translateX(-50%);white-space:nowrap;z-index:2">Recomendado</span>
+                                        <i data-lucide="qr-code" class="h-5 w-5 text-amber-500"></i>
+                                        <span class="text-xs font-medium text-white">PIX</span>
+                                        <span class="text-[10px] text-gray-500">Aprovação instantânea</span>
+                                    </div>
+                                    <div class="method-btn" onclick="selectMethod('cartao')" id="methodCartao" data-testid="method-cartao-btn">
+                                        <i data-lucide="credit-card" class="h-5 w-5 text-gray-500"></i>
+                                        <span class="text-xs font-medium text-gray-400">Cartão</span>
+                                        <span class="text-[10px] text-gray-500">Até 12x sem juros</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Parcelas (card only) -->
+                            <div id="parcelasSection" class="space-y-1.5 hidden">
+                                <label class="block text-sm font-medium text-gray-300">Parcelas</label>
+                                <select id="selectParcelas" class="input-field" style="cursor:pointer" data-testid="select-parcelas"></select>
+                            </div>
+
+                            <!-- Total -->
+                            <div class="rounded-xl p-4" style="border:1px solid rgba(245,158,11,0.12);background:rgba(245,158,11,0.03)" data-testid="total-section">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-300">Total a pagar agora:</span>
+                                    <span class="text-xl font-bold text-amber-500" id="totalValor">R$ 497</span>
+                                </div>
+                                <p class="mt-1 text-xs text-gray-500" id="totalDesc">Depois: R$ 197/mês (cancelável a qualquer momento)</p>
+                            </div>
+
+                            <!-- Submit -->
+                            <button type="submit" class="btn-primary" id="submitBtn" disabled data-testid="submit-btn">
+                                Finalizar com PIX
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- ===== PIX MODAL ===== -->
+<div id="pixModal" class="modal-backdrop hidden" data-testid="pix-modal">
+    <div class="modal-content slide-up">
+        <button onclick="closePixModal()" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors" style="position:absolute;top:1rem;right:1rem;background:none;border:none;cursor:pointer" data-testid="pix-modal-close">
+            <i data-lucide="x" class="h-5 w-5"></i>
+        </button>
+        <div class="flex items-center gap-2.5 mb-4">
+            <i data-lucide="qr-code" class="h-6 w-6 text-amber-500"></i>
+            <h2 class="text-xl font-semibold text-white">Pagamento via PIX</h2>
+        </div>
+        <p class="text-sm text-gray-400 mb-5">Escaneie o QR Code ou copie o código para pagar</p>
+
+        <!-- Amount -->
+        <div class="rounded-xl p-3.5 text-center mb-4" style="background:#0a0a0a;border:1px solid rgba(255,255,255,0.04)">
+            <p class="text-sm text-gray-400">Valor a pagar</p>
+            <p class="text-2xl font-bold text-amber-500" id="pixValor">R$ 497</p>
+        </div>
+
+        <!-- Timer -->
+        <div class="flex items-center justify-center gap-2 text-amber-500 mb-4">
+            <i data-lucide="clock" class="h-4 w-4"></i>
+            <span class="text-sm font-medium" id="pixTimer" data-testid="pix-timer">Expira em 30:00</span>
+        </div>
+
+        <!-- Waiting Animation -->
+        <div class="flex flex-col items-center gap-3 py-4">
+            <div class="relative">
+                <div class="h-16 w-16 rounded-full flex items-center justify-center" style="border:3px solid rgba(245,158,11,0.15)">
+                    <i data-lucide="loader-2" class="h-8 w-8 text-amber-500 spin-slow"></i>
+                </div>
+                <div class="absolute inset-0 rounded-full pulse-ring" style="border:3px solid rgba(245,158,11,0.2)"></div>
+            </div>
+            <p class="text-sm text-gray-400 text-center">Aguardando confirmação do pagamento...</p>
+            <p class="text-xs text-gray-600 text-center">O pagamento será confirmado automaticamente</p>
+        </div>
+
+        <!-- PIX Code -->
+        <div id="pixCodeSection" class="w-full space-y-2 mt-2">
+            <p class="text-xs text-gray-400 text-center">Código PIX Copia e Cola:</p>
+            <div class="flex gap-2">
+                <div class="flex-1 rounded-xl p-3 overflow-hidden" style="background:#0a0a0a;border:1px solid rgba(255,255,255,0.06)">
+                    <p class="break-all font-mono text-xs text-gray-300" id="pixCode" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden" data-testid="pix-code-text"></p>
+                </div>
+                <button onclick="copyPixCode()" class="shrink-0 rounded-xl p-3 hover:bg-white/5 transition-colors" style="border:1px solid rgba(255,255,255,0.06);background:#0a0a0a;cursor:pointer" id="copyBtn" data-testid="copy-pix-btn">
+                    <i data-lucide="copy" class="h-4 w-4 text-gray-400" id="copyIcon"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Cancel -->
+        <button onclick="closePixModal()" class="w-full rounded-xl py-3 text-sm text-gray-500 hover:text-white hover:bg-white/5 transition-all mt-4" style="background:none;border:none;cursor:pointer">
+            Cancelar
+        </button>
+    </div>
+</div>
+
+<!-- ===== CARD MODAL ===== -->
+<div id="cardModal" class="modal-backdrop hidden" data-testid="card-modal">
+    <div class="modal-content slide-up">
+        <button onclick="closeCardModal()" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors" style="position:absolute;top:1rem;right:1rem;background:none;border:none;cursor:pointer" data-testid="card-modal-close">
+            <i data-lucide="x" class="h-5 w-5"></i>
+        </button>
+        <div class="flex items-center gap-2.5 mb-4">
+            <i data-lucide="credit-card" class="h-6 w-6 text-amber-500"></i>
+            <h2 class="text-xl font-semibold text-white">Pagamento via Cartão</h2>
+        </div>
+        <p class="text-sm text-gray-400 mb-5">Preencha os dados do cartão de crédito</p>
+
+        <div class="rounded-xl p-3.5 text-center mb-5" style="background:#0a0a0a;border:1px solid rgba(255,255,255,0.04)">
+            <p class="text-sm text-gray-400">Valor a pagar</p>
+            <p class="text-2xl font-bold text-amber-500" id="cardValor">R$ 497</p>
+            <p class="text-xs text-gray-500 mt-1" id="cardParcelas"></p>
+        </div>
+
+        <div class="space-y-4">
+            <div class="space-y-1.5">
+                <label class="text-sm text-gray-300">Número do cartão</label>
+                <input id="cardNumero" class="input-field" placeholder="0000 0000 0000 0000" oninput="maskCardNumber(this)" data-testid="card-numero">
+                <p class="text-xs text-red-400 hidden" id="errCardNumero"></p>
+            </div>
+            <div class="space-y-1.5">
+                <label class="text-sm text-gray-300">Nome no cartão</label>
+                <input id="cardNome" class="input-field" placeholder="JOÃO DA SILVA" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" data-testid="card-nome">
+                <p class="text-xs text-red-400 hidden" id="errCardNome"></p>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-1.5">
+                    <label class="text-sm text-gray-300">Validade</label>
+                    <input id="cardValidade" class="input-field" placeholder="MM/AA" maxlength="5" oninput="maskCardExpiry(this)" data-testid="card-validade">
+                    <p class="text-xs text-red-400 hidden" id="errCardValidade"></p>
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-sm text-gray-300">CVV</label>
+                    <input id="cardCvv" class="input-field" placeholder="123" maxlength="4" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)" data-testid="card-cvv">
+                    <p class="text-xs text-red-400 hidden" id="errCardCvv"></p>
+                </div>
+            </div>
+
+            <button type="button" onclick="processCardPayment()" class="btn-primary" id="cardSubmitBtn" data-testid="card-submit-btn">
+                Pagar agora
+            </button>
+            <button onclick="closeCardModal()" class="w-full rounded-xl py-3 text-sm text-gray-500 hover:text-white hover:bg-white/5 transition-all" style="background:none;border:none;cursor:pointer">
+                Cancelar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== SUCCESS PAGE ===== -->
+<div id="successPage" class="hidden min-h-screen flex items-center justify-center px-4" style="background:#0a0a0a" data-testid="success-page">
+    <div id="confettiContainer" class="pointer-events-none fixed inset-0 overflow-hidden" style="z-index:50"></div>
+    <div class="w-full max-w-md slide-up">
+        <div class="mb-6 flex justify-center">
+            <div class="flex h-24 w-24 items-center justify-center rounded-full" style="background:rgba(34,197,94,0.12);box-shadow:0 0 40px rgba(34,197,94,0.1)">
+                <i data-lucide="check-circle" class="h-14 w-14 text-green-500"></i>
+            </div>
+        </div>
+        <h1 class="mb-2 text-center text-2xl font-bold text-white" data-testid="success-title">Pagamento Aprovado!</h1>
+        <p class="mb-8 text-center text-gray-400" id="successGreeting">Parabéns! Seu acesso ao CalFlow Premium foi liberado.</p>
+
+        <!-- Subscription Summary -->
+        <div class="mb-6 rounded-2xl p-5 card-elevated" data-testid="success-summary">
+            <h3 class="mb-3 text-sm font-semibold text-amber-500 text-center">Resumo da Assinatura</h3>
+            <div class="space-y-2 text-sm">
+                <div class="flex justify-between"><span class="text-gray-500">Plano:</span><span class="text-white font-medium" id="successPlano"></span></div>
+                <div class="flex justify-between"><span class="text-gray-500">Nome:</span><span class="text-white" id="successNome"></span></div>
+                <div class="flex justify-between"><span class="text-gray-500">E-mail:</span><span class="text-white" id="successEmail"></span></div>
+            </div>
+        </div>
+
+        <!-- Next Steps -->
+        <div class="mb-6 rounded-2xl p-5 card-elevated" data-testid="success-next-steps">
+            <div class="flex items-center justify-center gap-2 text-amber-500 mb-3">
+                <i data-lucide="sparkles" class="h-5 w-5"></i>
+                <span class="font-semibold text-sm">Próximos passos</span>
+            </div>
+            <ul class="space-y-3 text-sm text-gray-300">
+                <li class="flex items-start gap-3">
+                    <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs text-amber-500 font-bold" style="background:rgba(245,158,11,0.12)">1</span>
+                    <span>Clique no botão abaixo para enviar a mensagem no WhatsApp</span>
+                </li>
+                <li class="flex items-start gap-3">
+                    <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs text-amber-500 font-bold" style="background:rgba(245,158,11,0.12)">2</span>
+                    <span>Nossa equipe vai configurar seu sistema em até 24h</span>
+                </li>
+                <li class="flex items-start gap-3">
+                    <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs text-amber-500 font-bold" style="background:rgba(245,158,11,0.12)">3</span>
+                    <span>Você receberá o link de acesso e treinamento completo</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Buttons -->
+        <div class="space-y-3">
+            <button onclick="openWhatsApp()" class="w-full flex items-center justify-center gap-2 rounded-xl bg-green-600 py-4 text-base font-semibold text-white transition-all hover:bg-green-500 hover:shadow-lg" style="border:none;cursor:pointer;box-shadow:0 4px 20px rgba(34,197,94,0.15)" data-testid="whatsapp-btn">
+                <i data-lucide="message-circle" class="h-5 w-5"></i>
+                Configurar meu WhatsApp agora
+            </button>
+            <button onclick="backToCheckout()" class="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm text-gray-300 transition-all hover:bg-white/5" style="border:1px solid rgba(255,255,255,0.06);background:#141414;cursor:pointer" data-testid="back-btn">
+                <i data-lucide="settings" class="h-4 w-4"></i>
+                Voltar ao início
+            </button>
+            <button onclick="openWhatsApp()" class="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm text-gray-600 transition-all hover:text-gray-300" style="background:none;border:none;cursor:pointer" data-testid="support-btn">
+                <i data-lucide="headphones" class="h-4 w-4"></i>
+                Suporte via WhatsApp
+            </button>
+        </div>
+        <p class="mt-4 text-center text-xs text-gray-600">Caso o WhatsApp não abra automaticamente, entre em contato pelo número (32) 9940-1356</p>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    // CONFIGURAÇÕES - EDITE AQUI
+    // ============================================================
+    const CONFIG = {
+        // URL base da sua API Spring Boot
+        apiBaseUrl: '',  // Ex: '/api' ou 'http://localhost:8080/api'
+        // Número do WhatsApp (com código do país)
+        whatsappNumber: '553299401356',
+        // Nome do negócio
+        businessName: 'CalFlow',
+    };
+
+    // ============================================================
+    // STATE
+    // ============================================================
+    let state = {
+        plano: 'mensal',
+        metodo: 'pix',
+        parcelas: 1,
+        customerData: null,
+        transactionId: null,
+        pixTimerInterval: null,
+        pixPollingInterval: null,
+        timeLeft: 30 * 60,
+    };
+
+    // ============================================================
+    // VALIDATION FUNCTIONS
+    // ============================================================
+    function validarCPF(cpf) {
+        cpf = cpf.replace(/[^\d]/g, '');
+        if (cpf.length !== 11) return false;
+        if (/^(\d)\1+$/.test(cpf)) return false;
+        let soma = 0;
+        for (let i = 0; i < 9; i++) soma += parseInt(cpf.charAt(i)) * (10 - i);
+        let resto = (soma * 10) % 11;
+        if (resto === 10 || resto === 11) resto = 0;
+        if (resto !== parseInt(cpf.charAt(9))) return false;
+        soma = 0;
+        for (let i = 0; i < 10; i++) soma += parseInt(cpf.charAt(i)) * (11 - i);
+        resto = (soma * 10) % 11;
+        if (resto === 10 || resto === 11) resto = 0;
+        return resto === parseInt(cpf.charAt(10));
+    }
+
+    function validarCNPJ(cnpj) {
+        cnpj = cnpj.replace(/[^\d]/g, '');
+        if (cnpj.length !== 14) return false;
+        if (/^(\d)\1+$/.test(cnpj)) return false;
+        const p1 = [5,4,3,2,9,8,7,6,5,4,3,2];
+        let s = 0;
+        for (let i = 0; i < 12; i++) s += parseInt(cnpj.charAt(i)) * p1[i];
+        let r = s % 11;
+        const d1 = r < 2 ? 0 : 11 - r;
+        if (parseInt(cnpj.charAt(12)) !== d1) return false;
+        const p2 = [6,5,4,3,2,9,8,7,6,5,4,3,2];
+        s = 0;
+        for (let i = 0; i < 13; i++) s += parseInt(cnpj.charAt(i)) * p2[i];
+        r = s % 11;
+        const d2 = r < 2 ? 0 : 11 - r;
+        return parseInt(cnpj.charAt(13)) === d2;
+    }
+
+    function validarCPFouCNPJ(val) {
+        const limpo = val.replace(/[^\d]/g, '');
+        if (limpo.length <= 11) return validarCPF(limpo);
+        return validarCNPJ(limpo);
+    }
+
+    function validarEmail(email) {
+        return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email);
+    }
+
+    function validarTelefone(tel) {
+        const l = tel.replace(/\D/g, '');
+        if (l.length !== 10 && l.length !== 11) return false;
+        const ddd = parseInt(l.substring(0, 2));
+        if (ddd < 11 || ddd > 99) return false;
+        if (l.length === 11 && l.charAt(2) !== '9') return false;
+        return !/^(\d)\1+$/.test(l);
+    }
+
+    function validarNome(nome) {
+        const t = nome.trim();
+        if (t.length < 3) return false;
+        const p = t.split(/\s+/).filter(w => w.length > 1);
+        return p.length >= 2 && /^[a-zA-ZÀ-ÿ\s]+$/.test(t);
+    }
+
+    // ============================================================
+    // MASKS
+    // ============================================================
+    function maskCpfCnpj(el) {
+    // Remove tudo que não é número
+    let numeros = el.value.replace(/\D/g, '');
+
+    // CPF (11 dígitos)
+    if (numeros.length <= 11) {
+        numeros = numeros.substring(0, 11);
+        numeros = numeros.replace(/(\d{3})(\d)/, '$1.$2');
+        numeros = numeros.replace(/(\d{3})(\d)/, '$1.$2');
+        numeros = numeros.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    }
+    // CNPJ (14 dígitos)
+    else {
+        numeros = numeros.substring(0, 14);
+        numeros = numeros.replace(/^(\d{2})(\d)/, '$1.$2');
+        numeros = numeros.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+        numeros = numeros.replace(/\.(\d{3})(\d)/, '.$1/$2');
+        numeros = numeros.replace(/(\d{4})(\d)/, '$1-$2');
+    }
+
+    el.value = numeros;
+}
+
+    function maskPhone(el) {
+        let v = el.value.replace(/\D/g, '').slice(0, 11);
+        if (v.length > 2) v = '(' + v.slice(0,2) + ') ' + v.slice(2);
+        if (v.length > 10) v = v.slice(0,10) + '-' + v.slice(10);
+        el.value = v;
+    }
+
+    function maskCardNumber(el) {
+        el.value = el.value.replace(/\D/g, '').slice(0, 16).replace(/(\d{4})/g, '$1 ').trim();
+    }
+
+    function maskCardExpiry(el) {
+        el.value = el.value.replace(/\D/g, '').slice(0, 4).replace(/(\d{2})(\d)/, '$1/$2');
+    }
+
+    // ============================================================
+    // UI FUNCTIONS
+    // ============================================================
+    function selectPlano(plano) {
+        state.plano = plano;
+        document.getElementById('planMensal').className = 'plan-btn' + (plano === 'mensal' ? ' active' : '');
+        document.getElementById('planAnual').className = 'plan-btn' + (plano === 'anual' ? ' active' : '');
+        document.querySelector('#planMensal .text-sm.font-semibold').className = 'text-sm font-semibold ' + (plano === 'mensal' ? 'text-white' : 'text-gray-400');
+        document.querySelector('#planAnual .text-sm.font-semibold').className = 'text-sm font-semibold ' + (plano === 'anual' ? 'text-white' : 'text-gray-400');
+        updateTotal();
+        updateParcelasOptions();
+    }
+
+    function selectMethod(metodo) {
+    state.metodo = metodo;
+    document.getElementById('methodPix').className = 'method-btn' + (metodo === 'pix' ? ' active' : '');
+    document.getElementById('methodCartao').className = 'method-btn' + (metodo === 'cartao' ? ' active' : '');
+
+    const pixIcon = document.querySelector('#methodPix i');
+    const cartaoIcon = document.querySelector('#methodCartao i');
+    const pixLabel = document.querySelector('#methodPix .text-xs.font-medium');
+    const cartaoLabel = document.querySelector('#methodCartao .text-xs.font-medium');
+
+    if (pixIcon) pixIcon.style.color = metodo === 'pix' ? '#F59E0B' : '#6b7280';
+    if (cartaoIcon) cartaoIcon.style.color = metodo === 'cartao' ? '#F59E0B' : '#6b7280';
+    if (pixLabel) pixLabel.className = 'text-xs font-medium ' + (metodo === 'pix' ? 'text-white' : 'text-gray-400');
+    if (cartaoLabel) cartaoLabel.className = 'text-xs font-medium ' + (metodo === 'cartao' ? 'text-white' : 'text-gray-400');
+
+    // NOVO: Mostrar/esconder parcelas
+    const parcelasSection = document.getElementById('parcelasSection');
+    if (parcelasSection) {
+        parcelasSection.className = metodo === 'cartao' ? 'space-y-1.5 fade-in-up' : 'space-y-1.5 hidden';
+    }
+
+    // NOVO: Atualizar texto do botão
+    const btn = document.getElementById('submitBtn');
+    if (btn) {
+        btn.textContent = 'Finalizar com ' + (metodo === 'pix' ? 'PIX' : 'Cartão');
+    }
+
+    // CRÍTICO: Se plano ANUAL, FORÇA cartão (PIX não suporta parcelamento)
+    if (state.plano === 'anual' && metodo === 'pix') {
+        alert('Para o plano anual, apenas pagamento com cartão está disponível (até 12x sem juros).');
+        selectMethod('cartao'); // Força cartão
+        return;
+    }
+}
+
+    function getValorTotal() {
+        return state.plano === 'anual' ? 2197 : 497;
+    }
+
+    function updateTotal() {
+        const v = getValorTotal();
+        document.getElementById('totalValor').textContent = 'R$ ' + v.toLocaleString('pt-BR');
+        document.getElementById('totalDesc').textContent = state.plano === 'mensal'
+            ? 'Depois: R$ 197/mês (cancelável a qualquer momento)'
+            : '';
+    }
+
+    function updateParcelasOptions() {
+        const sel = document.getElementById('selectParcelas');
+        sel.innerHTML = '';
+        const v = getValorTotal();
+        for (let i = 1; i <= 12; i++) {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = i + 'x de R$ ' + (v / i).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) + ' (sem juros)';
+            sel.appendChild(opt);
+        }
+        sel.value = state.parcelas;
+    }
+
+    function checkFormValid() {
+        const nome = document.getElementById('inputNome').value;
+        const email = document.getElementById('inputEmail').value;
+        const tel = document.getElementById('inputTelefone').value;
+        const doc = document.getElementById('inputCpfCnpj').value;
+        const valid = validarNome(nome) && validarEmail(email) && validarTelefone(tel) && validarCPFouCNPJ(doc);
+        document.getElementById('submitBtn').disabled = !valid;
+    }
+
+    function showError(id, msg) {
+        const el = document.getElementById(id);
+        if (msg) { el.textContent = msg; el.classList.remove('hidden'); }
+        else { el.textContent = ''; el.classList.add('hidden'); }
+    }
+
+    // ============================================================
+    // FORM SUBMISSION
+    // ============================================================
+    async function handleSubmit(e) {
+        e.preventDefault();
+        const nome = document.getElementById('inputNome').value;
+        const email = document.getElementById('inputEmail').value;
+        const tel = document.getElementById('inputTelefone').value;
+        const doc = document.getElementById('inputCpfCnpj').value;
+
+        let hasError = false;
+        if (!validarNome(nome)) { showError('errNome', 'Digite nome e sobrenome completos'); document.getElementById('inputNome').classList.add('error'); hasError = true; }
+        else { showError('errNome', ''); document.getElementById('inputNome').classList.remove('error'); }
+        if (!validarEmail(email)) { showError('errEmail', 'Digite um e-mail válido'); document.getElementById('inputEmail').classList.add('error'); hasError = true; }
+        else { showError('errEmail', ''); document.getElementById('inputEmail').classList.remove('error'); }
+        if (!validarTelefone(tel)) { showError('errTelefone', 'Digite um telefone válido com DDD'); document.getElementById('inputTelefone').classList.add('error'); hasError = true; }
+        else { showError('errTelefone', ''); document.getElementById('inputTelefone').classList.remove('error'); }
+        const limpoDoc = doc.replace(/\D/g, '');
+        if (!validarCPFouCNPJ(doc)) {
+            const msg = limpoDoc.length <= 11 ? 'CPF inválido' : 'CNPJ inválido';
+            showError('errCpfCnpj', msg); document.getElementById('inputCpfCnpj').classList.add('error'); hasError = true;
+        } else { showError('errCpfCnpj', ''); document.getElementById('inputCpfCnpj').classList.remove('error'); }
+
+        if (hasError) return;
+
+        state.customerData = { nome, email, telefone: tel.replace(/\D/g, ''), cpfCnpj: limpoDoc, plano: state.plano };
+        state.parcelas = state.metodo === 'cartao' ? parseInt(document.getElementById('selectParcelas').value) : 1;
+
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span style="display:flex;align-items:center;justify-content:center;gap:0.5rem"><svg class="spin-slow" style="height:1.25rem;width:1.25rem" viewBox="0 0 24 24" fill="none"><circle style="opacity:0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path style="opacity:0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Processando...</span>';
+
+        try {
+            const response = await fetch(CONFIG.apiBaseUrl + '/api/checkout/processar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    nome, email,
+                    telefone: tel.replace(/\D/g, ''),
+                    cpfCnpj: limpoDoc,
+                    metodo: state.metodo,
+                    plano: state.plano,
+                    valor: getValorTotal(),
+                    parcelas: state.parcelas,
+                }),
+            });
+            const data = await response.json();
+            if (data.status === 'error') throw new Error(data.mensagem);
+
+            state.transactionId = data.transactionId;
+
+            if (state.metodo === 'pix') {
+                openPixModal(data.qrCodeTexto, getValorTotal());
+            } else {
+                openCardModal(getValorTotal(), state.parcelas);
+            }
+        } catch (err) {
+            alert(err.message || 'Erro ao processar. Tente novamente.');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Finalizar com ' + (state.metodo === 'pix' ? 'PIX' : 'Cartão');
+            checkFormValid();
+        }
+    }
+
+    // ============================================================
+    // PIX MODAL
+    // ============================================================
+    function openPixModal(pixCode, valor) {
+        document.getElementById('pixValor').textContent = 'R$ ' + valor.toLocaleString('pt-BR');
+        document.getElementById('pixCode').textContent = pixCode || 'Código será gerado pelo gateway';
+        document.getElementById('pixModal').classList.remove('hidden');
+        lucide.createIcons();
+
+        state.timeLeft = 30 * 60;
+        if (state.pixTimerInterval) clearInterval(state.pixTimerInterval);
+        state.pixTimerInterval = setInterval(() => {
+            state.timeLeft--;
+            if (state.timeLeft <= 0) {
+                clearInterval(state.pixTimerInterval);
+                state.timeLeft = 0;
+            }
+            const m = Math.floor(state.timeLeft / 60).toString().padStart(2, '0');
+            const s = (state.timeLeft % 60).toString().padStart(2, '0');
+            document.getElementById('pixTimer').textContent = 'Expira em ' + m + ':' + s;
+        }, 1000);
+
+        if (state.pixPollingInterval) clearInterval(state.pixPollingInterval);
+        state.pixPollingInterval = setInterval(async () => {
+            try {
+                const res = await fetch(CONFIG.apiBaseUrl + '/api/checkout/status/' + state.transactionId);
+                const data = await res.json();
+                if (data.status === 'confirmed') {
+                    clearInterval(state.pixPollingInterval);
+                    clearInterval(state.pixTimerInterval);
+                    document.getElementById('pixModal').classList.add('hidden');
+                    showSuccessPage();
+                }
+            } catch {}
+        }, 3000);
+    }
+
+    function closePixModal() {
+        document.getElementById('pixModal').classList.add('hidden');
+        if (state.pixTimerInterval) clearInterval(state.pixTimerInterval);
+        if (state.pixPollingInterval) clearInterval(state.pixPollingInterval);
+    }
+
+    function copyPixCode() {
+        const code = document.getElementById('pixCode').textContent;
+        navigator.clipboard.writeText(code).then(() => {
+            const btn = document.getElementById('copyBtn');
+            btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+            setTimeout(() => {
+                btn.innerHTML = '<i data-lucide="copy" class="h-4 w-4 text-gray-400"></i>';
+                lucide.createIcons();
+            }, 2000);
+        });
+    }
+
+    // ============================================================
+    // CARD MODAL
+    // ============================================================
+    function openCardModal(valor, parcelas) {
+        document.getElementById('cardValor').textContent = 'R$ ' + valor.toLocaleString('pt-BR');
+        if (parcelas > 1) {
+            document.getElementById('cardParcelas').textContent = parcelas + 'x de R$ ' + (valor / parcelas).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) + ' sem juros';
+        } else {
+            document.getElementById('cardParcelas').textContent = '';
+        }
+        document.getElementById('cardModal').classList.remove('hidden');
+        lucide.createIcons();
+    }
+
+    function closeCardModal() {
+        document.getElementById('cardModal').classList.add('hidden');
+    }
+
+    function processCardPayment() {
+        let hasError = false;
+        const num = document.getElementById('cardNumero').value.replace(/\D/g, '');
+        const nome = document.getElementById('cardNome').value;
+        const val = document.getElementById('cardValidade').value.replace(/\D/g, '');
+        const cvv = document.getElementById('cardCvv').value;
+
+        if (num.length !== 16) { showError('errCardNumero', 'Número inválido'); hasError = true; } else showError('errCardNumero', '');
+        if (nome.trim().length < 3) { showError('errCardNome', 'Digite o nome'); hasError = true; } else showError('errCardNome', '');
+        if (val.length !== 4) { showError('errCardValidade', 'Inválida'); hasError = true; }
+        else {
+            const mes = parseInt(val.slice(0,2));
+            const ano = parseInt('20' + val.slice(2,4));
+            if (mes < 1 || mes > 12) { showError('errCardValidade', 'Mês inválido'); hasError = true; }
+            else if (new Date(ano, mes-1) < new Date()) { showError('errCardValidade', 'Vencido'); hasError = true; }
+            else showError('errCardValidade', '');
+        }
+        if (cvv.length < 3) { showError('errCardCvv', 'CVV inválido'); hasError = true; } else showError('errCardCvv', '');
+
+        if (hasError) return;
+
+        const btn = document.getElementById('cardSubmitBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span style="display:flex;align-items:center;justify-content:center;gap:0.5rem"><svg class="spin-slow" style="height:1.25rem;width:1.25rem" viewBox="0 0 24 24" fill="none"><circle style="opacity:0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path style="opacity:0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Processando pagamento...</span>';
+
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.textContent = 'Pagar agora';
+            closeCardModal();
+            showSuccessPage();
+        }, 3000);
+    }
+
+    // ============================================================
+    // SUCCESS PAGE
+    // ============================================================
+    function showSuccessPage() {
+        document.getElementById('checkoutPage').classList.add('hidden');
+        document.getElementById('successPage').classList.remove('hidden');
+
+        const cd = state.customerData;
+        const firstName = cd.nome.split(' ')[0];
+        document.getElementById('successGreeting').textContent = 'Parabéns, ' + firstName + '! Seu acesso ao CalFlow Premium foi liberado.';
+        document.getElementById('successPlano').textContent = 'CalFlow Premium ' + (cd.plano === 'anual' ? 'Anual' : 'Mensal');
+        document.getElementById('successNome').textContent = cd.nome;
+        document.getElementById('successEmail').textContent = cd.email;
+
+        lucide.createIcons();
+        createConfetti();
+
+        setTimeout(() => openWhatsApp(), 2000);
+    }
+
+    function createConfetti() {
+        const container = document.getElementById('confettiContainer');
+        container.innerHTML = '';
+        const colors = ['#F59E0B', '#10B981', '#3B82F6', '#EC4899', '#8B5CF6'];
+        for (let i = 0; i < 50; i++) {
+            const p = document.createElement('div');
+            p.className = 'confetti-particle';
+            p.style.cssText = 'position:absolute;height:10px;width:10px;left:' + (Math.random()*100) + '%;top:-20px;background:' + colors[Math.floor(Math.random()*colors.length)] + ';animation-delay:' + (Math.random()*2) + 's;border-radius:' + (Math.random()>0.5?'50%':'2px');
+            container.appendChild(p);
+        }
+    }
+
+    function openWhatsApp() {
+        const cd = state.customerData;
+        const planoTexto = cd.plano === 'anual' ? 'Anual' : 'Mensal';
+        const msg = encodeURIComponent(
+            'Olá! Acabei de realizar o pagamento do CalFlow Premium (' + planoTexto + ').\n\n' +
+            'Nome: ' + cd.nome + '\n' +
+            'E-mail: ' + cd.email + '\n' +
+            'Telefone: ' + cd.telefone + '\n\n' +
+            'Aguardo as instruções de acesso!'
+        );
+        window.open('https://wa.me/' + CONFIG.whatsappNumber + '?text=' + msg, '_blank');
+    }
+
+    function backToCheckout() {
+        document.getElementById('successPage').classList.add('hidden');
+        document.getElementById('checkoutPage').classList.remove('hidden');
+    }
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    document.addEventListener('DOMContentLoaded', () => {
+        lucide.createIcons();
+        updateParcelasOptions();
+
+        document.getElementById('inputCpfCnpj').addEventListener('input', function() { maskCpfCnpj(this); checkFormValid(); });
+        document.getElementById('inputTelefone').addEventListener('input', function() { maskPhone(this); checkFormValid(); });
+        document.getElementById('inputNome').addEventListener('input', checkFormValid);
+        document.getElementById('inputEmail').addEventListener('input', checkFormValid);
+
+        document.getElementById('inputNome').addEventListener('blur', function() {
+            if (!validarNome(this.value) && this.value.trim()) { showError('errNome', 'Digite nome e sobrenome completos'); this.classList.add('error'); }
+            else { showError('errNome', ''); this.classList.remove('error'); }
+        });
+        document.getElementById('inputEmail').addEventListener('blur', function() {
+            if (!validarEmail(this.value) && this.value.trim()) { showError('errEmail', 'Digite um e-mail válido'); this.classList.add('error'); }
+            else { showError('errEmail', ''); this.classList.remove('error'); }
+        });
+        document.getElementById('inputTelefone').addEventListener('blur', function() {
+            if (!validarTelefone(this.value) && this.value.trim()) { showError('errTelefone', 'Digite um telefone válido com DDD'); this.classList.add('error'); }
+            else { showError('errTelefone', ''); this.classList.remove('error'); }
+        });
+        document.getElementById('inputCpfCnpj').addEventListener('blur', function() {
+            const limpo = this.value.replace(/\D/g, '');
+            if (!validarCPFouCNPJ(this.value) && limpo.length > 0) {
+                const msg = limpo.length <= 11 ? 'CPF inválido' : 'CNPJ inválido';
+                showError('errCpfCnpj', msg); this.classList.add('error');
+            } else { showError('errCpfCnpj', ''); this.classList.remove('error'); }
+        });
+
+        document.getElementById('selectParcelas').addEventListener('change', function() {
+            state.parcelas = parseInt(this.value);
+        });
+    });
+</script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>

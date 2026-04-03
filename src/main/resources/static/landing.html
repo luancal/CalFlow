@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CalFlow - Automatize Agendamentos via WhatsApp | Sistema Inteligente 24/7</title>
+    <!-- FAVICON -->
+    <link rel="apple-touch-icon" sizes="180x180" href="images/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png">
+    <link rel="manifest" href="images/site.webmanifest">
+
+    <meta name="description" content="Sistema de agendamento automático via WhatsApp. Reduza faltas em 80%, receba pagamentos antecipados e venda 24/7. Implantação em 24h.">
+    <meta name="theme-color" content="#F59E0B">
+    <meta property="og:title" content="CalFlow - Automatize Agendamentos via WhatsApp">
+    <meta property="og:description" content="Sistema automatizado que agenda, lembra e recebe pagamentos automaticamente via WhatsApp, 24 horas por dia.">
+    <meta property="og:type" content="website">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"DM Sans"', 'system-ui', 'sans-serif'] },
+                    colors: {
+                        surface: '#141414',
+                        amber: { 400: '#FBBF24', 500: '#F59E0B', 600: '#D97706' }
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.7s ease-out forwards',
+                        'glow-pulse': 'glowPulse 2s ease-in-out infinite',
+                        'slide-up': 'slideUp 0.5s ease-out forwards',
+                        'border-glow': 'borderGlow 3s ease-in-out infinite',
+                        'pulse-ring': 'pulseRing 2s ease-in-out infinite',
+                        'float': 'float 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(24px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        },
+                        glowPulse: {
+                            '0%, 100%': { boxShadow: '0 0 5px rgba(245, 158, 11, 0.3)' },
+                            '50%': { boxShadow: '0 0 20px rgba(245, 158, 11, 0.6)' }
+                        },
+                        borderGlow: {
+                            '0%, 100%': { borderColor: 'rgba(255, 255, 255, 0.1)' },
+                            '50%': { borderColor: 'rgba(245, 158, 11, 0.5)' }
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px) scale(0.98)' },
+                            '100%': { opacity: '1', transform: 'translateY(0) scale(1)' }
+                        },
+                        pulseRing: {
+                            '0%, 100%': { transform: 'scale(1)', opacity: '1' },
+                            '50%': { transform: 'scale(1.06)', opacity: '0.8' }
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-8px)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'DM Sans', system-ui, sans-serif;
+            background-color: #0a0a0a;
+            color: #fff;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+            overflow-x: hidden;
+        }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 10px; }
+        html { scroll-behavior: smooth; }
+
+        .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.7s ease, transform 0.7s ease; }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+
+        .glow-amber { box-shadow: 0 0 50px -15px rgba(245, 158, 11, 0.25); }
+        .glow-green { box-shadow: 0 0 30px -10px rgba(34, 197, 94, 0.25); }
+
+        .card-base {
+            background: #141414;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.3s ease;
+        }
+        .card-base:hover {
+            border-color: rgba(245, 158, 11, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        /* CORREÇÃO 2: Timeline cards NÃO sobem no hover */
+        .timeline-card.card-base:hover {
+            transform: none;
+            border-color: rgba(245, 158, 11, 0.25);
+        }
+        .timeline-dot {
+            z-index: 10;
+            position: absolute;
+            left: -1.25rem;
+            top: 0.25rem;
+        }
+
+        .timeline-line {
+            position: absolute;
+            left: 1.25rem;
+            top: 2.5rem;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #F59E0B, rgba(245,158,11,0.1));
+        }
+
+        details summary { list-style: none; cursor: pointer; }
+        details summary::-webkit-details-marker { display: none; }
+        details[open] .faq-chevron { transform: rotate(180deg); }
+        .faq-chevron { transition: transform 0.3s ease; }
+
+        .roi-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #262626;
+            outline: none;
+        }
+        .roi-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 22px; width: 22px;
+            border-radius: 50%;
+            background: #F59E0B;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+        }
+        .roi-slider::-moz-range-thumb {
+            height: 22px; width: 22px;
+            border-radius: 50%;
+            background: #F59E0B;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+        }
+
+        .whatsapp-mockup {
+            background: #0b141a;
+            border-radius: 2.5rem;
+            overflow: hidden;
+            border: 6px solid #1f2c34;
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.8),
+                0 0 20px rgba(245, 158, 11, 0.05);
+            max-width: 360px;
+            width: 100%;
+            margin-left: auto;
+            transition: all 0.5s ease;
+        }
+        @media (min-width: 1024px) {
+            .whatsapp-mockup {
+                transform: translateX(-20px); /* Move levemente para a esquerda */
+                scale: 1.1; /* Aumenta o tamanho geral */
+            }
+        }
+        .wa-header { background: #1f2c34; padding: 1.2rem 1.2rem 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .wa-bubble-in {
+            background: #202c33;
+            border-radius: 0 0.75rem 0.75rem 0.75rem;
+            padding: 0.8rem 1rem;
+            max-width: 88%;
+            font-size: 0.9rem;
+            color: #e9edef;
+            line-height: 1.4;
+        }
+        .wa-bubble-out {
+            background: #005c4b;
+            border-radius: 0.75rem 0 0.75rem 0.75rem;
+            padding: 0.8rem 1rem;
+            max-width: 88%;
+            margin-left: auto;
+            margin-right: 0.5rem;
+            font-size: 0.9rem;
+            color: #e9edef;
+        }
+        .nav-link-flash { animation: navFlash 0.4s ease; }
+            @keyframes navFlash {
+            0% { color: #737373; transform: scale(1); }
+            50% { color: #F59E0B; transform: scale(1.08); }
+            100% { color: #737373; transform: scale(1); }
+        }
+        .card-problema:hover {
+            border-color: rgba(239, 68, 68, 0.35) !important;
+            box-shadow: 0 8px 32px rgba(239, 68, 68, 0.08);
+            transform: translateY(-2px);
+        }
+    </style>
+
+    <script src="https://unpkg.com/lucide@latest" defer></script>
+
+</head>
+<body>
+
+<!-- ====== STICKY NAV ====== -->
+<nav class="fixed top-0 left-0 right-0 z-50 border-b border-white/5" style="background:rgba(10,10,10,0.7);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)" data-testid="navbar">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <button id="mobileMenuBtn" class="md:hidden flex flex-col gap-1.5 p-2" style="background:none;border:none;cursor:pointer" onclick="toggleMobileMenu()">
+                <span class="w-5 h-0.5 bg-white transition-all" id="burger1"></span>
+                <span class="w-5 h-0.5 bg-white transition-all" id="burger2"></span>
+                <span class="w-5 h-0.5 bg-white transition-all" id="burger3"></span>
+            </button>
+            <a href="#" class="flex items-center">
+                <img src="images/CalFlow.jpeg" alt="CalFlow" class="h-10 rounded-lg" loading="lazy" data-testid="nav-logo">
+            </a>
+        </div>
+        <div class="hidden md:flex items-center gap-8 text-sm text-neutral-400">
+            <a href="#solucao" class="hover:text-white transition-colors">A Solução</a>
+            <a href="#funcionalidades" class="hover:text-white transition-colors">Funcionalidades</a>
+            <a href="#precos" class="hover:text-white transition-colors">Preços</a>
+            <a href="#roi" class="hover:text-white transition-colors">Calculadora ROI</a>
+            <a href="#faq" class="hover:text-white transition-colors">FAQ</a>
+            <a href="/cliente.html" class="hover:text-white transition-colors flex items-center gap-1.5" data-testid="nav-area-cliente">
+                <i data-lucide="user-circle" style="width:16px;height:16px"></i>
+                Área do Cliente
+            </a>
+        </div>
+        <a href="/checkout.html?ref=nav&plano=mensal" class="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-full text-sm transition-all hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:scale-105" data-testid="nav-cta-button">
+            Começar Agora
+        </a>
+    </div>
+</nav>
+<div id="mobileMenu" style="display:none;position:fixed;top:64px;left:0;right:0;z-index:49;background:rgba(10,10,10,0.97);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,0.06);padding:1rem 1.5rem 1.5rem">
+    <div class="flex flex-col gap-1">
+        <a href="#solucao" onclick="toggleMobileMenu()" class="py-3 text-sm text-neutral-300 hover:text-white border-b border-white/5">A Solução</a>
+        <a href="#funcionalidades" onclick="toggleMobileMenu()" class="py-3 text-sm text-neutral-300 hover:text-white border-b border-white/5">Funcionalidades</a>
+        <a href="#precos" onclick="toggleMobileMenu()" class="py-3 text-sm text-neutral-300 hover:text-white border-b border-white/5">Preços</a>
+        <a href="#roi" onclick="toggleMobileMenu()" class="py-3 text-sm text-neutral-300 hover:text-white border-b border-white/5">Calculadora ROI</a>
+        <a href="#faq" onclick="toggleMobileMenu()" class="py-3 text-sm text-neutral-300 hover:text-white border-b border-white/5">FAQ</a>
+        <a href="/cliente.html" onclick="toggleMobileMenu()" class="py-3 text-sm text-neutral-300 hover:text-white border-b border-white/5 flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            Área do Cliente
+        </a>
+        <a href="/checkout.html?ref=mobile-nav&plano=mensal" class="mt-3 w-full text-center py-3 bg-amber-500 text-black font-bold rounded-full text-sm">Começar Agora</a>
+    </div>
+</div>
+<!-- ====== HERO SECTION ====== -->
+<section class="pt-28 pb-20 md:pt-36 md:pb-28 relative" data-testid="hero-section">
+    <div class="absolute inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full" style="background:radial-gradient(ellipse, rgba(245,158,11,0.06) 0%, transparent 70%)"></div>
+    </div>
+    <div class="max-w-7xl mx-auto px-6 relative">
+        <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <!-- Left: Text -->
+            <div class="reveal">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6" style="background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.15)" data-testid="hero-badge">
+                    <i data-lucide="zap" style="width:14px;height:14px"></i>
+                    Automação via WhatsApp com menus interativos
+                </div>
+                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] mb-6" data-testid="hero-headline">
+                    Sua Empresa<br>
+                    Funcionando<br>
+                    <span class="text-amber-500">Sozinha 24/7</span>
+                </h1>
+                <p class="text-lg text-neutral-400 leading-relaxed mb-8 max-w-lg">
+                    Sistema automatizado que agenda, lembra e recebe pagamentos dos seus clientes pelo WhatsApp, 24 horas por dia, com menus simples e intuitivos.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <a href="/checkout.html?ref=hero&plano=mensal" class="inline-flex items-center justify-center gap-2 px-8 py-4 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-full transition-all shadow-[0_0_24px_rgba(245,158,11,0.3)] hover:shadow-[0_0_36px_rgba(245,158,11,0.5)] hover:scale-105 text-base" data-testid="hero-cta-button">
+                        Começar Agora
+                        <i data-lucide="arrow-right" style="width:20px;height:20px"></i>
+                    </a>
+                    <a href="#solucao" class="inline-flex items-center justify-center gap-2 px-8 py-4 border border-neutral-800 hover:border-amber-500/40 text-white font-medium rounded-full transition-all text-base" data-testid="hero-secondary-cta">
+                        <i data-lucide="play-circle" style="width:20px;height:20px"></i>
+                        Ver Como Funciona
+                    </a>
+                </div>
+                <div class="flex items-center gap-6 mt-8 text-sm text-neutral-500">
+                    <span class="flex items-center gap-1.5"><i data-lucide="shield-check" style="width:16px;height:16px;color:#22c55e"></i> Pagamento seguro</span>
+                    <span class="flex items-center gap-1.5"><i data-lucide="clock" style="width:16px;height:16px;color:#22c55e"></i> Setup em 24h</span>
+                </div>
+            </div>
+
+            <!-- Right: WhatsApp Mockup — CORREÇÃO 1: menus numerados, logo CalFlow Zap -->
+            <div class="reveal flex justify-center lg:justify-end" style="animation-delay:0.15s">
+                <div class="whatsapp-mockup animate-float shadow-2xl w-full sm:w-auto" data-testid="whatsapp-mockup">
+                    <div class="wa-header flex items-center gap-3">
+                        <img src="images/CalFlow%20Zap.jpeg" alt="CalFlow" class="w-9 h-9 rounded-full object-cover">
+                        <div>
+                            <p class="text-sm font-semibold text-white">CalFlow</p>
+                            <p class="text-[11px] text-green-400">online</p>
+                        </div>
+                    </div>
+                    <div class="p-2 space-y-1" style="background:#0b141a; min-height:350px; padding-bottom: 1rem;">
+                        <div class="wa-bubble-in">Olá! Bem-vindo(a) ao CalFlow.<br><br>1 - Agendar horário<br>2 - Consultar agenda<br>3 - Cancelar agendamento<br>4 - Recepção</div>
+                        <div class="wa-bubble-out">1</div>
+                        <div class="wa-bubble-in">Qual serviço deseja?<br><br>1 - Corte — R$ 45<br>2 - Barba — R$ 35<br>3 - Corte + Barba — R$ 70</div>
+                        <div class="wa-bubble-out">1</div>
+                        <div class="wa-bubble-in">Escolha o horário disponível:<br><br>1 - Sábado 14:00<br>2 - Sábado 15:00<br>3 - Sábado 16:00</div>
+                        <div class="wa-bubble-out">2</div>
+                        <div class="wa-bubble-in"><span style="color:#22c55e;font-weight:600">Agendado!</span> Corte no Sábado às 15:00. Nos vemos em breve! 👊</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ====== PROBLEMA SECTION ====== -->
+<section class="py-24 md:py-32" id="problema" data-testid="problema-section">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="text-center mb-16 reveal">
+            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-4" style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.15)">
+                <i data-lucide="alert-triangle" style="width:14px;height:14px"></i>
+                O Problema
+            </span>
+            <h2 class="text-3xl md:text-5xl font-bold mb-4">Você reconhece<br>algum desses?</h2>
+            <p class="text-neutral-400 text-lg max-w-2xl mx-auto">Milhares de empresas perdem dinheiro todos os dias por não automatizar o atendimento.</p>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-5 max-w-4xl mx-auto">
+            <div class="card-base card-problema rounded-2xl p-7 reveal" data-testid="problema-card-1">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style="background:rgba(239,68,68,0.1)">
+                    <i data-lucide="phone-off" style="width:24px;height:24px;color:#ef4444"></i>
+                </div>
+                <h3 class="text-lg font-semibold mb-2">Perde clientes fora do horário</h3>
+                <p class="text-sm text-neutral-500 leading-relaxed">Clientes tentam agendar de noite e no fim de semana, mas ninguém responde. Eles vão para o concorrente.</p>
+            </div>
+            <div class="card-base card-problema rounded-2xl p-7 reveal" style="animation-delay:0.08s" data-testid="problema-card-2">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style="background:rgba(239,68,68,0.1)">
+                    <i data-lucide="ban" style="width:24px;height:24px;color:#ef4444"></i>
+                </div>
+                <h3 class="text-lg font-semibold mb-2">Faltas sem aviso = prejuízo</h3>
+                <p class="text-sm text-neutral-500 leading-relaxed">Clientes esquecem ou desistem sem avisar. Você perde tempo e dinheiro com horários vazios.</p>
+            </div>
+            <div class="card-base card-problema rounded-2xl p-7 reveal" style="animation-delay:0.12s" data-testid="problema-card-3">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style="background:rgba(239,68,68,0.1)">
+                    <i data-lucide="message-square" style="width:24px;height:24px;color:#ef4444"></i>
+                </div>
+                <h3 class="text-lg font-semibold mb-2">Dia inteiro no WhatsApp</h3>
+                <p class="text-sm text-neutral-500 leading-relaxed">Ao invés de focar no serviço, você passa horas respondendo mensagens e marcando horários manualmente.</p>
+            </div>
+            <div class="card-base card-problema rounded-2xl p-7 reveal" style="animation-delay:0.16s" data-testid="problema-card-4">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style="background:rgba(239,68,68,0.1)">
+                    <i data-lucide="calendar-x" style="width:24px;height:24px;color:#ef4444"></i>
+                </div>
+                <h3 class="text-lg font-semibold mb-2">Confusão com horários</h3>
+                <p class="text-sm text-neutral-500 leading-relaxed">Dupla marcação, conflito de agenda, anotações perdidas. Resultado: cliente insatisfeito e caos.</p>
+            </div>
+        </div>
+        <div class="text-center mt-12 reveal">
+            <a href="/checkout.html?ref=problema&plano=mensal" class="inline-flex items-center gap-2 px-8 py-4 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-full transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:shadow-[0_0_30px_rgba(245,158,11,0.5)] hover:scale-105" data-testid="problema-cta-button">
+                Resolver Isso Agora
+                <i data-lucide="arrow-right" style="width:18px;height:18px"></i>
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- ====== SOLUÇÃO SECTION ====== -->
+<section class="py-24 md:py-32" id="solucao" data-testid="solucao-section">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="text-center mb-16 reveal">
+            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-4" style="background:rgba(245,158,11,0.1);color:#F59E0B;border:1px solid rgba(245,158,11,0.15)">
+                <i data-lucide="sparkles" style="width:14px;height:14px"></i>
+                A Solução
+            </span>
+            <h2 class="text-3xl md:text-5xl font-bold mb-4">Como o CalFlow Resolve</h2>
+            <p class="text-neutral-400 text-lg max-w-2xl mx-auto">Tudo automatizado pelo WhatsApp, o app mais usado no Brasil.</p>
+        </div>
+        <div class="max-w-3xl mx-auto">
+            <div class="relative pl-12 space-y-12">
+                <div class="timeline-line"></div>
+
+                <div class="relative reveal" data-testid="step-1">
+                    <div class="timeline-dot w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center font-bold text-black text-sm shadow-[0_0_16px_rgba(245,158,11,0.4)]">1</div>
+                    <div class="timeline-card card-base rounded-2xl p-6">
+                        <h3 class="text-lg font-semibold mb-2">Cliente envia mensagem</h3>
+                        <p class="text-sm text-neutral-400">O sistema responde na hora com um menu interativo, 24 horas por dia. Mostra serviços, preços e horários disponíveis automaticamente.</p>
+                    </div>
+                </div>
+
+                <div class="relative reveal" data-testid="step-2">
+                    <div class="timeline-dot w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center font-bold text-black text-sm shadow-[0_0_16px_rgba(245,158,11,0.4)]">2</div>
+                    <div class="timeline-card card-base rounded-2xl p-6">
+                        <h3 class="text-lg font-semibold mb-2">Agenda automaticamente</h3>
+                        <p class="text-sm text-neutral-400">O cliente escolhe o serviço, profissional e horário pelo menu numerado. O CalFlow agenda direto no Google Calendar sem intervenção humana.</p>
+                    </div>
+                </div>
+
+                <div class="relative reveal" data-testid="step-3">
+                    <div class="timeline-dot w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center font-bold text-black text-sm shadow-[0_0_16px_rgba(245,158,11,0.4)]">3</div>
+                    <div class="timeline-card card-base rounded-2xl p-6">
+                        <h3 class="text-lg font-semibold mb-2">Lembrete automático</h3>
+                        <p class="text-sm text-neutral-400">24h e 1h antes, o sistema envia lembrete pelo WhatsApp. Isso reduz faltas em até 80%.</p>
+                    </div>
+                </div>
+
+                <div class="relative reveal" data-testid="step-4">
+                    <div class="timeline-dot w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center font-bold text-black text-sm shadow-[0_0_16px_rgba(245,158,11,0.4)]">4</div>
+                    <div class="timeline-card card-base rounded-2xl p-6">
+                        <h3 class="text-lg font-semibold mb-2">Pagamento antecipado</h3>
+                        <p class="text-sm text-neutral-400">O cliente paga via PIX antes de chegar. Você recebe antecipado e reduz cancelamentos de última hora.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ====== VIDEO PLACEHOLDER ====== -->
+<section class="py-16 md:py-24" data-testid="video-section">
+    <div class="max-w-5xl mx-auto px-6">
+        <div class="reveal">
+            <div class="relative aspect-video rounded-3xl overflow-hidden border border-neutral-800 flex items-center justify-center cursor-pointer group" style="background:#141414;box-shadow:0 0 60px -20px rgba(245,158,11,0.15)" data-testid="video-placeholder">
+                <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/40"></div>
+                <div class="relative z-10 flex flex-col items-center gap-4">
+                    <div class="w-20 h-20 rounded-full bg-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform shadow-[0_0_30px_rgba(245,158,11,0.4)]">
+                        <i data-lucide="play" style="width:32px;height:32px;color:#000;margin-left:4px"></i>
+                    </div>
+                    <p class="text-sm text-neutral-400 font-medium">Veja o CalFlow em ação (2 min)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ====== FUNCIONALIDADES ====== -->
+<section class="py-24 md:py-32" id="funcionalidades" data-testid="funcionalidades-section">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="text-center mb-16 reveal">
+            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-4" style="background:rgba(245,158,11,0.1);color:#F59E0B;border:1px solid rgba(245,158,11,0.15)">
+                <i data-lucide="layers" style="width:14px;height:14px"></i>
+                Funcionalidades
+            </span>
+            <h2 class="text-3xl md:text-5xl font-bold mb-4">Tudo que você precisa</h2>
+            <p class="text-neutral-400 text-lg max-w-2xl mx-auto">Automação completa pelo WhatsApp. Sem complicação, sem curva de aprendizado.</p>
+        </div>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div class="card-base rounded-2xl p-7 reveal" data-testid="feature-bot">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style="background:rgba(245,158,11,0.1)">
+                    <i data-lucide="message-square-text" style="width:24px;height:24px;color:#F59E0B"></i>
+                </div>
+                <h3 class="text-lg font-semibold mb-2">Atendente Virtual 24/7</h3>
+                <p class="text-sm text-neutral-500 leading-relaxed">Sistema com menus interativos que exibe serviços, horários e agenda clientes automaticamente, a qualquer hora.</p>
+            </div>
+            <div class="card-base rounded-2xl p-7 reveal" style="animation-delay:0.06s" data-testid="feature-calendar">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style="background:rgba(245,158,11,0.1)">
+                    <i data-lucide="calendar-check" style="width:24px;height:24px;color:#F59E0B"></i>
+                </div>
+                <h3 class="text-lg font-semibold mb-2">Google Calendar Sincronizado</h3>
+                <p class="text-sm text-neutral-500 leading-relaxed">Agenda se atualiza em tempo real. Sem conflito de horários, sem dupla marcação. Tudo organizado.</p>
+            </div>
+            <div class="card-base rounded-2xl p-7 reveal" style="animation-delay:0.12s" data-testid="feature-pix">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style="background:rgba(245,158,11,0.1)">
+                    <i data-lucide="wallet" style="width:24px;height:24px;color:#F59E0B"></i>
+                </div>
+                <h3 class="text-lg font-semibold mb-2">Pagamento Antecipado (PIX)</h3>
+                <p class="text-sm text-neutral-500 leading-relaxed">Cliente paga na hora do agendamento via PIX. Você recebe antes mesmo do atendimento começar.</p>
+            </div>
+            <div class="card-base rounded-2xl p-7 reveal" style="animation-delay:0.18s" data-testid="feature-lembretes">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style="background:rgba(245,158,11,0.1)">
+                    <i data-lucide="bell-ring" style="width:24px;height:24px;color:#F59E0B"></i>
+                </div>
+                <h3 class="text-lg font-semibold mb-2">Lembretes Automáticos</h3>
+                <p class="text-sm text-neutral-500 leading-relaxed">Envio automático de lembrete via WhatsApp. Redução de até 80% nas faltas e cancelamentos.</p>
+            </div>
+            <div class="card-base rounded-2xl p-7 reveal" style="animation-delay:0.24s" data-testid="feature-dashboard">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style="background:rgba(245,158,11,0.1)">
+                    <i data-lucide="bar-chart-3" style="width:24px;height:24px;color:#F59E0B"></i>
+                </div>
+                <h3 class="text-lg font-semibold mb-2">Dashboard de Gestão</h3>
+                <p class="text-sm text-neutral-500 leading-relaxed">Veja agendamentos, receita, taxa de faltas e histórico de clientes em um painel completo.</p>
+            </div>
+            <div class="card-base rounded-2xl p-7 reveal" style="animation-delay:0.3s" data-testid="feature-seguranca">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style="background:rgba(245,158,11,0.1)">
+                    <i data-lucide="shield" style="width:24px;height:24px;color:#F59E0B"></i>
+                </div>
+                <h3 class="text-lg font-semibold mb-2">Segurança e Backup</h3>
+                <p class="text-sm text-neutral-500 leading-relaxed">Dados criptografados, backup automático e conformidade com a LGPD. Seu negócio protegido.</p>
+            </div>
+        </div>
+        <div class="text-center mt-12 reveal">
+            <a href="/checkout.html?ref=funcionalidades&plano=mensal" class="inline-flex items-center gap-2 px-8 py-4 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-full transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:shadow-[0_0_30px_rgba(245,158,11,0.5)] hover:scale-105" data-testid="funcionalidades-cta-button">
+                Quero Automatizar
+                <i data-lucide="arrow-right" style="width:18px;height:18px"></i>
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- ====== SOCIAL PROOF ====== -->
+<section class="py-24 md:py-32" data-testid="social-proof-section">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="text-center mb-16 reveal">
+            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-4" style="background:rgba(245,158,11,0.1);color:#F59E0B;border:1px solid rgba(245,158,11,0.15)">
+                <i data-lucide="star" style="width:14px;height:14px"></i>
+                Depoimentos
+            </span>
+            <h2 class="text-3xl md:text-5xl font-bold mb-4">Quem usa, recomenda</h2>
+            <p class="text-neutral-400 text-lg max-w-2xl mx-auto">Veja o que nossos clientes dizem sobre o CalFlow.</p>
+        </div>
+        <div class="grid md:grid-cols-3 gap-5 items-stretch">
+        <div class="card-base rounded-2xl p-7 reveal flex flex-col" data-testid="testimonial-1">
+                <div class="flex items-center gap-1 mb-4">
+                    <i data-lucide="star" style="width:16px;height:16px;fill:#F59E0B;color:#F59E0B"></i>
+                    <i data-lucide="star" style="width:16px;height:16px;fill:#F59E0B;color:#F59E0B"></i>
+                    <i data-lucide="star" style="width:16px;height:16px;fill:#F59E0B;color:#F59E0B"></i>
+                    <i data-lucide="star" style="width:16px;height:16px;fill:#F59E0B;color:#F59E0B"></i>
+                    <i data-lucide="star" style="width:16px;height:16px;fill:#F59E0B;color:#F59E0B"></i>
+                </div>
+                <p class="text-sm text-neutral-300 leading-relaxed mb-6 flex-1">"Antes eu perdia uns 5 clientes por semana que ligavam de noite. Agora eles agendam sozinhos pelo WhatsApp! Minha agenda nunca esteve tão cheia."</p>
+                <div class="flex items-center gap-3">
+                    <img src="https://images.pexels.com/photos/3993305/pexels-photo-3993305.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop" loading="lazy" alt="Maria Silva" class="w-10 h-10 rounded-full object-cover">
+                    <div>
+                        <p class="text-sm font-semibold">Maria Silva</p>
+                        <p class="text-xs text-neutral-500">Espaço Bella, Viçosa</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-base rounded-2xl p-7 reveal flex flex-col" style="animation-delay:0.08s" data-testid="testimonial-2">
+                <div class="flex items-center gap-1 mb-4">
+                    <i data-lucide="star" style="width:16px;height:16px;fill:#F59E0B;color:#F59E0B"></i>
+                    <i data-lucide="star" style="width:16px;height:16px;fill:#F59E0B;color:#F59E0B"></i>
+                    <i data-lucide="star" style="width:16px;height:16px;fill:#F59E0B;color:#F59E0B"></i>
+                    <i data-lucide="star" style="width:16px;height:16px;fill:#F59E0B;color:#F59E0B"></i>
+                    <i data-lucide="star" style="width:16px;height:16px;fill:#F59E0B;color:#F59E0B"></i>
+                </div>
+                <p class="text-sm text-neutral-300 leading-relaxed mb-6 flex-1">"Reduzi as faltas de 30% para 5%. O lembrete automático é mágico! Meu faturamento subiu 40% no primeiro mês."</p>
+                <div class="flex items-center gap-3">
+                    <img src="https://images.pexels.com/photos/2174112/pexels-photo-2174112.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop" loading="lazy" alt="João Pedro" class="w-10 h-10 rounded-full object-cover">
+                    <div>
+                        <p class="text-sm font-semibold">João Pedro</p>
+                        <p class="text-xs text-neutral-500">Barbearia Premium, Ubá</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-base rounded-2xl p-7 reveal flex flex-col" style="animation-delay:0.16s" data-testid="testimonial-3">
+                <div class="flex items-center gap-1 mb-4">
+                    <i data-lucide="star" style="width:16px;height:16px;fill:#F59E0B;color:#F59E0B"></i>
+                    <i data-lucide="star" style="width:16px;height:16px;fill:#F59E0B;color:#F59E0B"></i>
+                    <i data-lucide="star" style="width:16px;height:16px;fill:#F59E0B;color:#F59E0B"></i>
+                    <i data-lucide="star" style="width:16px;height:16px;fill:#F59E0B;color:#F59E0B"></i>
+                    <i data-lucide="star" style="width:16px;height:16px;fill:#F59E0B;color:#F59E0B"></i>
+                </div>
+                <p class="text-sm text-neutral-300 leading-relaxed mb-6 flex-1">"Recebo o PIX antes do cliente chegar. Mudou meu fluxo de caixa completamente. Melhor investimento que fiz!"</p>
+                <div class="flex items-center gap-3">
+                    <img src="https://images.pexels.com/photos/5452268/pexels-photo-5452268.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop" loading="lazy" alt="Ana Costa" class="w-10 h-10 rounded-full object-cover">
+                    <div>
+                        <p class="text-sm font-semibold">Ana Costa</p>
+                        <p class="text-xs text-neutral-500">Studio Hair, Ponte Nova</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ====== PRICING (CORREÇÃO 4: movido para ANTES da calculadora) ====== -->
+<section class="py-24 md:py-32 bg-[#0a0a0a]" id="precos" data-testid="pricing-section">
+    <div class="max-w-5xl mx-auto px-6">
+        <div class="text-center mb-16 reveal">
+            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-4" style="background:rgba(245,158,11,0.1);color:#F59E0B;border:1px solid rgba(245,158,11,0.15)">
+                <i data-lucide="tag" style="width:14px;height:14px"></i>
+                Investimento
+            </span>
+            <h2 class="text-3xl md:text-5xl font-bold mb-4 text-white">Escolha seu plano</h2>
+            <p class="text-neutral-400 text-lg max-w-2xl mx-auto">Sua empresa no automático em 24h. Sem letras miúdas ou fidelidade.</p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto items-stretch">
+            <!-- PLANO MENSAL -->
+            <div class="relative rounded-2xl p-7 md:p-10 reveal border border-amber-500/30 glow-amber flex flex-col justify-between" style="background:#141414" data-testid="pricing-mensal">
+                <div class="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span class="inline-flex items-center gap-1 px-4 py-1 rounded-full text-xs font-bold bg-amber-500 text-black shadow-lg">
+                        <i data-lucide="crown" style="width:12px;height:12px"></i>
+                        Mais Popular
+                    </span>
+                </div>
+
+                <div>
+                    <h3 class="text-2xl font-bold mb-1 text-white">Mensal</h3>
+                    <p class="text-sm text-neutral-500 mb-8">Fluxo completo para escalar sua agenda</p>
+
+                    <div class="mb-8">
+                        <div class="flex items-end gap-1 mb-1">
+                            <span class="text-sm text-neutral-600 line-through">R$ 997</span>
+                        </div>
+                        <div class="flex items-end gap-1">
+                            <span class="text-5xl font-bold text-amber-500">R$ 497</span>
+                            <span class="text-sm text-neutral-500 mb-2">Implantação</span>
+                        </div>
+                        <p class="text-sm text-neutral-300 mt-3 font-medium">+ R$ 197/mês pela manutenção</p>
+                    </div>
+
+                    <ul class="space-y-4 mb-10">
+                        <li class="flex items-start gap-3 text-sm text-neutral-300">
+                            <i data-lucide="check-circle-2" class="w-5 h-5 text-green-500 shrink-0"></i>
+                            <span><b>Chatbot + Atendimento Humano:</b> O bot agenda, mas você pode assumir o chat quando quiser.</span>
+                        </li>
+                        <li class="flex items-start gap-3 text-sm text-neutral-300">
+                            <i data-lucide="check-circle-2" class="w-5 h-5 text-green-500 shrink-0"></i>
+                            <span><b>Setup em 24h:</b> Entregamos tudo pronto e configurado para você.</span>
+                        </li>
+                        <li class="flex items-start gap-3 text-sm text-neutral-300">
+                            <i data-lucide="check-circle-2" class="w-5 h-5 text-green-500 shrink-0"></i>
+                            <span><b>Agendamentos ILIMITADOS</b> via WhatsApp.</span>
+                        </li>
+                        <li class="flex items-start gap-3 text-sm text-neutral-300">
+                            <i data-lucide="check-circle-2" class="w-5 h-5 text-green-500 shrink-0"></i>
+                            <span><b>Lembretes automáticos</b> (reduz 80% das faltas).</span>
+                        </li>
+                        <li class="flex items-start gap-3 text-sm text-neutral-300">
+                            <i data-lucide="check-circle-2" class="w-5 h-5 text-green-500 shrink-0"></i>
+                            <span><b>Dashboard de Ganhos:</b> Painel completo com gráficos de faturamento e serviços mais vendidos.</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <a href="/checkout.html?plano=mensal" class="block w-full text-center px-6 py-4 bg-amber-500 text-black font-bold rounded-xl transition-all duration-300 animate-pulse-ring hover:scale-105 hover:shadow-[0_0_25px_rgba(245,158,11,0.5)]">
+                    Escolher Mensal
+                </a>
+            </div>
+
+            <!-- PLANO ANUAL -->
+            <div class="relative rounded-2xl p-7 md:p-10 reveal border border-neutral-800 flex flex-col justify-between transition-all duration-500 hover:animate-float hover:border-amber-500 hover:shadow-[0_0_15px_rgba(245,158,11,0.2)]" style="background:#141414; animation-delay:0.1s" data-testid="pricing-anual">
+                <!-- BADGES ALINHADOS NO TOPO -->
+                <div class="absolute -top-3 left-1/2 -translate-x-1/2 flex gap-2 w-full justify-center">
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold bg-green-600 text-white shadow-lg whitespace-nowrap">
+                        <i data-lucide="gift" style="width:12px;height:12px"></i>
+                            IMPLANTAÇÃO GRÁTIS
+                    </span>
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold bg-neutral-800 text-neutral-300 border border-neutral-700 shadow-lg whitespace-nowrap">
+                        MELHOR CUSTO-BENEFÍCIO
+                    </span>
+                </div>
+
+                <div>
+                    <h3 class="text-2xl font-bold mb-1 text-white">Anual</h3>
+                    <p class="text-sm text-neutral-500 mb-8">A solução definitiva para o seu negócio</p>
+
+                    <div class="mb-8">
+                        <div class="h-[20px]"></div> <!-- Espaçador para alinhar com o preço de cima -->
+                        <div class="flex items-end gap-1">
+                            <span class="text-5xl font-bold text-white">R$ 2.197</span>
+                            <span class="text-sm text-neutral-500 mb-2">/ano</span>
+                        </div>
+                        <p class="text-sm text-green-500 mt-3 font-semibold">Economia real de R$ 664/ano</p>
+                    </div>
+
+                    <ul class="space-y-4 mb-10">
+                        <li class="flex items-start gap-3 text-sm text-neutral-300">
+                            <i data-lucide="sparkles" class="w-5 h-5 text-amber-500 shrink-0"></i>
+                            <span><b>Tudo do Mensal</b> + Economia VIP.</span>
+                        </li>
+                        <li class="flex items-start gap-3 text-sm text-neutral-300">
+                            <i data-lucide="check-circle-2" class="w-5 h-5 text-green-500 shrink-0"></i>
+                            <span><b>Suporte Prioritário:</b> Atendimento direto no seu Zap.</span>
+                        </li>
+                        <li class="flex items-start gap-3 text-sm text-neutral-300">
+                            <i data-lucide="check-circle-2" class="w-5 h-5 text-green-500 shrink-0"></i>
+                            <span><b>Treinamento de Equipe:</b> Ensinamos como usar.</span>
+                        </li>
+                        <li class="flex items-start gap-3 text-sm text-neutral-300">
+                            <i data-lucide="check-circle-2" class="w-5 h-5 text-green-500 shrink-0"></i>
+                            <span><b>Atualizações frequentes</b> e novas funções de acordo com o plano.</span>
+                        </li>
+                        <li class="flex items-start gap-3 text-sm text-neutral-300">
+                            <i data-lucide="check-circle-2" class="w-5 h-5 text-green-500 shrink-0"></i>
+                            <span><b>Painel de gestão</b> para controlar seus agendamentos.</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <a href="/checkout.html?plano=anual" class="block w-full text-center px-6 py-4 border border-neutral-700 text-white font-bold rounded-xl transition-all hover:bg-white/5">
+                    Escolher Anual
+                </a>
+            </div>
+        </div>
+
+        <div class="mt-12 text-center reveal">
+            <p class="text-neutral-500 text-sm flex items-center justify-center gap-2">
+                <i data-lucide="shield-check" class="w-4 h-4 text-green-500"></i>
+                7 dias de garantia ou seu dinheiro de volta. Sem perguntas.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- ====== ROI CALCULATOR (CORREÇÃO 4: agora DEPOIS dos preços) ====== -->
+<section class="py-24 md:py-32" id="roi" data-testid="roi-calculator-section">
+    <div class="max-w-3xl mx-auto px-6">
+        <div class="reveal">
+            <div class="card-base rounded-2xl p-8 md:p-10 glow-amber" data-testid="roi-calculator-card">
+                <div class="text-center mb-8">
+                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-4" style="background:rgba(245,158,11,0.1);color:#F59E0B;border:1px solid rgba(245,158,11,0.15)">
+                        <i data-lucide="calculator" style="width:14px;height:14px"></i>
+                        Calculadora de ROI
+                    </span>
+                    <h2 class="text-2xl md:text-3xl font-bold mb-2">Quanto você pode economizar?</h2>
+                    <p class="text-sm text-neutral-500">Descubra o impacto do CalFlow no seu negócio</p>
+                </div>
+
+                <div class="space-y-8">
+                    <div>
+                        <div class="flex justify-between mb-3">
+                            <label class="text-sm text-neutral-300 font-medium">Atendimentos por dia</label>
+                            <span class="text-sm font-bold text-amber-500" id="roiAtendimentos" data-testid="roi-atendimentos-value">10</span>
+                        </div>
+                        <input type="range" min="1" max="50" value="10" class="roi-slider" id="sliderAtendimentos" data-testid="roi-slider-atendimentos">
+                    </div>
+                    <div>
+                        <div class="flex justify-between mb-3">
+                            <label class="text-sm text-neutral-300 font-medium">Ticket médio (R$)</label>
+                            <span class="text-sm font-bold text-amber-500" id="roiTicket" data-testid="roi-ticket-value">80</span>
+                        </div>
+                        <input type="range" min="20" max="500" value="80" step="10" class="roi-slider" id="sliderTicket" data-testid="roi-slider-ticket">
+                    </div>
+                </div>
+
+                <div class="mt-8 rounded-xl p-6 text-center" style="background:#0a0a0a;border:1px solid rgba(245,158,11,0.15)">
+                    <p class="text-sm text-neutral-400 mb-1">Receita extra estimada por mês</p>
+                    <p class="text-4xl md:text-5xl font-bold text-amber-500" id="roiResultado" data-testid="roi-resultado">R$ 4.800</p>
+                    <p class="text-xs text-neutral-600 mt-2">Baseado em 20% de recuperação de faltas e novos agendamentos</p>
+                </div>
+
+                <div class="text-center mt-6">
+                    <a href="/checkout.html?ref=roi&plano=mensal" class="inline-flex items-center gap-2 px-8 py-4 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-full transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:shadow-[0_0_30px_rgba(245,158,11,0.5)] hover:scale-105" data-testid="roi-cta-button">
+                        Começar a Lucrar
+                        <i data-lucide="trending-up" style="width:18px;height:18px"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ====== COMPARAÇÃO ====== -->
+<section class="py-24 md:py-32" data-testid="comparacao-section">
+    <div class="max-w-5xl mx-auto px-6">
+        <div class="text-center mb-16 reveal">
+            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-4" style="background:rgba(245,158,11,0.1);color:#F59E0B;border:1px solid rgba(245,158,11,0.15)">
+                <i data-lucide="git-compare" style="width:14px;height:14px"></i>
+                Comparação
+            </span>
+            <h2 class="text-3xl md:text-5xl font-bold mb-4">Antes vs Depois</h2>
+        </div>
+        <div class="grid md:grid-cols-2 gap-5 reveal">
+            <!-- SEM CalFlow -->
+            <div class="rounded-2xl p-7 md:p-8 border border-neutral-800" style="background:#0f0f0f" data-testid="comparacao-sem">
+                <div class="flex items-center gap-2 mb-6">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background:rgba(239,68,68,0.1)">
+                        <i data-lucide="x" style="width:16px;height:16px;color:#ef4444"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-neutral-400">Sem CalFlow</h3>
+                </div>
+                <ul class="space-y-4">
+                    <li class="flex items-start gap-3"><i data-lucide="x" style="width:18px;height:18px;color:#ef4444;flex-shrink:0;margin-top:2px"></i><span class="text-sm text-neutral-500">Atende WhatsApp o dia todo manualmente</span></li>
+                    <li class="flex items-start gap-3"><i data-lucide="x" style="width:18px;height:18px;color:#ef4444;flex-shrink:0;margin-top:2px"></i><span class="text-sm text-neutral-500">Faltas de 30% ou mais</span></li>
+                    <li class="flex items-start gap-3"><i data-lucide="x" style="width:18px;height:18px;color:#ef4444;flex-shrink:0;margin-top:2px"></i><span class="text-sm text-neutral-500">Agenda em papel ou Excel</span></li>
+                    <li class="flex items-start gap-3"><i data-lucide="x" style="width:18px;height:18px;color:#ef4444;flex-shrink:0;margin-top:2px"></i><span class="text-sm text-neutral-500">Recebe pagamento só depois do serviço</span></li>
+                    <li class="flex items-start gap-3"><i data-lucide="x" style="width:18px;height:18px;color:#ef4444;flex-shrink:0;margin-top:2px"></i><span class="text-sm text-neutral-500">Perde clientes fora do horário</span></li>
+                </ul>
+            </div>
+            <!-- COM CalFlow -->
+            <div class="rounded-2xl p-7 md:p-8 border border-amber-500/20 glow-amber" style="background:#141414" data-testid="comparacao-com">
+                <div class="flex items-center gap-2 mb-6">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background:rgba(34,197,94,0.1)">
+                        <i data-lucide="check" style="width:16px;height:16px;color:#22c55e"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white">Com CalFlow</h3>
+                </div>
+                <ul class="space-y-4">
+                    <li class="flex items-start gap-3"><i data-lucide="check" style="width:18px;height:18px;color:#22c55e;flex-shrink:0;margin-top:2px"></i><span class="text-sm text-neutral-300">Sistema responde automático, 24/7</span></li>
+                    <li class="flex items-start gap-3"><i data-lucide="check" style="width:18px;height:18px;color:#22c55e;flex-shrink:0;margin-top:2px"></i><span class="text-sm text-neutral-300">Faltas abaixo de 5%</span></li>
+                    <li class="flex items-start gap-3"><i data-lucide="check" style="width:18px;height:18px;color:#22c55e;flex-shrink:0;margin-top:2px"></i><span class="text-sm text-neutral-300">Google Calendar sincronizado em tempo real</span></li>
+                    <li class="flex items-start gap-3"><i data-lucide="check" style="width:18px;height:18px;color:#22c55e;flex-shrink:0;margin-top:2px"></i><span class="text-sm text-neutral-300">PIX antecipado antes do atendimento</span></li>
+                    <li class="flex items-start gap-3"><i data-lucide="check" style="width:18px;height:18px;color:#22c55e;flex-shrink:0;margin-top:2px"></i><span class="text-sm text-neutral-300">Vendas e agendamentos 24 horas por dia</span></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ====== FAQ ====== -->
+<section class="py-24 md:py-32" id="faq" data-testid="faq-section">
+    <div class="max-w-3xl mx-auto px-6">
+        <div class="text-center mb-16 reveal">
+            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-4" style="background:rgba(245,158,11,0.1);color:#F59E0B;border:1px solid rgba(245,158,11,0.15)">
+                <i data-lucide="help-circle" style="width:14px;height:14px"></i>
+                Perguntas Frequentes
+            </span>
+            <h2 class="text-3xl md:text-5xl font-bold">Dúvidas? A gente responde</h2>
+        </div>
+        <div class="space-y-3 reveal">
+            <!-- CORREÇÃO 7: Resposta revisada sobre celular desligado -->
+            <details class="card-base rounded-xl group" data-testid="faq-item-1">
+                <summary class="flex items-center justify-between p-5 cursor-pointer">
+                    <span class="text-sm font-semibold pr-4">O que acontece se meu celular estiver desligado?</span>
+                    <i data-lucide="chevron-down" class="faq-chevron h-5 w-5 text-neutral-500 flex-shrink-0"></i>
+                </summary>
+                <div class="px-5 pb-5 text-sm text-neutral-400 leading-relaxed">Nossa infraestrutura foi desenhada para manter sua operação ativa 24h. O CalFlow funciona como uma instância independente na nuvem: o sistema continua processando dados e organizando sua agenda mesmo em momentos de instabilidade no seu aparelho. O sistema só precisa de uma reconexão caso o WhatsApp force um logoff por falta prolongada de sinal, garantindo total controle para você.</div>
+            </details>
+            <details class="card-base rounded-xl group" data-testid="faq-item-2">
+                <summary class="flex items-center justify-between p-5 cursor-pointer">
+                    <span class="text-sm font-semibold pr-4">Funciona para mais de um profissional?</span>
+                    <i data-lucide="chevron-down" class="faq-chevron h-5 w-5 text-neutral-500 flex-shrink-0"></i>
+                </summary>
+                <div class="px-5 pb-5 text-sm text-neutral-400 leading-relaxed">Sim! Você pode cadastrar vários profissionais, cada um com sua agenda e horários próprios. O cliente escolhe com quem quer agendar direto pelo menu.</div>
+            </details>
+            <details class="card-base rounded-xl group" data-testid="faq-item-3">
+                <summary class="flex items-center justify-between p-5 cursor-pointer">
+                    <span class="text-sm font-semibold pr-4">Posso personalizar as mensagens do sistema?</span>
+                    <i data-lucide="chevron-down" class="faq-chevron h-5 w-5 text-neutral-500 flex-shrink-0"></i>
+                </summary>
+                <div class="px-5 pb-5 text-sm text-neutral-400 leading-relaxed">Totalmente! Todas as mensagens são personalizáveis: saudação, confirmação, lembretes, menus e respostas configuradas. O sistema fala a linguagem do seu negócio.</div>
+            </details>
+            <details class="card-base rounded-xl group" data-testid="faq-item-4">
+                <summary class="flex items-center justify-between p-5 cursor-pointer">
+                    <span class="text-sm font-semibold pr-4">Como funciona a integração com Google Calendar?</span>
+                    <i data-lucide="chevron-down" class="faq-chevron h-5 w-5 text-neutral-500 flex-shrink-0"></i>
+                </summary>
+                <div class="px-5 pb-5 text-sm text-neutral-400 leading-relaxed">A integração é automática. Cada agendamento cria um evento no Google Calendar em tempo real. Você vê tudo no celular ou computador, e qualquer alteração sincroniza automaticamente.</div>
+            </details>
+            <details class="card-base rounded-xl group" data-testid="faq-item-5">
+                <summary class="flex items-center justify-between p-5 cursor-pointer">
+                    <span class="text-sm font-semibold pr-4">E se eu quiser cancelar?</span>
+                    <i data-lucide="chevron-down" class="faq-chevron h-5 w-5 text-neutral-500 flex-shrink-0"></i>
+                </summary>
+                <div class="px-5 pb-5 text-sm text-neutral-400 leading-relaxed">Sem burocracia. No plano mensal, você cancela quando quiser sem multa. Nos primeiros 7 dias, devolvemos 100% do valor, sem perguntas. Você não tem nada a perder.</div>
+            </details>
+        </div>
+    </div>
+</section>
+
+<!-- ====== CTA FINAL ====== -->
+<section class="py-24 md:py-32 relative overflow-hidden" data-testid="cta-final-section">
+    <div class="absolute inset-0 pointer-events-none">
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] rounded-full" style="background:radial-gradient(ellipse, rgba(245,158,11,0.08) 0%, transparent 70%)"></div>
+    </div>
+    <div class="max-w-4xl mx-auto px-6 text-center relative reveal">
+        <div class="mb-6">
+            <img src="images/CalFlow%20Zap.jpeg" alt="CalFlow" class="h-24 mx-auto rounded-2xl" loading="lazy" data-testid="cta-final-logo">
+        </div>
+        <h2 class="text-3xl md:text-5xl font-bold mb-4" data-testid="cta-final-headline">
+            Comece Hoje.<br>
+            <span class="text-amber-500">Resultados em 24 Horas.</span>
+        </h2>
+        <p class="text-lg text-neutral-400 mb-10 max-w-xl mx-auto">Implantação rápida. Sem complicação. Suporte total. Seu negócio funcionando no piloto automático.</p>
+        <a href="/checkout.html?ref=cta-final&plano=mensal" class="inline-flex items-center gap-3 px-10 py-5 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-full transition-all shadow-[0_0_30px_rgba(245,158,11,0.4)] hover:shadow-[0_0_50px_rgba(245,158,11,0.6)] hover:scale-105 text-lg" data-testid="cta-final-button">
+            Automatizar Meu Negócio Agora
+            <i data-lucide="arrow-right" style="width:22px;height:22px"></i>
+        </a>
+        <div class="flex flex-wrap items-center justify-center gap-6 mt-8 text-sm text-neutral-500">
+            <span class="flex items-center gap-1.5"><i data-lucide="shield-check" style="width:16px;height:16px;color:#22c55e"></i> SSL Seguro</span>
+            <span class="flex items-center gap-1.5"><i data-lucide="wallet" style="width:16px;height:16px;color:#22c55e"></i> PIX Instantâneo</span>
+            <span class="flex items-center gap-1.5"><i data-lucide="message-circle" style="width:16px;height:16px;color:#22c55e"></i> WhatsApp Oficial</span>
+        </div>
+    </div>
+</section>
+
+<!-- ====== FOOTER ====== -->
+<footer class="py-16 border-t border-neutral-900" data-testid="footer-section">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
+            <div>
+                <img src="images/CalFlow%20Zap.jpeg" alt="CalFlow" class="h-16 rounded-xl mb-4" loading="lazy" data-testid="footer-logo">
+                <p class="text-sm text-neutral-500 leading-relaxed">Automação de agendamentos via WhatsApp para o seu negócio.</p>
+            </div>
+            <div>
+                <h4 class="text-sm font-semibold text-neutral-300 mb-4">Produto</h4>
+                <ul class="space-y-2.5 text-sm text-neutral-500">
+                    <li><a href="#solucao" class="hover:text-white transition-colors">A Solução</a></li>
+                    <li><a href="#funcionalidades" class="hover:text-white transition-colors">Funcionalidades</a></li>
+                    <li><a href="#precos" class="hover:text-white transition-colors">Preços</a></li>
+                    <li><a href="#roi" class="hover:text-white transition-colors">Calculadora ROI</a></li>
+                    <li><a href="#faq" class="hover:text-white transition-colors">FAQ</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="text-sm font-semibold text-neutral-300 mb-4">Contato</h4>
+                <ul class="space-y-2.5 text-sm text-neutral-500">
+                    <li class="flex items-center gap-2"><i data-lucide="message-circle" style="width:14px;height:14px"></i> <a href="https://wa.me/553299401356" target="_blank" class="hover:text-white transition-colors">(32) 9940-1356</a></li>
+                    <li class="flex items-center gap-2"><i data-lucide="mail" style="width:14px;height:14px"></i><a href="mailto:calluann11@gmail.com" class="hover:text-white transition-colors">calluann11@gmail.com</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="text-sm font-semibold text-neutral-300 mb-4">Social</h4>
+                <div class="flex items-center gap-3">
+                    <a href="https://instagram.com/calflowofc" target="_blank" class="w-10 h-10 rounded-xl border border-neutral-800 flex items-center justify-center text-neutral-500 hover:text-white hover:border-neutral-600 transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+                    </a>
+                    <a href="https://facebook.com/luancalofc" class="w-10 h-10 rounded-xl border border-neutral-800 flex items-center justify-center text-neutral-500 hover:text-white hover:border-neutral-600 transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="pt-8 border-t border-neutral-900 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p class="text-xs text-neutral-600 order-2 sm:order-1">Copyright 2026 CalFlow. Todos os direitos reservados.</p>
+            <div class="flex items-center gap-4 text-xs text-neutral-600 order-1 sm:order-2">
+                <button onclick="openLegalModal('termos')"
+                        style="background:none;border:none;cursor:pointer;font-family:inherit;font-size:0.75rem;color:#525252;transition:color 0.2s"
+                        onmouseover="this.style.color='#a3a3a3'" onmouseout="this.style.color='#525252'">
+                    Termos de Uso
+                </button>
+                <span style="color:#333">·</span>
+                <button onclick="openLegalModal('privacidade')"
+                        style="background:none;border:none;cursor:pointer;font-family:inherit;font-size:0.75rem;color:#525252;transition:color 0.2s"
+                        onmouseover="this.style.color='#a3a3a3'" onmouseout="this.style.color='#525252'">
+                    Política de Privacidade
+                </button>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- ====== WHATSAPP FLOAT ====== -->
+<a href="https://wa.me/553299401356?text=Olá!%20Tenho%20interesse%20no%20CalFlow.%20Pode%20me%20ajudar?" target="_blank" class="fixed bottom-6 right-6 z-50 bg-green-500 text-white p-4 rounded-full shadow-[0_0_24px_rgba(34,197,94,0.4)] hover:scale-110 transition-transform group" data-testid="whatsapp-float-btn">
+    <i data-lucide="message-circle" style="width:28px;height:28px"></i>
+    <span class="absolute bottom-full right-0 mb-2 px-3 py-1.5 rounded-lg text-xs font-medium text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" style="background:#141414;border:1px solid rgba(255,255,255,0.06)">Fale conosco no WhatsApp</span>
+</a>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+    function openLegalModal(tipo) {
+        const textos = {
+            termos: '<h3 class="text-lg font-bold mb-4">Termos de Uso</h3><p class="text-sm text-neutral-400">Em breve. Para dúvidas, entre em contato pelo WhatsApp.</p>',
+            privacidade: '<h3 class="text-lg font-bold mb-4">Política de Privacidade</h3><p class="text-sm text-neutral-400">Em breve. Seus dados estão seguros conosco.</p>'
+        };
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:100;display:flex;align-items:center;justify-content:center;padding:1rem;';
+        overlay.onclick = function(e) { if (e.target === overlay) document.body.removeChild(overlay); };
+        overlay.innerHTML = '<div style="background:#141414;border:1px solid rgba(255,255,255,0.08);border-radius:1rem;padding:2rem;max-width:500px;width:100%">' + textos[tipo] + '<button onclick="this.closest(\'div\').parentElement.remove()" style="margin-top:1.5rem;padding:0.5rem 1.5rem;background:#F59E0B;color:#000;border:none;border-radius:0.5rem;font-weight:600;cursor:pointer;font-family:inherit">Fechar</button></div>';
+        document.body.appendChild(overlay);
+    }
+
+    function toggleMobileMenu() {
+        const menu = document.getElementById('mobileMenu');
+        const isOpen = menu.style.display !== 'none';
+        menu.style.display = isOpen ? 'none' : 'block';
+        document.getElementById('burger1').style.transform = isOpen ? '' : 'rotate(45deg) translate(5px, 5px)';
+        document.getElementById('burger2').style.opacity = isOpen ? '1' : '0';
+        document.getElementById('burger3').style.transform = isOpen ? '' : 'rotate(-45deg) translate(5px, -5px)';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    // ============================================
+    // 1. OBSERVER (usado tanto no scroll quanto no navbar)
+    // ============================================
+    const revealObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                revealObserver.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+    // ============================================
+    // 2. NAVBAR CLICK — re-usa o observer (idêntico à 1ª vez)
+    // ============================================
+    function handleNavClick(e) {
+        e.preventDefault();
+        const targetId = this.getAttribute('href');
+        if (!targetId || targetId === '#') return;
+
+        const targetSection = document.querySelector(targetId);
+        if (!targetSection) return;
+
+        const revealElements = targetSection.querySelectorAll('.reveal');
+
+        // Esconde instantaneamente (ninguém vê)
+        revealElements.forEach(el => {
+            el.style.transition = 'none';
+            el.classList.remove('visible');
+        });
+
+        // Força o browser a processar
+        void targetSection.offsetWidth;
+
+        // Religa transições e RE-OBSERVA (igual à primeira vez)
+        revealElements.forEach(el => {
+            el.style.transition = '';
+            revealObserver.observe(el);
+        });
+
+        // Scroll — o observer cuida do resto automaticamente
+        targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        // Flash no link
+        this.classList.remove('nav-link-flash');
+        void this.offsetWidth;
+        this.classList.add('nav-link-flash');
+    }
+
+    document.querySelectorAll('nav a[href^="#"]').forEach(a => a.addEventListener('click', handleNavClick));
+    document.querySelectorAll('#mobileMenu a[href^="#"]').forEach(a => a.addEventListener('click', handleNavClick));
+    document.querySelectorAll('footer a[href^="#"]').forEach(a => a.addEventListener('click', handleNavClick));
+
+
+        // ============================================
+        // 3. ROI CALCULATOR
+        // ============================================
+        var sliderA = document.getElementById('sliderAtendimentos');
+        var sliderT = document.getElementById('sliderTicket');
+        var labelA = document.getElementById('roiAtendimentos');
+        var labelT = document.getElementById('roiTicket');
+        var resultado = document.getElementById('roiResultado');
+
+        if (sliderA && sliderT) {
+            function calcROI() {
+                var a = parseInt(sliderA.value);
+                var t = parseInt(sliderT.value);
+                labelA.textContent = a;
+                labelT.textContent = t;
+                var r = Math.round(a * t * 30 * 0.2);
+                resultado.textContent = 'R$ ' + r.toLocaleString('pt-BR');
+            }
+            sliderA.addEventListener('input', calcROI);
+            sliderT.addEventListener('input', calcROI);
+        }
+
+        // ============================================
+        // 4. NAV SCROLL EFFECT
+        // ============================================
+        var nav = document.querySelector('nav');
+        window.addEventListener('scroll', function() {
+            if (window.scrollY > 50) {
+                nav.style.borderBottomColor = 'rgba(255,255,255,0.08)';
+            } else {
+                nav.style.borderBottomColor = 'rgba(255,255,255,0.03)';
+            }
+        });
+
+        // ============================================
+        // 5. FECHAR MOBILE MENU AO CLICAR FORA
+        // ============================================
+        document.addEventListener('click', function(e) {
+            const menu = document.getElementById('mobileMenu');
+            const btn = document.getElementById('mobileMenuBtn');
+            if (menu && menu.style.display !== 'none' && !menu.contains(e.target) && !btn.contains(e.target)) {
+                toggleMobileMenu();
+            }
+        });
+    });
+</script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>

@@ -6,6 +6,8 @@ import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.EventDateTime;
 import com.google.api.services.calendar.model.Events;
 import com.luancal.calflow.model.Clinica;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -21,9 +23,13 @@ import java.util.stream.Collectors;
         @Autowired
         private Calendar calendar;
         private final ZoneId ZONE = ZoneId.of("America/Sao_Paulo");
+        private static final Logger logger = LoggerFactory.getLogger(EventService.class);
 
-        // 1. Gera a lista de horários livres (Ex: ["08:00", "08:30", "10:00"])
-        public List<String> isSlotDisponivel(LocalDate data, Clinica clinica, int duracaoServicoMinutos) throws IOException {
+        public List<String> isSlotDisponivel(LocalDate data, Clinica clinica, int duracao)
+            throws IOException {
+        return isSlotDisponivel(data, clinica, duracao, null);
+        }
+        public List<String> isSlotDisponivel(LocalDate data, Clinica clinica, int duracaoServicoMinutos, String calendarIdCustom) throws IOException {
             DayOfWeek diaSemana = data.getDayOfWeek();
 
             // 1. Verifica Sábado/Domingo
@@ -37,7 +43,8 @@ import java.util.stream.Collectors;
                 return new ArrayList<>();
             }
 
-            String calendarId = clinica.getGoogleCalendarId();
+            String calendarId = (calendarIdCustom != null) ?
+                    calendarIdCustom : clinica.getGoogleCalendarId();
             List<String> disponiveis = new ArrayList<>();
 
             // Define limites do dia
@@ -150,4 +157,40 @@ import java.util.stream.Collectors;
     public void cancelarEvento(String eventId, String calendarId) throws IOException {
         calendar.events().delete(calendarId, eventId).execute();
     }
+    public Event buscarEventoPorId(String eventId, String calendarId) throws IOException {
+        try {
+            return calendar.events().get(calendarId, eventId).execute();
+        } catch (Exception e) {
+            logger.error("❌ Evento não encontrado no Google: {}", eventId);
+            return null;
+        }
+    }
+    public Event buscarEventoSeguro(String eventId, String calendarId, String telefoneEsperado) throws IOException {
+        try {
+            Event event = calendar.events().get(calendarId, eventId).execute();
+            // ✅ Validar que telefone do evento corresponde
+            String desc = event.getDescription();
+            if (desc == null) return null;
+            String telefoneEvento = desc.replaceAll("[^0-9]", "");
+            String telefoneCliente = telefoneEsperado.replaceAll("[^0-9]", "");
+            // Comparar últimos 9 dígitos (pra aceitar variações de DDD)
+            if (telefoneEvento.length() >= 9 && telefoneCliente.length() >= 9) {
+                String ultimos9Evento = telefoneEvento.substring(
+                        Math.max(0, telefoneEvento.length() - 9)
+                );
+                String ultimos9Cliente = telefoneCliente.substring(
+                        Math.max(0, telefoneCliente.length() - 9)
+                );
+                if (ultimos9Evento.equals(ultimos9Cliente)) {
+                    return event;
+                }
+            }
+            logger.warn("⚠️ Evento {} não pertence ao telefone {}", eventId, telefoneEsperado);
+            return null;
+        } catch (Exception e) {
+            logger.error("❌ Erro ao buscar evento: {}", eventId);
+            return null;
+        }
+    }
 }
+

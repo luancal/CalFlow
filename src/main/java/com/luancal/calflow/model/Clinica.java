@@ -32,6 +32,8 @@ public class Clinica {
     private Integer fechamentoSabado;
     @Column(name = "dias_folga")
     private String diasFolga;
+    private String mercadoPagoToken;
+    private Boolean cobrancaAntecipada = false;
 
     @Column(name = "lembrete_ativo", nullable = false, columnDefinition = "boolean default false")
     private boolean lembreteAtivo = true;

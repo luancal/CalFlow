@@ -2,14 +2,8 @@ package com.luancal.calflow.service;
 
 import com.google.api.services.calendar.model.Event;
 import com.luancal.calflow.controller.WhatsAppController;
-import com.luancal.calflow.model.Clinica;
-import com.luancal.calflow.model.EstadoConversa;
-import com.luancal.calflow.model.Profissional;
-import com.luancal.calflow.model.TipoServico;
-import com.luancal.calflow.repository.ClinicaRepository;
-import com.luancal.calflow.repository.EstadoConversaRepository;
-import com.luancal.calflow.repository.ProfissionalRepository;
-import com.luancal.calflow.repository.TipoServicoRepository;
+import com.luancal.calflow.model.*;
+import com.luancal.calflow.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,8 +12,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -35,6 +33,12 @@ public class WhatsAppService {
     private TipoServicoRepository servicoRepository;
     @Autowired
     private ProfissionalRepository profissionalRepository;
+    @Autowired
+    private ServicoProfissionalRepository servicoProfissionalRepository;
+    @Autowired
+    private PagamentoService pagamentoService;
+    @Autowired
+    private PagamentoRepository pagamentoRepository;
     @Autowired
     private EvolutionService metaService;
     @Autowired
@@ -152,6 +156,9 @@ public class WhatsAppService {
             estado.setEstadoAtual(2);
             estado.setServicoSelecionado(null);
             estado.setPaginaHorarios(0);
+            estado.setServicoSelecionado(null);
+            estado.setProfissionalSelecionado(null);
+            estado.getDadosTemporarios().clear();
             estadoRepository.save(estado);
             metaService.enviarMensagem(de, "🔄 Menu Principal:\n\n1. ✅ Novo Agendamento\n2. ❌ Cancelar ou Remarcar\n3. 📞 Informações e Preços\n4. 💬 Falar com atendente\n\nCaso precise, digite *menu* para voltar aqui", clinica);
 
@@ -191,10 +198,24 @@ public class WhatsAppService {
                         List<TipoServico> servicos = servicoRepository.findByClinicaId(clinica.getId());
                         List<Profissional> profissionais = profissionalRepository.findByClinicaIdAndAtivoTrue(clinica.getId());
                         if (servicos.isEmpty()) {
-                            // FLUXO ANTIGO (Sem escolha de serviço)
-                            metaService.enviarMensagem(de, "Certo! Agora digite a data desejada.\nExemplo: *20/01* ou *Sexta*", clinica);
-                            estado.setEstadoAtual(3); // Vai direto pedir data
-                            estadoRepository.save(estado);
+                            if (profissionais.size() <= 1) {
+                                if (!profissionais.isEmpty()) {
+                                    estado.setProfissionalSelecionado(profissionais.get(0));
+                                }
+                                // FLUXO ANTIGO (Sem escolha de serviço)
+                                metaService.enviarMensagem(de, "Certo! Agora digite a data desejada.\nExemplo: *20/01* ou *Sexta*", clinica);
+                                estado.setEstadoAtual(3); // Vai direto pedir data
+                                estadoRepository.save(estado);
+                            } else {
+                                // ✅ Múltiplos profissionais → mostra lista
+                                StringBuilder sb = new StringBuilder("✂️ *Com qual profissional deseja agendar?*\n\n");
+                                for (int i = 0; i < profissionais.size(); i++) {
+                                    sb.append(i + 1).append(". ").append(profissionais.get(i).getNome()).append("\n");
+                                }
+                                sb.append("\nDigite o *número* da sua escolha:");
+                                metaService.enviarMensagem(de, sb.toString(), clinica);
+                                estado.setEstadoAtual(11);
+                            }
                         } else {
                             // FLUXO NOVO (Escolher serviço)
                             StringBuilder menuServicos = new StringBuilder("🏆 *Nossos Serviços*\n\n");
@@ -271,8 +292,11 @@ public class WhatsAppService {
                         }
 
                         int duracao = (estado.getServicoSelecionado() != null) ? estado.getServicoSelecionado().getDuracaoMinutos() : 30;
-                        List<String> horarios = eventService.isSlotDisponivel(data, clinica, duracao);
-
+                        String calendarIdParaBuscar;
+                        if (estado.getProfissionalSelecionado() != null &&
+                                estado.getProfissionalSelecionado().getGoogleCalendarId() != null) {
+                            calendarIdParaBuscar = estado.getProfissionalSelecionado().getGoogleCalendarId();} else {calendarIdParaBuscar = clinica.getGoogleCalendarId();}
+                        List<String> horarios = eventService.isSlotDisponivel(data, clinica, duracao, calendarIdParaBuscar);
                         if (horarios.isEmpty()) {
                             metaService.enviarMensagem(de, "😔 Infelizmente não há horários disponíveis para este dia. Por favor, tente outra data! ou digite *menu*.", clinica);
                             return;
@@ -324,7 +348,9 @@ public class WhatsAppService {
                         if (msgLimpa.equals("+")) {
                             LocalDate dataSelecionada = LocalDate.parse(estado.getDataSugerida());
                             int duracao = (estado.getServicoSelecionado() != null) ? estado.getServicoSelecionado().getDuracaoMinutos() : 30;
-                            List<String> todosHorarios = eventService.isSlotDisponivel(dataSelecionada, clinica, duracao);
+                            String calendarIdParaBuscar;
+                            if (estado.getProfissionalSelecionado() != null && estado.getProfissionalSelecionado().getGoogleCalendarId() != null) {calendarIdParaBuscar = estado.getProfissionalSelecionado().getGoogleCalendarId();} else {calendarIdParaBuscar = clinica.getGoogleCalendarId();}
+                            List<String> todosHorarios = eventService.isSlotDisponivel(dataSelecionada, clinica, duracao, calendarIdParaBuscar);
                             if (todosHorarios.isEmpty()) {
                                 metaService.enviarMensagem(de, "😔 Não há mais horários disponíveis para este dia.", clinica);
                                 return;
@@ -375,26 +401,94 @@ public class WhatsAppService {
 
                             String tituloEvento = estado.getNomePaciente();
                             String servicoNome = (estado.getServicoSelecionado() != null) ? estado.getServicoSelecionado().getNome() : "Consulta";
-                            String descricaoEvento = "Telefone: " + de + " | " + servicoNome;
-                            DateTimeFormatter parser = DateTimeFormatter.ofPattern("HH:mm");
-                            LocalTime inicioConf = LocalTime.parse(horaEscolhida, parser);
-                            LocalTime fimConf = inicioConf.plusMinutes(duracao);
-                            String intervaloHorario = inicioConf.format(parser) + " às " + fimConf.format(parser);
-                            eventService.criarAgendamento(tituloEvento, data, de, horaEscolhida, clinica.getGoogleCalendarId(), duracao, descricaoEvento );
 
-                            metaService.enviarMensagem(de, "✅ *Seu agendamento foi realizado.*\n\n" +
-                                    "📅 *Data:* " + data.format(DateTimeFormatter.ofPattern("dd/MM")) + "\n" +
-                                    "🕒 *Horário:* " + intervaloHorario + "\n" +
-                                    "📝 *Serviço:* " + servicoNome + "\n" +
-                                    "📍 *Local:* " + clinica.getEndereco() + "\n\n" +
-                                    "Tamo junto! Nos vemos em breve 👊🔥 \n" +
-                                    "Caso precise, digite *menu* para outras opções.", clinica);
-                            estado.setEstadoAtual(0);
-                            estado.setPaginaHorarios(0);
-                            estado.setHorariosTemporarios(null);
-                            estado.setDataSugerida(null);
-                            estadoRepository.save(estado);
-                            return;
+                            if (clinica.getCobrancaAntecipada() != null &&
+                                    clinica.getCobrancaAntecipada() &&
+                                    estado.getServicoSelecionado() != null) {
+
+                                // ✅ GERAR PAGAMENTO PIX
+                                BigDecimal valor = estado.getServicoSelecionado().getPreco();
+                                String descricao = servicoNome + " - " + clinica.getNome();
+
+                                Pagamento pag = pagamentoService.gerarPagamentoPix(
+                                        clinica, de, valor, descricao
+                                );
+
+                                if (pag != null && pag.getPixCopiaECola() != null) {
+                                    // Salvar dados do agendamento no pagamento
+                                    pag.setDataAgendamento(data.toString());
+                                    pag.setHoraAgendamento(horaEscolhida);
+                                    pag.setServicoNome(servicoNome);
+                                    pagamentoRepository.save(pag);
+
+                                    // ✅ ENVIAR PIX PARA O CLIENTE
+                                    DateTimeFormatter parser = DateTimeFormatter.ofPattern("HH:mm");
+                                    LocalTime inicioConf = LocalTime.parse(horaEscolhida, parser);
+                                    LocalTime fimConf = inicioConf.plusMinutes(duracao);
+                                    String intervaloHorario = inicioConf.format(parser) + " às " + fimConf.format(parser);
+
+                                    DecimalFormat df = new DecimalFormat("#,##0.00",
+                                            new DecimalFormatSymbols(new Locale("pt", "BR")));
+
+                                    String msgPagamento =
+                                            "💰 *Pagamento Antecipado*\n\n" +
+                                                    "📅 Data: " + data.format(DateTimeFormatter.ofPattern("dd/MM")) + "\n" +
+                                                    "🕐 Horário: " + intervaloHorario + "\n" +
+                                                    "📋 Serviço: " + servicoNome + "\n" +
+                                                    "💵 Valor: R$ " + df.format(valor) + "\n\n" +
+                                                    "🔐 *Pague via PIX para confirmar:*\n" +
+                                                    "📋 Copie o código abaixo:\n" +
+                                                    "`" + pag.getPixCopiaECola() + "`\n\n" +
+                                                    "⏰ Expira em 30 minutos.\n" +
+                                                    "Após o pagamento, seu agendamento será confirmado automaticamente!";
+
+                                    metaService.enviarMensagem(de, msgPagamento, clinica);
+
+                                    // ✅ Mudar estado para aguardar pagamento
+                                    estado.setEstadoAtual(12); // Novo estado: aguardando pagamento
+                                    estado.getDadosTemporarios().put("pagamento_id", pag.getId().toString());
+                                    estadoRepository.save(estado);
+                                    return;
+                                } else {
+                                    metaService.enviarMensagem(de,
+                                            "❌ Erro ao gerar pagamento. Entre em contato com " +
+                                                    clinica.getNome(), clinica);
+                                    return;
+                                }
+                            } else {
+                                String descricaoEvento = "Telefone: " + de + " | " + servicoNome;
+                                DateTimeFormatter parser = DateTimeFormatter.ofPattern("HH:mm");
+                                LocalTime inicioConf = LocalTime.parse(horaEscolhida, parser);
+                                LocalTime fimConf = inicioConf.plusMinutes(duracao);
+                                String intervaloHorario = inicioConf.format(parser) + " às " + fimConf.format(parser);
+                                String calendarIdFinal;
+
+                                if (estado.getProfissionalSelecionado() != null &&
+                                        estado.getProfissionalSelecionado().getGoogleCalendarId() != null) {
+                                    calendarIdFinal = estado.getProfissionalSelecionado().getGoogleCalendarId();
+                                } else {
+                                    calendarIdFinal = clinica.getGoogleCalendarId(); // Fallback: agenda da clínica
+                                }
+
+                                eventService.criarAgendamento(tituloEvento, data, de, horaEscolhida, calendarIdFinal, duracao, descricaoEvento);
+
+                                metaService.enviarMensagem(de, "✅ *Seu agendamento foi realizado.*\n\n" +
+                                        "📅 *Data:* " + data.format(DateTimeFormatter.ofPattern("dd/MM")) + "\n" +
+                                        "🕒 *Horário:* " + intervaloHorario + "\n" +
+                                        "📝 *Serviço:* " + servicoNome + "\n" +
+                                        "📍 *Local:* " + clinica.getEndereco() + "\n\n" +
+                                        "Tamo junto! Nos vemos em breve 👊🔥 \n" +
+                                        "Caso precise, digite *menu* para outras opções.", clinica);
+                                estado.setEstadoAtual(0);
+                                estado.setPaginaHorarios(0);
+                                estado.setHorariosTemporarios(null);
+                                estado.setDataSugerida(null);
+                                estado.setServicoSelecionado(null);
+                                estado.setProfissionalSelecionado(null);
+                                estado.getDadosTemporarios().clear();
+                                estadoRepository.save(estado);
+                                return;
+                            }
                         } else {
                             metaService.enviarMensagem(de, "Número inválido. Digite um número da lista acima ou *+* para mais horários.", clinica);
                             return;
@@ -408,7 +502,7 @@ public class WhatsAppService {
                             executarLogicaCoringaAgenda(de, msgLimpa, clinica, estado);
 
                         } catch (IllegalArgumentException e) {
-                            metaService.enviarMensagem(de, "⚠️ Não entendi. Digite o *número* do horário ou uma *nova data* (ex: amanhã).", clinica);
+                            metaService.enviarMensagem(de, "⚠️ Não entendi. Digite o *número* do horário ou uma *nova data* (ex: Amanhã, 22/08).", clinica);
                         }
                     } catch (Exception e) {
                         logger.error("Erro no Case 4: ", e);
@@ -431,9 +525,94 @@ public class WhatsAppService {
                 case 7:
                     String idEvento = estado.getDadosTemporarios().get("_selected_event");
                     if (msgLimpa.equals("1")) {
-                        eventService.cancelarEvento(idEvento, calendarId);
-                        metaService.enviarMensagem(de, "✅ Agendamento cancelado com sucesso!\n" +
-                                "Caso precise, digite *menu* para outras opções.", clinica);
+                        Event event = eventService.buscarEventoSeguro(idEvento, calendarId, de);
+
+                        if (event == null) {
+                            metaService.enviarMensagem(de,
+                                    "❌ Evento não encontrado ou não pertence a você. Digite *menu*.", clinica);
+                            estado.setEstadoAtual(0);
+                            estadoRepository.save(estado);
+                            break;
+                        }
+
+                        boolean temPagamento = event.getDescription() != null &&
+                                event.getDescription().contains("PAGO");
+
+                        if (temPagamento) {
+                            // Calcular horas até o evento
+                            String inicioStr = event.getStart().getDateTime().toString();
+                            LocalDateTime inicioEvento = LocalDateTime.parse(
+                                    inicioStr.substring(0, 19)
+                            );
+                            long horasAte = ChronoUnit.HOURS.between(LocalDateTime.now(), inicioEvento);
+                            String msgCancelamento = "";
+
+                            if (horasAte >= 24) {
+                                // ✅ REEMBOLSAR 100%
+                                // Buscar pagamento no banco
+                                // (Você precisa adicionar eventId no Pagamento pra facilitar)
+                                Pagamento pag = pagamentoRepository
+                                        .findByTelefoneClienteAndDataAgendamento(de,
+                                                inicioEvento.toLocalDate().toString())
+                                        .orElse(null);
+
+                                if (pag != null && "approved".equals(pag.getStatus())) {
+                                    boolean reembolsado = pagamentoService.reembolsarPagamento(
+                                            pag.getMercadoPagoId(), 1.0  // 100%
+                                    );
+
+                                    if (reembolsado) {
+                                        msgCancelamento = "✅ Agendamento cancelado.\n" +
+                                                "💰 Reembolso de 100% será processado em até 3 dias úteis.";
+                                        pag.setStatus("refunded");
+                                        pagamentoRepository.save(pag);
+                                    } else {
+                                        msgCancelamento = "✅ Agendamento cancelado.\n" +
+                                                "⚠️ Erro ao processar reembolso. Entre em contato: Digite *menu* e depois 4 para falar com um atendente";
+                                    }
+                                } else {
+                                    msgCancelamento = "✅ Agendamento cancelado.\n" +
+                                            "Entre em contato para reembolso: Digite *menu* e depois 4 para falar com um atendente";
+                                }
+
+                            } else if (horasAte >= 2) {
+                                // ✅ REEMBOLSAR 50%
+                                Pagamento pag = pagamentoRepository
+                                        .findByTelefoneClienteAndDataAgendamento(de,
+                                                inicioEvento.toLocalDate().toString())
+                                        .orElse(null);
+
+                                if (pag != null) {
+                                    boolean reembolsado = pagamentoService.reembolsarPagamento(
+                                            pag.getMercadoPagoId(), 0.5  // 50%
+                                    );
+
+                                    if (reembolsado) {
+                                        msgCancelamento = "⚠️ Agendamento cancelado.\n" +
+                                                "💰 Reembolso de 50% será processado em até 3 dias úteis.\n" +
+                                                "(Política: cancelamento com menos de 24h)";
+                                        pag.setStatus("partially_refunded");
+                                        pagamentoRepository.save(pag);
+                                    } else {
+                                        msgCancelamento = "Erro ao processar reembolso. Contate: Digite *menu* e depois 4 para falar com um atendente";
+                                    }
+                                } else {
+                                    msgCancelamento = "Cancelamento registrado. Contate para reembolso: Digite *menu* e depois 4 para falar com um atendente";
+                                }
+
+                            } else {
+                                msgCancelamento = "❌ Não é possível cancelar com menos de 2h de antecedência.\n" +
+                                        "O profissional já está preparado para te atender.\n" +
+                                        "Entre em contato: Digite *menu* e depois 4 para falar com um atendente";
+                            }
+                            eventService.cancelarEvento(idEvento, calendarId);
+                            metaService.enviarMensagem(de, msgCancelamento, clinica);
+                        } else {
+                            // Sem pagamento → cancelamento simples
+                            eventService.cancelarEvento(idEvento, calendarId);
+                            metaService.enviarMensagem(de,
+                                    "✅ Agendamento cancelado com sucesso!\n Caso precise, digite *menu* para mais opções", clinica);
+                        }
                         estado.setEstadoAtual(0);
                         estadoRepository.save(estado);
                     } else if (msgLimpa.equals("2")) {
@@ -454,14 +633,206 @@ public class WhatsAppService {
                         int idx = Integer.parseInt(msgLimpa.replaceAll("\\D", "")) - 1;
                         if (idx >= 0 && idx < servicos.size()) {
                             estado.setServicoSelecionado(servicos.get(idx));
+                            List<ServicoProfissional> profissionaisServico =
+                                    servicoProfissionalRepository.findProfissionaisByServico(servicos.get(idx).getId());
+                            if (profissionaisServico.isEmpty()) {
+                            metaService.enviarMensagem(de, "Você escolheu: *" + servicos.get(idx).getNome() + "*.\nAgora, digite a data desejada (Ex: *20/01* ou *Terça*):", clinica);
                             estado.setEstadoAtual(3);
                             estadoRepository.save(estado);
-                            metaService.enviarMensagem(de, "Você escolheu: *" + servicos.get(idx).getNome() + "*.\nAgora, digite a data desejada (Ex: *20/01* ou *Terça*):", clinica);
-                        } else {
+                            } else if (profissionaisServico.size() == 1) {
+                                // Só 1 profissional → seleciona automaticamente
+                                ServicoProfissional sp = profissionaisServico.get(0);
+                                estado.setProfissionalSelecionado(sp.getProfissional());
+                                BigDecimal precoFinal = (sp.getPrecoCustomizado() != null) ?
+                                        (sp.getPrecoCustomizado()) : servicos.get(idx).getPreco();
+                                DecimalFormat df = new DecimalFormat("#,##0.00",
+                                        new DecimalFormatSymbols(new Locale("pt", "BR")));
+                                metaService.enviarMensagem(de,
+                                        "Você escolheu: *" + servicos.get(idx).getNome() + "* com *" +
+                                                sp.getProfissional().getNome() + "* por *R$ " + df.format(precoFinal) + "*.\n\n" +
+                                                "Agora, digite a data desejada (Ex: *20/01* ou *Sexta*):", clinica);
+                                estado.setEstadoAtual(3);
+                                estadoRepository.save(estado);
+                            } else {
+                                // Múltiplos profissionais → mostra lista
+                                StringBuilder sb = new StringBuilder("🧙‍♂️ *Escolha o profissional:*\n\n");
+
+                                DecimalFormat df = new DecimalFormat("#,##0.00",
+                                        new DecimalFormatSymbols(new Locale("pt", "BR")));
+
+                                for (int i = 0; i < profissionaisServico.size(); i++) {
+                                    ServicoProfissional sp = profissionaisServico.get(i);
+                                    BigDecimal precoFinal = (sp.getPrecoCustomizado() != null) ?
+                                            (sp.getPrecoCustomizado()) : servicos.get(idx).getPreco();
+
+                                    sb.append(i + 1).append(". *")
+                                            .append(sp.getProfissional().getNome())
+                                            .append("* - R$ ")
+                                            .append(df.format(precoFinal)).append("\n");
+                                }
+
+                                sb.append("\nDigite o *número* da sua escolha:");
+                                metaService.enviarMensagem(de, sb.toString(), clinica);
+                                estado.setEstadoAtual(11);
+
+                                // Salvar lista temporária
+                                estado.getDadosTemporarios().put("profissionais_disponiveis",
+                                        profissionaisServico.stream()
+                                                .map(sp -> sp.getId().toString())
+                                                .collect(Collectors.joining(",")));
+                            }
+                            estadoRepository.save(estado);
+                            } else {
                             metaService.enviarMensagem(de, "Número inválido. Tente novamente e caso precise digite *menu*.", clinica);
                         }
                     } catch (NumberFormatException e) {
                         metaService.enviarMensagem(de, "Digite apenas o número do serviço.", clinica);
+                    }
+                    break;
+
+                case 11: // Escolher profissional
+                    try {
+                        String idsDisponiveis = estado.getDadosTemporarios().get("profissionais_disponiveis");
+                        if (idsDisponiveis == null) {
+                            metaService.enviarMensagem(de, "Sessão expirada. Digite *menu*.", clinica);
+                            estado.setEstadoAtual(0);
+                            estadoRepository.save(estado);
+                            break;
+                        }
+                        String[] ids = idsDisponiveis.split(",");
+                        int idx = Integer.parseInt(msgLimpa.replaceAll("\\D", "")) - 1;
+                        if (idx >= 0 && idx < ids.length) {
+                            Long servicoProfissionalId = Long.parseLong(ids[idx]);
+                            ServicoProfissional sp = servicoProfissionalRepository
+                                    .findById(servicoProfissionalId).orElse(null);
+                            if (sp != null) {
+                                estado.setProfissionalSelecionado(sp.getProfissional());
+                                // Atualizar preço e duração customizados se houver
+                                if (sp.getPrecoCustomizado() != null) {
+                                    estado.getServicoSelecionado().setPreco((sp.getPrecoCustomizado()));
+                                }
+                                if (sp.getDuracaoCustomizada() != null) {
+                                    estado.getServicoSelecionado().setDuracaoMinutos(sp.getDuracaoCustomizada());
+                                }
+                                metaService.enviarMensagem(de,
+                                        "Ótimo! Agendando com *" + sp.getProfissional().getNome() + "* 👊\n\n" +
+                                                "Agora digite a data desejada (ex: *22/08* ou *Sexta*):", clinica);
+                                estado.setEstadoAtual(3);
+                                estadoRepository.save(estado);
+                            } else {
+                                metaService.enviarMensagem(de, "Erro ao selecionar, tente novamente. OU digite *menu*.", clinica);
+                            }
+                        } else {
+                            metaService.enviarMensagem(de,
+                                    "Número inválido. Escolha um da lista ou digite *menu*.", clinica);
+                        }
+                    } catch (NumberFormatException e) {
+                        metaService.enviarMensagem(de, "Digite apenas o número do profissional.", clinica);
+                    }
+                    break;
+
+                case 12: // Aguardando confirmação de pagamento
+                    String pagamentoIdStr = estado.getDadosTemporarios().get("pagamento_id");
+                    if (pagamentoIdStr == null) {
+                        metaService.enviarMensagem(de, "Sessão expirada. Digite *menu* para recomeçar.", clinica);
+                        estado.setEstadoAtual(0);
+                        estadoRepository.save(estado);
+                        break;
+                    }
+
+                    // Opção de cancelar
+                    if (msgLimpa.contains("cancelar")) {
+                        metaService.enviarMensagem(de,
+                                "Agendamento cancelado. O PIX expira automaticamente em 30 minutos.\n" +
+                                        "Digite *menu* para outras opções.", clinica);
+                        estado.setEstadoAtual(0);
+                        estado.getDadosTemporarios().clear();
+                        estado.setPaginaHorarios(0);
+                        estado.setHorariosTemporarios(null);
+                        estado.setDataSugerida(null);
+                        estado.setServicoSelecionado(null);
+                        estado.setProfissionalSelecionado(null);
+                        estadoRepository.save(estado);
+                        break;
+                    }
+
+                    Long pagamentoId = Long.parseLong(pagamentoIdStr);
+                    Pagamento pag = pagamentoRepository.findById(pagamentoId).orElse(null);
+
+                    if (pag == null) {
+                        metaService.enviarMensagem(de, "Pagamento não encontrado. Digite *menu*.", clinica);
+                        estado.setEstadoAtual(0);
+                        estadoRepository.save(estado);
+                        break;
+                    }
+
+                    // ✅ Verificar status
+                    String status = pagamentoService.consultarStatus(pag.getMercadoPagoId());
+
+                    if ("approved".equals(status)) {
+                        // ✅ CRIAR AGENDAMENTO
+                        LocalDate data = LocalDate.parse(pag.getDataAgendamento());
+                        String horaEscolhida = pag.getHoraAgendamento();
+                        int duracao = (estado.getServicoSelecionado() != null) ?
+                                estado.getServicoSelecionado().getDuracaoMinutos() : 30;
+
+                        String tituloEvento = estado.getNomePaciente();
+                        String descricaoEvento = "Telefone: " + de + " | " + pag.getServicoNome() + " | PAGO";
+
+                        String calendarIdFinal;
+                        if (estado.getProfissionalSelecionado() != null &&
+                                estado.getProfissionalSelecionado().getGoogleCalendarId() != null) {
+                            calendarIdFinal = estado.getProfissionalSelecionado().getGoogleCalendarId();
+                        } else {
+                            calendarIdFinal = clinica.getGoogleCalendarId();
+                        }
+
+                        try {
+                            eventService.criarAgendamento(tituloEvento, data, de, horaEscolhida,
+                                    calendarIdFinal, duracao, descricaoEvento);
+
+                            DateTimeFormatter parser = DateTimeFormatter.ofPattern("HH:mm");
+                            LocalTime inicioConf = LocalTime.parse(horaEscolhida, parser);
+                            LocalTime fimConf = inicioConf.plusMinutes(duracao);
+                            String intervaloHorario = inicioConf.format(parser) + " às " + fimConf.format(parser);
+
+                            metaService.enviarMensagem(de,
+                                    "✅ *Pagamento Confirmado!*\n\n" +
+                                            "Seu agendamento foi confirmado:\n\n" +
+                                            "📅 *Data:* " + data.format(DateTimeFormatter.ofPattern("dd/MM")) + "\n" +
+                                            "🕒 *Horário:* " + intervaloHorario + "\n" +
+                                            "📝 *Serviço:* " + pag.getServicoNome() + "\n" +
+                                            "📍 *Local:* " + clinica.getEndereco() + "\n\n" +
+                                            "Tamo junto! Nos vemos em breve 👊🔥", clinica);
+
+                            // Resetar estado
+                            estado.setEstadoAtual(0);
+                            estado.setPaginaHorarios(0);
+                            estado.setHorariosTemporarios(null);
+                            estado.setDataSugerida(null);
+                            estado.setServicoSelecionado(null);
+                            estado.setProfissionalSelecionado(null);
+                            estado.getDadosTemporarios().clear();
+                            estadoRepository.save(estado);
+
+                        } catch (IOException e) {
+                            logger.error("Erro ao criar agendamento após pagamento: ", e);
+                            metaService.enviarMensagem(de,
+                                    "Pagamento confirmado mas erro ao criar agendamento. " +
+                                            "Entre em contato: Digite *menu* e depois 4.", clinica);
+                        }
+
+                    } else if ("pending".equals(status)) {
+                        metaService.enviarMensagem(de,
+                                "⏳ *Aguardando pagamento...*\n\n" +
+                                        "Assim que o PIX for compensado, você receberá a confirmação automática.\n\n" +
+                                        "💡 Não precisa fazer nada! O sistema confirma sozinho.\n\n" +
+                                        "Caso queira cancelar, digite *cancelar*.", clinica);
+                    } else {
+                        metaService.enviarMensagem(de,
+                                "❌ Pagamento não confirmado.\n" +
+                                        "Status: " + status + "\n\n" +
+                                        "Digite *menu* ou entre em contato.", clinica);
                     }
                     break;
             }

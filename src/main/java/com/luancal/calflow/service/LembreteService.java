@@ -5,7 +5,9 @@ import com.google.api.services.calendar.Calendar;
 import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.Events;
 import com.luancal.calflow.model.Clinica;
+import com.luancal.calflow.model.Profissional;
 import com.luancal.calflow.repository.ClinicaRepository;
+import com.luancal.calflow.repository.ProfissionalRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +32,9 @@ public class LembreteService {
 
     @Autowired
     private ClinicaRepository clinicaRepository;
+
+    @Autowired
+    private ProfissionalRepository profissionalRepository;
 
     @Autowired
     private EvolutionService evolutionService;
@@ -58,48 +63,65 @@ public class LembreteService {
             }
 
             try {
-                processarClinica(clinica);
+                // ✅ BUSCAR AGENDAS: da clínica + de cada profissional
+                List<String> calendarIds = new ArrayList<>();
+
+                // Agenda da clínica
+                if (clinica.getGoogleCalendarId() != null) {
+                    calendarIds.add(clinica.getGoogleCalendarId());
+                }
+
+                // Agendas dos profissionais
+                List<Profissional> profissionais = profissionalRepository
+                        .findByClinicaIdAndAtivoTrue(clinica.getId());
+
+                for (Profissional prof : profissionais) {
+                    if (prof.getGoogleCalendarId() != null) {
+                        calendarIds.add(prof.getGoogleCalendarId());
+                    }
+                }
+
+                // ✅ Verificar eventos em TODAS as agendas
+                for (String calendarId : calendarIds) {
+                    verificarEventosCalendar(calendarId, clinica);
+                }
+
             } catch (Exception e) {
-                // Try-catch DENTRO do loop garante que se uma clínica der erro, as outras continuam funcionando
-                logger.error("❌ Erro ao processar clínica {}: {}", clinica.getNome(), e.getMessage());
+                logger.error("❌ Erro ao verificar lembretes da clínica {}: ",
+                        clinica.getNome(), e);
             }
         }
     }
 
-    private void processarClinica(Clinica clinica) throws IOException {
-        long agora = System.currentTimeMillis();
+    private void verificarEventosCalendar(String calendarId, Clinica clinica) throws IOException {
+        LocalDateTime agora = LocalDateTime.now(ZoneId.of("America/Sao_Paulo"));
+        LocalDateTime daquiUmaHora = agora.plusHours(1);
 
-        // Janela de Tempo: Eventos entre 50min e 70min no futuro
-        DateTime minTime = new DateTime(agora + (50 * 60 * 1000));
-        DateTime maxTime = new DateTime(agora + (70 * 60 * 1000));
+        DateTime min = new DateTime(agora.atZone(ZoneId.of("America/Sao_Paulo")).toInstant().toEpochMilli());
+        DateTime max = new DateTime(daquiUmaHora.atZone(ZoneId.of("America/Sao_Paulo")).toInstant().toEpochMilli());
 
-        Events events = googleCalendar.events().list(clinica.getGoogleCalendarId())
-                .setTimeMin(minTime)
-                .setTimeMax(maxTime)
+        Events events = googleCalendar.events().list(calendarId)
+                .setTimeMin(min)
+                .setTimeMax(max)
                 .setSingleEvents(true)
                 .setOrderBy("startTime")
                 .execute();
 
-        List<Event> items = events.getItems();
+        for (Event event : events.getItems()) {
+            // VERIFICAÇÃO DE DUPLICIDADE (A chave para não ter reclamação)
+            if (eventosProcessados.contains(event.getId())) {
+                continue; // Já avisamos sobre esse evento, pula.
+            }
 
-        if (items != null && !items.isEmpty()) {
-            for (Event event : items) {
-                // VERIFICAÇÃO DE DUPLICIDADE (A chave para não ter reclamação)
-                if (eventosProcessados.contains(event.getId())) {
-                    continue; // Já avisamos sobre esse evento, pula.
-                }
-
-                enviarLembrete(event, clinica);
-                eventosProcessados.add(event.getId());
-                try {
-                    Thread.sleep(2000 + new Random().nextInt(3000)); // Espera 2 a 5 segundos entre cada lembrete
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
+            enviarLembrete(event, clinica);
+            eventosProcessados.add(event.getId());
+            try {
+                Thread.sleep(2000 + new Random().nextInt(3000)); // Espera 2 a 5 segundos entre cada lembrete
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
         }
     }
-
     private void enviarLembrete(Event event, Clinica clinica) {
         String descricao = event.getDescription();
         if (descricao == null) return; // Se não tem descrição (telefone), ignora
