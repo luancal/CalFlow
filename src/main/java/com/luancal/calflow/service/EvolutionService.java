@@ -1,117 +1,122 @@
 package com.luancal.calflow.service;
 
+import com.luancal.calflow.model.Clinica;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import com.luancal.calflow.model.Clinica;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class EvolutionService {
     private static final Logger log = LoggerFactory.getLogger(EvolutionService.class);
+
     @Value("${evolution.api.url:http://localhost:8080}")
     private String evolutionHost;
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final Random random = new Random();
 
+    // Armazena o último envio por número para evitar rajadas (Cooldown)
+    private final Map<String, Long> ultimoEnvioPorNumero = new ConcurrentHashMap<>();
+
     public void enviarMensagem(String telefone, String texto, Clinica clinica) {
+        String numeroFormatado = formatarNumeroWhatsApp(telefone);
+
         try {
-            // ✅ PASSO 1: Mostrar "online"
-            atualizarPresenca(telefone, "available", clinica);
+            // 1. Respeita o intervalo entre mensagens para o mesmo número
+            respeitarCooldown(numeroFormatado);
 
-            // ✅ PASSO 2: Simular tempo de leitura (humano)
-            Thread.sleep(800 + random.nextInt(700)); // 800-1500ms
+            // 2. Fica "Online" (Available)
+            atualizarPresenca(numeroFormatado, "available", clinica);
+            Thread.sleep(800 + random.nextInt(1000)); // Simula tempo de leitura
 
-            // ✅ PASSO 3: Mostrar "digitando..."
-            atualizarPresenca(telefone, "composing", clinica);
+            // 3. Mostra "Digitando..." (Composing)
+            atualizarPresenca(numeroFormatado, "composing", clinica);
 
-            // ✅ PASSO 4: Delay proporcional ao tamanho da mensagem
-            long delay = Math.min(2000, 500 + (texto.length() * 10L));
-            Thread.sleep(delay);
+            // 4. Delay calculado pelo tamanho do texto (Simula digitação real)
+            long delayDigitacao = calcularDelayHumano(texto);
+            Thread.sleep(delayDigitacao);
 
-            // ✅ PASSO 5: Parar de "digitar" e enviar
-            atualizarPresenca(telefone, "paused", clinica);
-
-            enviarTexto(telefone, texto, clinica);
+            // 5. Para de digitar e envia
+            atualizarPresenca(numeroFormatado, "paused", clinica);
+            enviarTexto(numeroFormatado, texto, clinica);
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.warn("Thread interrompida, enviando mensagem direto");
-            enviarTexto(telefone, texto, clinica);
+            log.warn("Fluxo interrompido para {}, enviando direto.", numeroFormatado);
+            enviarTexto(numeroFormatado, texto, clinica);
         }
     }
 
-    private void atualizarPresenca(String telefone, String presenca, Clinica clinica) {
+    private long calcularDelayHumano(String texto) {
+        int tamanho = (texto != null) ? texto.length() : 0;
+        // Base de 1s + (15ms por letra) + variação aleatória
+        long tempoBase = 1000 + (tamanho * 15L) + random.nextInt(800);
+        return Math.min(tempoBase, 5000); // No máximo 5 segundos digitando
+    }
+
+    private void respeitarCooldown(String telefone) {
+        long agora = System.currentTimeMillis();
+        long ultimo = ultimoEnvioPorNumero.getOrDefault(telefone, 0L);
+        long intervaloMinimo = 2000L + random.nextInt(1500); // 2 a 3.5 segundos entre msgs
+
+        long falta = intervaloMinimo - (agora - ultimo);
+        if (falta > 0) {
+            try { Thread.sleep(falta); } catch (InterruptedException ignored) {}
+        }
+        ultimoEnvioPorNumero.put(telefone, System.currentTimeMillis());
+    }
+
+    private void atualizarPresenca(String numero, String presenca, Clinica clinica) {
         try {
-            String url = evolutionHost + "/chat/updatePresence/" + clinica.getNomeInstancia();
+            // Endpoint V2: chat/updatePresence/{instance}
+            String url = String.format("%s/chat/updatePresence/%s", evolutionHost, clinica.getNomeInstancia());
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("apikey", clinica.getApikeyEvolution());
-            // Formata número corretamente
-            String numeroFormatado = formatarNumeroWhatsApp(telefone);
+
             Map<String, Object> body = new HashMap<>();
-            body.put("number", numeroFormatado); // Só o número, sem @s.whatsapp.net
-            body.put("presence", presenca); // "available", "composing", "paused"
-            body.put("delay", 1200); // Delay em milissegundos
+            body.put("number", numero);
+            body.put("presence", presenca);
 
-            HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
-            ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
-
-            if (response.getStatusCode().is2xxSuccessful()) {
-                log.debug("Presença atualizada: {} -> {}", numeroFormatado, presenca);
-            } else {
-                log.warn("Falha ao atualizar presença: status={}", response.getStatusCode());
-            }
+            restTemplate.postForEntity(url, new HttpEntity<>(body, headers), String.class);
         } catch (Exception e) {
-            log.warn("Erro ao atualizar presença (não crítico): {}", e.getMessage());
+            log.warn("Erro ao atualizar presença: {}", e.getMessage());
         }
     }
 
-    private void enviarTexto(String telefone, String texto, Clinica clinica) {
-        try {
-            String url = evolutionHost + "/message/sendText/" + clinica.getNomeInstancia();
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("apikey", clinica.getApikeyEvolution());
-            String numeroFormatado = formatarNumeroWhatsApp(telefone);
-            Map<String, Object> body = new HashMap<>();
-            body.put("number", numeroFormatado);
-            body.put("text", texto);
-            Map<String, Object> options = new HashMap<>();
-            options.put("delay", 500);
-            body.put("options", options);
-            HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
-            ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
-            if (response.getStatusCode().is2xxSuccessful()) {
-                log.info("✅ Mensagem enviada: {}", numeroFormatado);
-            } else {
-                log.error("❌ Falha ao enviar: status={}, body={}",
-                        response.getStatusCode(), response.getBody());
-            }
-        } catch (Exception e) {
-            log.error("❌ Erro ao enviar mensagem para {}: {}", telefone, e.getMessage(), e);
-            throw new RuntimeException("Erro ao enviar mensagem WhatsApp", e);
-        }
+    private void enviarTexto(String numero, String texto, Clinica clinica) {
+        String url = String.format("%s/message/sendText/%s", evolutionHost, clinica.getNomeInstancia());
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("apikey", clinica.getApikeyEvolution());
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("number", numero);
+        body.put("text", texto);
+
+        // Link preview e outras opções (V2)
+        Map<String, Object> options = new HashMap<>();
+        options.put("delay", 0); // O delay a gente já tratou no Java
+        options.put("linkPreview", true);
+        body.put("options", options);
+
+        restTemplate.postForEntity(url, new HttpEntity<>(body, headers), String.class);
     }
+
     private String formatarNumeroWhatsApp(String telefone) {
         String numero = telefone.replaceAll("[^0-9]", "");
-        if (numero.startsWith("55") && numero.length() >= 12) {
-            return numero;
-        }
-        if (numero.length() == 10 || numero.length() == 11) {
-            return "55" + numero;
-        }
+        // Garante o formato DDI + DDD + Numero (ex: 553299401356)
+        if (!numero.startsWith("55")) numero = "55" + numero;
         return numero;
     }
 }

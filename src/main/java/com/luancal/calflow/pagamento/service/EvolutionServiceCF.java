@@ -1,7 +1,5 @@
 package com.luancal.calflow.pagamento.service;
 
-import com.luancal.calflow.service.EvolutionService;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,15 +22,8 @@ public class EvolutionServiceCF {
     @Value("${evolution.api.key}")
     private String evolutionApiKey;
 
-    private final RestTemplate restTemplate;
+    private final RestTemplate restTemplate = new RestTemplate();
 
-    public EvolutionServiceCF() {
-        this.restTemplate = new RestTemplate();
-    }
-
-    /**
-     * Cria instância na Evolution API
-     */
     public Map<String, Object> criarInstancia(String instanceName) {
         String url = evolutionUrl + "/instance/create";
 
@@ -40,6 +31,7 @@ public class EvolutionServiceCF {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("apikey", evolutionApiKey);
 
+        // Token da instância (usado para autenticação interna da Evolution)
         String token = gerarTokenAleatorio(32);
 
         Map<String, Object> body = Map.of(
@@ -54,26 +46,23 @@ public class EvolutionServiceCF {
                 "syncFullHistory", false
         );
 
-        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
-
         try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
-            log.info("Instância criada: {}", instanceName);
+            ResponseEntity<Map> response = restTemplate.postForEntity(url, new HttpEntity<>(body, headers), Map.class);
+            log.info("✅ Instância criada: {}", instanceName);
 
-            // Configurar webhook
+            // Configura o Webhook logo após criar
             configurarWebhook(instanceName);
 
             return response.getBody();
         } catch (Exception e) {
-            log.error("Erro ao criar instância: {}", instanceName, e);
-            throw new RuntimeException("Erro ao criar instância Evolution", e);
+            log.error("❌ Erro ao criar instância {}: {}", instanceName, e.getMessage());
+            throw new RuntimeException("Falha na criação da instância");
         }
     }
 
-    /**
-     * Configura webhook para receber mensagens
-     */
     public void configurarWebhook(String instanceName) {
+        // Na V2 o endpoint de setar webhook é via POST ou no create.
+        // Aqui usamos o padrão da V2:
         String url = evolutionUrl + "/webhook/set/" + instanceName;
 
         HttpHeaders headers = new HttpHeaders();
@@ -84,69 +73,37 @@ public class EvolutionServiceCF {
                 "enabled", true,
                 "url", "https://calflow.app.br/api/webhook/whatsapp",
                 "webhookByEvents", false,
-                "events", List.of(
-                        "messages.upsert",
-                        "connection.update",
-                        "qrcode.updated"
-                )
+                "events", List.of("MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED")
         );
 
-        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
-        restTemplate.exchange(url, HttpMethod.PUT, request, Map.class);
-        log.info("Webhook configurado: {}", instanceName);
+        try {
+            restTemplate.postForEntity(url, new HttpEntity<>(body, headers), Map.class);
+            log.info("🔗 Webhook configurado para: {}", instanceName);
+        } catch (Exception e) {
+            log.warn("⚠️ Não foi possível setar o webhook agora: {}", e.getMessage());
+        }
     }
 
-    /**
-     * Busca QR Code da instância
-     */
     public String getQRCode(String instanceName) {
+        // Endpoint correto V2
         String url = evolutionUrl + "/instance/connect/" + instanceName;
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("apikey", evolutionApiKey);
 
-        HttpEntity<?> request = new HttpEntity<>(headers);
-
         try {
-            ResponseEntity<Map> response = restTemplate.exchange(
-                    url, HttpMethod.GET, request, Map.class);
+            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), Map.class);
             Map body = response.getBody();
-            if (body != null && body.containsKey("base64")) {
+            // A Evolution retorna o base64 dentro de body -> code ou base64
+            if (body != null) {
                 return (String) body.get("base64");
             }
-            return null;
         } catch (Exception e) {
-            log.error("Erro ao buscar QR: {}", instanceName, e);
-            return null;
+            log.error("❌ Erro ao buscar QR Code: {}", e.getMessage());
         }
+        return null;
     }
 
-    /**
-     * Verifica status da conexão
-     */
-    public String getConnectionStatus(String instanceName) {
-        String url = evolutionUrl + "/instance/connectionState/" + instanceName;
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("apikey", evolutionApiKey);
-
-        try {
-            HttpEntity<?> request = new HttpEntity<>(headers);
-            ResponseEntity<Map> response = restTemplate.exchange(
-                    url, HttpMethod.GET, request, Map.class);
-            Map body = response.getBody();
-            if (body != null && body.containsKey("state")) {
-                return (String) body.get("state");
-            }
-            return "close";
-        } catch (Exception e) {
-            return "close";
-        }
-    }
-
-    /**
-     * Envia mensagem de texto
-     */
     public void enviarMensagem(String instanceName, String telefone, String mensagem) {
         String url = evolutionUrl + "/message/sendText/" + instanceName;
 
@@ -154,27 +111,25 @@ public class EvolutionServiceCF {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("apikey", evolutionApiKey);
 
-        String jid = telefone.replaceAll("\\D", "");
-        if (!jid.startsWith("55")) jid = "55" + jid;
-        jid += "@s.whatsapp.net";
+        // LIMPEZA DO NÚMERO (Removendo o @s.whatsapp.net para a V2)
+        String numeroLimpo = telefone.replaceAll("\\D", "");
+        if (!numeroLimpo.startsWith("55")) numeroLimpo = "55" + numeroLimpo;
 
         Map<String, Object> body = Map.of(
-                "number", jid,
+                "number", numeroLimpo,
                 "text", mensagem
         );
 
-        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
-        restTemplate.postForEntity(url, request, Map.class);
-        log.info("Mensagem enviada: telefone={}", telefone);
+        restTemplate.postForEntity(url, new HttpEntity<>(body, headers), Map.class);
+        log.info("🚀 Mensagem enviada via {}: {}", instanceName, numeroLimpo);
     }
 
     private String gerarTokenAleatorio(int length) {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        StringBuilder sb = new StringBuilder();
         SecureRandom random = new SecureRandom();
-        for (int i = 0; i < length; i++) {
-            sb.append(chars.charAt(random.nextInt(chars.length())));
-        }
-        return sb.toString();
+        return random.ints(length, 0, chars.length())
+                .mapToObj(chars::charAt)
+                .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append).toString();
     }
 }
+

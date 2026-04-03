@@ -195,7 +195,7 @@ public class VendaService {
         }
 
         try {
-            notificacaoService.enviarBoasVindasCliente(venda.getCliente(), "calflow_admin");
+            notificacaoService.enviarBoasVindasCliente(venda.getCliente());
         } catch (Exception e) {
             log.error("Erro ao enviar boas-vindas", e);
         }
