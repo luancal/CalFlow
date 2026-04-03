@@ -10,6 +10,9 @@ COPY build.gradle settings.gradle ./
 COPY gradle gradle
 COPY gradlew ./
 
+# ✅ DAR PERMISSÃO DE EXECUÇÃO AO GRADLEW (Essa é a correção)
+RUN chmod +x ./gradlew
+
 # Baixar dependências
 RUN ./gradlew dependencies --no-daemon || true
 
