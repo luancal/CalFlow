@@ -26,7 +26,7 @@ public class SecurityConfig {
                         .requestMatchers("/webhook/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/evolution/**").permitAll()
-                        .requestMatchers("/", "/landing.html", "/checkout.html", "/cliente.html", "/images/**").permitAll()
+                        .requestMatchers("/", "/index.html", "/checkout.html", "/cliente.html", "/images/**").permitAll()
                         .anyRequest().permitAll()
                 )
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
