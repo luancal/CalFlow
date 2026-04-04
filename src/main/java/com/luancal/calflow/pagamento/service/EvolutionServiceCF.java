@@ -103,6 +103,27 @@ public class EvolutionServiceCF {
         }
         return null;
     }
+    public String getConnectionStatus(String instanceName) {
+        String url = evolutionUrl + "/instance/connectionState/" + instanceName;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("apikey", evolutionApiKey);
+
+        try {
+            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), Map.class);
+            Map body = response.getBody();
+
+            // A Evolution retorna o state dentro do objeto 'instance'
+            if (body != null && body.containsKey("instance")) {
+                Map instanceData = (Map) body.get("instance");
+                return (String) instanceData.get("state");
+            }
+        } catch (Exception e) {
+            log.error("❌ Erro ao buscar status da instância {}: {}", instanceName, e.getMessage());
+        }
+
+        return "DISCONNECTED";
+    }
 
     public void enviarMensagem(String instanceName, String telefone, String mensagem) {
         String url = evolutionUrl + "/message/sendText/" + instanceName;

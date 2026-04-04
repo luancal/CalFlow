@@ -34,6 +34,7 @@ public class Assinatura {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private StatusAssinatura status = StatusAssinatura.ATIVA;
 
     @Column(name = "data_proxima_cobranca")
@@ -41,7 +42,7 @@ public class Assinatura {
 
     @Column(name = "dia_vencimento")
     private Integer diaVencimento; // 10, 15, 20...
-
+    @Builder.Default
     @Column(name = "data_criacao", nullable = false)
     private LocalDateTime dataCriacao = LocalDateTime.now();
 

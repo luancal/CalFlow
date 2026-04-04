@@ -35,13 +35,14 @@ public class Afiliado {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private StatusAfiliado status = StatusAfiliado.ATIVO;
 
     // RELACIONAMENTO COM GESTOR
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "gestor_id")
     private Gestor gestor; // Quem recrutou este afiliado
-
+    @Builder.Default
     @Column(name = "data_cadastro", nullable = false)
     private LocalDateTime dataCadastro = LocalDateTime.now();
 

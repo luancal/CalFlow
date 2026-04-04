@@ -38,8 +38,9 @@ public class Comissao {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private StatusComissao status = StatusComissao.PENDENTE;
-
+    @Builder.Default
     @Column(name = "data_geracao", nullable = false)
     private LocalDateTime dataGeracao = LocalDateTime.now();
 

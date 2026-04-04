@@ -100,6 +100,32 @@ public class NotificacaoService {
 
         enviar(telefone, mensagem);
     }
+    @Async
+    public void notificarPagamentoRealizado(Comissao comissao, BigDecimal total) {
+        String telefone;
+        String nome;
+
+        // Verifica se a comissão é de um Afiliado ou de um Gestor
+        if (comissao.getAfiliado() != null) {
+            telefone = comissao.getAfiliado().getTelefone();
+            nome = comissao.getAfiliado().getNome();
+        } else if (comissao.getGestor() != null) {
+            telefone = comissao.getGestor().getTelefone();
+            nome = comissao.getGestor().getNome();
+        } else {
+            return; // Se não tiver nenhum dos dois, cancela o envio
+        }
+
+        String mensagem = String.format(
+                "💸 *PAGAMENTO REALIZADO!*\n\n" +
+                        "Olá %s!\n\n" +
+                        "Suas comissões no valor total de *R$ %.2f* acabam de ser pagas via PIX! 🚀\n\n" +
+                        "Confira sua conta bancária.",
+                nome, total
+        );
+
+        enviar(telefone, mensagem);
+    }
 
     // Método privado para evitar repetição de código
     private void enviar(String telefone, String mensagem) {

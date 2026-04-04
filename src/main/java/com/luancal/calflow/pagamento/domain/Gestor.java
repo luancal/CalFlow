@@ -35,8 +35,9 @@ public class Gestor {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private StatusGestor status = StatusGestor.ATIVO;
-
+    @Builder.Default
     @Column(name = "data_cadastro", nullable = false)
     private LocalDateTime dataCadastro = LocalDateTime.now();
 

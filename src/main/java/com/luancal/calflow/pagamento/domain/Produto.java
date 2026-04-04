@@ -45,10 +45,10 @@ public class Produto {
 
     @Column(name = "comissao_gestor_recorrente", precision = 10, scale = 2)
     private BigDecimal comissaoGestorRecorrente; // R$ 10
-
+    @Builder.Default
     @Column(nullable = false)
     private Boolean ativo = true;
-
+    @Builder.Default
     @Column(name = "criado_em", nullable = false)
     private LocalDateTime criadoEm = LocalDateTime.now();
 

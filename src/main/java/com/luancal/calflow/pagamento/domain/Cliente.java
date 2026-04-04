@@ -29,7 +29,7 @@ public class Cliente {
 
     @Column(name = "cpf_cnpj")
     private String cpfCnpj;
-
+    @Builder.Default
     @Column(name = "data_cadastro", nullable = false)
     private LocalDateTime dataCadastro = LocalDateTime.now();
 

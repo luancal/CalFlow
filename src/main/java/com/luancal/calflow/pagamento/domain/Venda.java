@@ -40,11 +40,12 @@ public class Venda {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private StatusVenda status = StatusVenda.PENDENTE;
 
     @Column(name = "gateway_transacao_id")
     private String gatewayTransacaoId; // ID do Mercado Pago
-
+    @Builder.Default
     @Column(name = "data_venda", nullable = false)
     private LocalDateTime dataVenda = LocalDateTime.now();
 
