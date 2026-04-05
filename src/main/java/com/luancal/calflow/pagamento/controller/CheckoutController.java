@@ -39,7 +39,7 @@ public class CheckoutController {
     private final ClienteRepository clienteRepository;
     private final ProdutoRepository produtoRepository;
 
-    @Value("${mercadopago.access-token}")
+    @Value("${MERCADOPAGO_ACCESS_TOKEN}")
     private String mercadoPagoAccessToken;
 
     @Value("${app.base-url}")
