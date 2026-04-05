@@ -42,7 +42,7 @@ public class CheckoutController {
     @Value("${mercadopago.access.token}")
     private String mercadoPagoAccessToken;
 
-    @Value("${app.base-url}")
+    @Value("${app.base.url}")
     private String appBaseUrl;
 
     @PostMapping("/processar")
