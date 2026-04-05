@@ -41,7 +41,7 @@ out/
 .env.local
 *.env
 application.properties
-application-prod.properties
+#application-prod.properties
 service-account-key.json
 
 # ========================================
