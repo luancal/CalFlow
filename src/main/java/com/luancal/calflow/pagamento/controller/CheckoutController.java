@@ -154,7 +154,7 @@ public class CheckoutController {
 
             Payment payment = client.create(paymentRequest);
 
-            venda.setGatewayTransacaoId(payment.getId().toString());
+            venda.setCartaoTokenizado(venda.getCliente().getCartaoTokenizado());
             vendaRepository.save(venda);
 
             CheckoutResponse response = CheckoutResponse.builder()
@@ -242,5 +242,30 @@ public class CheckoutController {
                         "transactionId", venda.getId()
                 )))
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    // ✅ NOVO: Endpoint para salvar token do cartão (recebe apenas o token, não os dados do cartão)
+    @PostMapping("/salvar-token-cartao")
+    public ResponseEntity<?> salvarTokenCartao(@RequestBody Map<String, String> request) {
+        try {
+            String email = request.get("email");
+            String token = request.get("token");
+
+            if (email == null || token == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Email e token são obrigatórios"));
+            }
+
+            Cliente cliente = clienteRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+
+            cliente.setCartaoTokenizado(token);
+            clienteRepository.save(cliente);
+
+            return ResponseEntity.ok(Map.of("success", true, "message", "Token de cartão salvo com sucesso"));
+
+        } catch (Exception e) {
+            log.error("Erro ao salvar token do cartão", e);
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 }

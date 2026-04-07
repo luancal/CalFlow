@@ -12,7 +12,6 @@ import java.util.Optional;
 
 @Repository
 public interface AssinaturaRepository extends JpaRepository<Assinatura, String> {
-
     Optional<Assinatura> findByAssinaturaGatewayId(String assinaturaGatewayId);
 
     List<Assinatura> findByStatus(StatusAssinatura status);

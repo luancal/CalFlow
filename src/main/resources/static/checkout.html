@@ -130,12 +130,23 @@
         .info-box { background: rgba(245,158,11,0.04); border: 1px solid rgba(245,158,11,0.12); border-radius: 0.75rem; padding: 0.875rem; }
         .info-box-disabled { background: rgba(239,68,68,0.04); border: 1px solid rgba(239,68,68,0.12); }
     </style>
+    <!-- SDK do Mercado Pago para tokenização -->
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
+    <script>
+        // Inicializa o SDK do Mercado Pago
+        const mp = new MercadoPago('TEST-9f227472-bb5a-4d2e-af64-5eb1f359dc2b', {
+            locale: 'pt-BR'
+        });
+    </script>
 </head>
 <body>
 <!-- ===== TOAST ===== -->
-<div id="loadingToast" class="toast-bar hidden" data-testid="loading-toast">
-    <svg class="spin-slow" style="height:1rem;width:1rem;color:#F59E0B" viewBox="0 0 24 24" fill="none"><circle style="opacity:0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path style="opacity:0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-    <span class="text-sm text-amber-500 font-medium">Preparando seu checkout...</span>
+<div id="loadingToast" class="toast-bar hidden">
+    <svg class="spin-slow" style="height:1rem;width:1rem;color:#F59E0B" viewBox="0 0 24 24" fill="none">
+        <circle style="opacity:0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+        <path style="opacity:0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+    </svg>
+    <span class="text-sm text-amber-500 font-medium">Preparando seu checkout seguro...</span>
 </div>
 
 <!-- ===== CHECKOUT PAGE ===== -->
@@ -386,7 +397,13 @@
         <div class="rounded-xl p-3.5 mb-5" style="background:#0a0a0a;border:1px solid rgba(34,197,94,0.12)">
             <div class="flex items-center gap-2">
                 <i data-lucide="shield-check" class="h-4 w-4 text-green-500 flex-shrink-0"></i>
-                <p class="text-xs text-gray-400">Dados protegidos. O cartão é <strong class="text-green-400">tokenizado</strong> e nunca armazenado em texto simples.</p>
+                <p class="text-xs text-gray-400">Dados protegidos. Cartão <strong class="text-green-400">tokenizado</strong> e seguro.</p>
+            </div>
+        </div>
+        <div class="rounded-xl p-3.5 mb-5" style="background:#0a0a0a;border:1px solid rgba(245,158,11,0.12)">
+            <div class="flex items-center gap-2">
+                <i data-lucide="shield-check" class="h-4 w-4 text-amber-500 flex-shrink-0"></i>
+                <p class="text-xs text-gray-400">Garantia incondicional de <strong class="text-amber-500">7 dias</strong> para devolução.</p>
             </div>
         </div>
 
@@ -456,11 +473,14 @@
             <span class="text-sm font-medium" id="pixTimer" data-testid="pix-timer">Expira em 30:00</span>
         </div>
         <div class="flex flex-col items-center gap-3 py-4">
-            <div class="relative">
-                <div class="h-16 w-16 rounded-full flex items-center justify-center" style="border:3px solid rgba(245,158,11,0.15)">
-                    <i data-lucide="loader-2" class="h-8 w-8 text-amber-500 spin-slow"></i>
+            <div id="pixQrImageContainer" class="flex justify-center my-4">
+                <!-- QR Code será inserido aqui via JS -->
+                <div class="pulse-ring" style="width:200px;height:200px;background:rgba(245,158,11,0.05);border-radius:12px;display:flex;align-items:center;justify-content:center">
+                    <svg class="spin-slow" style="height:2rem;width:2rem;color:#F59E0B" viewBox="0 0 24 24" fill="none">
+                        <circle style="opacity:0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                        <path style="opacity:0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
                 </div>
-                <div class="absolute inset-0 rounded-full pulse-ring" style="border:3px solid rgba(245,158,11,0.2)"></div>
             </div>
             <p class="text-sm text-gray-400 text-center">Aguardando confirmação do pagamento...</p>
             <p class="text-xs text-gray-600 text-center">O pagamento será confirmado automaticamente</p>
@@ -496,7 +516,18 @@
             <h2 class="text-xl font-semibold text-white">Pagamento via Cartão</h2>
         </div>
         <p class="text-sm text-gray-400 mb-5">Preencha os dados do cartão de crédito</p>
-
+        <div class="rounded-xl p-3.5 mb-5" style="background:#0a0a0a;border:1px solid rgba(34,197,94,0.12)">
+            <div class="flex items-center gap-2">
+                <i data-lucide="shield-check" class="h-4 w-4 text-green-500 flex-shrink-0"></i>
+                <p class="text-xs text-gray-400">Dados protegidos. Cartão <strong class="text-green-400">tokenizado</strong> e seguro.</p>
+            </div>
+        </div>
+        <div class="rounded-xl p-3.5 mb-5" style="background:#0a0a0a;border:1px solid rgba(245,158,11,0.12)">
+            <div class="flex items-center gap-2">
+                <i data-lucide="shield-check" class="h-4 w-4 text-amber-500 flex-shrink-0"></i>
+                <p class="text-xs text-gray-400">Garantia incondicional de <strong class="text-amber-500">7 dias</strong> para devolução.</p>
+            </div>
+        </div>
         <div class="rounded-xl p-4 text-center mb-5" style="background:#0a0a0a;border:1px solid rgba(255,255,255,0.04)">
             <p class="text-sm text-gray-500 mb-1" id="cardModalPlanLabel">Plano Mensal</p>
             <p class="text-xl font-bold text-amber-500" id="cardParcelasDisplay">1x de R$ 497,00</p>
@@ -578,7 +609,7 @@
                     </div>
                 </div>
             </div>
-            <p class="text-xs text-gray-500 mt-3 text-center">Guarde bem! Estas informações também foram enviadas para o seu e-mail e WhatsApp. Use-as para acessar a área do cliente em <strong class="text-amber-500">calflow.app.br</strong></p>
+            <p class="text-xs text-gray-500 mt-3 text-center">Guarde bem! Estas informações também foram enviadas para o seu e-mail e WhatsApp. Use-as para acessar a área do cliente em <strong class="text-amber-500">calflow.pages.dev</strong></p>
         </div>
 
         <!-- Next Steps -->
@@ -598,7 +629,7 @@
                 </li>
                 <li class="flex items-start gap-3">
                     <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs text-amber-500 font-bold" style="background:rgba(245,158,11,0.12)">3</span>
-                    <span>Acesse a área do cliente em <strong class="text-amber-500">calflow.app.br</strong> com suas credenciais</span>
+                    <span>Acesse a área do cliente em <strong class="text-amber-500">calflow.pages.dev</strong> com suas credenciais</span>
                 </li>
             </ul>
         </div>
@@ -994,35 +1025,40 @@
     // FORM SUBMISSION
     // ============================================================
     async function handleSubmit(e) {
-        e.preventDefault();
-        const nome = document.getElementById('inputNome').value;
-        const email = document.getElementById('inputEmail').value;
-        const tel = document.getElementById('inputTelefone').value;
-        const doc = document.getElementById('inputCpfCnpj').value;
+    e.preventDefault();
+    const nome = document.getElementById('inputNome').value;
+    const email = document.getElementById('inputEmail').value;
+    const tel = document.getElementById('inputTelefone').value;
+    const doc = document.getElementById('inputCpfCnpj').value;
 
-        let hasError = false;
-        if (!validarNome(nome)) { showError('errNome', 'Digite nome e sobrenome completos'); document.getElementById('inputNome').classList.add('error'); hasError = true; }
-        else { showError('errNome', ''); document.getElementById('inputNome').classList.remove('error'); }
-        if (!validarEmail(email)) { showError('errEmail', 'Digite um e-mail válido'); document.getElementById('inputEmail').classList.add('error'); hasError = true; }
-        else { showError('errEmail', ''); document.getElementById('inputEmail').classList.remove('error'); }
-        if (!validarTelefone(tel)) { showError('errTelefone', 'Digite um telefone válido com DDD'); document.getElementById('inputTelefone').classList.add('error'); hasError = true; }
-        else { showError('errTelefone', ''); document.getElementById('inputTelefone').classList.remove('error'); }
-        const limpoDoc = doc.replace(/\D/g, '');
-        if (!validarCPFouCNPJ(doc)) {
-            const msg = limpoDoc.length <= 11 ? 'CPF inválido' : 'CNPJ inválido';
-            showError('errCpfCnpj', msg); document.getElementById('inputCpfCnpj').classList.add('error'); hasError = true;
-        } else { showError('errCpfCnpj', ''); document.getElementById('inputCpfCnpj').classList.remove('error'); }
+    let hasError = false;
+    if (!validarNome(nome)) { showError('errNome', 'Digite nome e sobrenome completos'); document.getElementById('inputNome').classList.add('error'); hasError = true; }
+    else { showError('errNome', ''); document.getElementById('inputNome').classList.remove('error'); }
+    if (!validarEmail(email)) { showError('errEmail', 'Digite um e-mail válido'); document.getElementById('inputEmail').classList.add('error'); hasError = true; }
+    else { showError('errEmail', ''); document.getElementById('inputEmail').classList.remove('error'); }
+    if (!validarTelefone(tel)) { showError('errTelefone', 'Digite um telefone válido com DDD'); document.getElementById('inputTelefone').classList.add('error'); hasError = true; }
+    else { showError('errTelefone', ''); document.getElementById('inputTelefone').classList.remove('error'); }
+    const limpoDoc = doc.replace(/\D/g, '');
+    if (!validarCPFouCNPJ(doc)) {
+        const msg = limpoDoc.length <= 11 ? 'CPF inválido' : 'CNPJ inválido';
+        showError('errCpfCnpj', msg); document.getElementById('inputCpfCnpj').classList.add('error'); hasError = true;
+    } else { showError('errCpfCnpj', ''); document.getElementById('inputCpfCnpj').classList.remove('error'); }
 
-        if (hasError) return;
+    if (hasError) return;
 
-        state.customerData = { nome, email, telefone: tel.replace(/\D/g, ''), cpfCnpj: limpoDoc, plano: state.plano };
-        state.parcelas = state.metodo === 'cartao' ? parseInt(document.getElementById('selectParcelas').value) : 1;
+    state.customerData = { nome, email, telefone: tel.replace(/\D/g, ''), cpfCnpj: limpoDoc, plano: state.plano };
+    state.parcelas = state.metodo === 'cartao' ? parseInt(document.getElementById('selectParcelas').value) : 1;
 
-        const btn = document.getElementById('submitBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<span style="display:flex;align-items:center;justify-content:center;gap:0.5rem"><svg class="spin-slow" style="height:1.25rem;width:1.25rem" viewBox="0 0 24 24" fill="none"><circle style="opacity:0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path style="opacity:0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Processando...</span>';
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span style="display:flex;align-items:center;justify-content:center;gap:0.5rem"><svg class="spin-slow" style="height:1.25rem;width:1.25rem" viewBox="0 0 24 24" fill="none"><circle style="opacity:0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path style="opacity:0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Processando...</span>';
 
-        try {
+    try {
+        if (state.metodo === 'pix') {
+            // ✅ Se for PIX, abre o modal para cadastrar o cartão primeiro
+            openCardRegisterModal();
+        } else {
+            // ✅ Se for cartão, chama o backend para gerar a assinatura
             const response = await fetch(CONFIG.apiBaseUrl + '/api/checkout/processar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1036,23 +1072,31 @@
                     parcelas: state.parcelas,
                 }),
             });
-            const data = await response.json();
-            if (data.status === 'error') throw new Error(data.mensagem);
-            state.transactionId = data.transactionId;
 
-            if (state.metodo === 'pix') {
-                openCardRegisterModal();
-            } else {
-                openCardModal(getValorPagarAgora(), state.parcelas);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.mensagem || 'Erro ao processar pagamento. Tente novamente.');
             }
-        } catch (err) {
-            alert(err.message || 'Erro ao processar. Tente novamente.');
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Finalizar com ' + (state.metodo === 'pix' ? 'PIX' : 'Cartão');
-            checkFormValid();
+
+            const data = await response.json();
+            if (data.status === 'error') throw new Error(data.mensagem || 'Erro desconhecido');
+
+            // ✅ Redireciona para o Mercado Pago
+            if (data.checkoutUrl) {
+                window.location.href = data.checkoutUrl;
+            } else {
+                throw new Error('URL de checkout não disponível. Tente novamente.');
+            }
         }
+    } catch (err) {
+        console.error('Erro completo:', err);
+        alert(err.message || 'Erro ao processar. Tente novamente.');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Finalizar com ' + (state.metodo === 'pix' ? 'PIX' : 'Cartão');
+        checkFormValid();
     }
+}
     // ── CARD REGISTER (PIX flow passo 1) ──────────────────────
 let cardRegistered = false;
 
@@ -1064,7 +1108,7 @@ function closeCardRegisterModal() {
     document.getElementById('cardRegisterModal').classList.add('hidden');
 }
 
-function processCardRegister() {
+async function processCardRegister() {
     // Validar campos
     const num = document.getElementById('regCardNumero').value.replace(/\D/g,'');
     const nome = document.getElementById('regCardNome').value;
@@ -1091,50 +1135,127 @@ function processCardRegister() {
     btn.disabled = true;
     btn.innerHTML = '<span style="display:flex;align-items:center;justify-content:center;gap:0.5rem"><svg class="spin-slow" style="height:1.1rem;width:1.1rem" viewBox="0 0 24 24" fill="none"><circle style="opacity:0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path style="opacity:0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Cadastrando cartão...</span>';
 
-    setTimeout(() => {
+    try {
+        // ✅ Usa o SDK do Mercado Pago para tokenizar o cartão (nunca passa pelo seu server)
+        const token = await mp.card.createToken({
+            cardNumber: num,
+            securityCode: cvv,
+            expirationMonth: val.slice(0,2),
+            expirationYear: val.slice(2),
+            cardholder: {
+                name: nome
+            }
+        });
+
+        // ✅ Envia apenas o token pro seu backend (não os dados do cartão)
+        const response = await fetch(CONFIG.apiBaseUrl + '/api/checkout/salvar-token-cartao', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: state.customerData.email,
+                token: token.id
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Erro ao salvar token do cartão');
+        }
+
+        // ✅ Cartão cadastrado com sucesso
         cardRegistered = true;
         closeCardRegisterModal();
-        // Mostrar barra de progresso no modal PIX
-        document.getElementById('pixProgressBar').classList.remove('hidden');
-        openPixModal(null, getValorPagarAgora());
+
+        // ✅ Chama o backend para processar o checkout e gerar o PIX
+        const checkoutResponse = await fetch(CONFIG.apiBaseUrl + '/api/checkout/processar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nome: state.customerData.nome,
+                email: state.customerData.email,
+                telefone: state.customerData.telefone,
+                cpfCnpj: state.customerData.cpfCnpj,
+                metodo: 'pix',
+                plano: state.plano,
+                valor: getValorPagarAgora(),
+                parcelas: 1
+            })
+        });
+
+        if (!checkoutResponse.ok) {
+            const errorData = await checkoutResponse.json().catch(() => ({}));
+            throw new Error(errorData.mensagem || 'Erro ao gerar PIX');
+        }
+
+        const data = await checkoutResponse.json();
+        state.transactionId = data.transactionId || data.vendaId;
+        state.pixData = {
+            qrCode: data.qrCode,
+            qrCodeTexto: data.qrCodeTexto
+        };
+
+        // ✅ Abre o modal do PIX com o QR Code real
+        openPixModal(state.pixData, getValorPagarAgora());
+
+    } catch (err) {
+        console.error('Erro ao cadastrar cartão:', err);
+        alert(err.message || 'Erro ao cadastrar cartão. Tente novamente.');
+    } finally {
         btn.disabled = false;
         btn.textContent = 'Cadastrar e ir para o PIX →';
         lucide.createIcons();
-    }, 1800);
+    }
 }
     // ============================================================
     // PIX MODAL
     // ============================================================
-    function openPixModal(pixCode, valor) {
-        document.getElementById('pixValor').textContent = 'R$ ' + valor.toLocaleString('pt-BR');
-        document.getElementById('pixCode').textContent = pixCode || 'Código será gerado pelo gateway';
-        document.getElementById('pixModal').classList.remove('hidden');
-        lucide.createIcons();
+    function openPixModal(pixData, valor) {
+    document.getElementById('pixValor').textContent = 'R$ ' + valor.toLocaleString('pt-BR');
 
-        state.timeLeft = 30 * 60;
-        if (state.pixTimerInterval) clearInterval(state.pixTimerInterval);
-        state.pixTimerInterval = setInterval(() => {
-            state.timeLeft--;
-            if (state.timeLeft <= 0) { clearInterval(state.pixTimerInterval); state.timeLeft = 0; }
-            const m = Math.floor(state.timeLeft / 60).toString().padStart(2, '0');
-            const s = (state.timeLeft % 60).toString().padStart(2, '0');
-            document.getElementById('pixTimer').textContent = 'Expira em ' + m + ':' + s;
-        }, 1000);
-
-        if (state.pixPollingInterval) clearInterval(state.pixPollingInterval);
-        state.pixPollingInterval = setInterval(async () => {
-            try {
-                const res = await fetch(CONFIG.apiBaseUrl + '/api/checkout/status/' + state.transactionId);
-                const data = await res.json();
-                if (data.status === 'confirmed') {
-                    clearInterval(state.pixPollingInterval);
-                    clearInterval(state.pixTimerInterval);
-                    document.getElementById('pixModal').classList.add('hidden');
-                    showSuccessPage();
-                }
-            } catch {}
-        }, 3000);
+    // ✅ FIX: Mostrar QR Code real
+    if (pixData && pixData.qrCodeTexto) {
+        document.getElementById('pixCode').textContent = pixData.qrCodeTexto;
+    } else {
+        document.getElementById('pixCode').textContent = 'Erro ao gerar código PIX';
     }
+
+    // ✅ FIX: Mostrar imagem QR Code
+    const qrContainer = document.getElementById('pixQrImageContainer');
+    if (qrContainer && pixData && pixData.qrCode) {
+        qrContainer.innerHTML = '<img src="data:image/png;base64,' + pixData.qrCode + '" alt="QR Code PIX" style="width:200px;height:200px;margin:0 auto;display:block;border-radius:12px;">';
+    }
+
+    document.getElementById('pixModal').classList.remove('hidden');
+    lucide.createIcons();
+
+    // Timer
+    state.timeLeft = 30 * 60;
+    if (state.pixTimerInterval) clearInterval(state.pixTimerInterval);
+    state.pixTimerInterval = setInterval(() => {
+        state.timeLeft--;
+        if (state.timeLeft <= 0) { clearInterval(state.pixTimerInterval); state.timeLeft = 0; }
+        const m = Math.floor(state.timeLeft / 60).toString().padStart(2, '0');
+        const s = (state.timeLeft % 60).toString().padStart(2, '0');
+        document.getElementById('pixTimer').textContent = 'Expira em ' + m + ':' + s;
+    }, 1000);
+
+    // ✅ FIX: Polling - checar por 'aprovada' (não 'confirmed')
+    if (state.pixPollingInterval) clearInterval(state.pixPollingInterval);
+    state.pixPollingInterval = setInterval(async () => {
+        try {
+            const res = await fetch(CONFIG.apiBaseUrl + '/api/checkout/status/' + state.transactionId);
+            const data = await res.json();
+            if (data.status === 'aprovada') {
+                clearInterval(state.pixPollingInterval);
+                clearInterval(state.pixTimerInterval);
+                document.getElementById('pixModal').classList.add('hidden');
+                showSuccessPage();
+            }
+        } catch (e) {
+            console.log('Polling error:', e);
+        }
+    }, 5000); // ✅ 5 segundos em vez de 3 (evita spam)
+}
 
     function closePixModal() {
         document.getElementById('pixModal').classList.add('hidden');
@@ -1281,14 +1402,14 @@ function processCardRegister() {
 
         // Toast transition on ref param
         const ref = params.get('ref');
-        if (ref && (ref.startsWith('pricing') || ref.startsWith('landing'))) {
-            const toast = document.getElementById('loadingToast');
-            toast.classList.remove('hidden');
-            setTimeout(() => {
-                toast.classList.add('fade-out');
-                setTimeout(() => toast.classList.add('hidden'), 300);
-            }, 1500);
-        }
+        if (ref || document.referrer.includes('calflow')) {
+        const toast = document.getElementById('loadingToast');
+        toast.classList.remove('hidden');
+        setTimeout(() => {
+            toast.classList.add('fade-out');
+            setTimeout(() => toast.classList.add('hidden'), 300);
+        }, 1800);
+    }
 
         updateParcelasOptions();
 

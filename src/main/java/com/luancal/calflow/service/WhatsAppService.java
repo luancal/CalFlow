@@ -44,7 +44,7 @@ public class WhatsAppService {
     @Autowired
     private EventService eventService;
 
-    private static final Logger logger = LoggerFactory.getLogger(WhatsAppController.class);
+    private static final Logger logger = LoggerFactory.getLogger(WhatsAppService.class);
     private final long startTime = Instant.now().getEpochSecond();
 
     @Async
@@ -461,14 +461,7 @@ public class WhatsAppService {
                                 LocalTime inicioConf = LocalTime.parse(horaEscolhida, parser);
                                 LocalTime fimConf = inicioConf.plusMinutes(duracao);
                                 String intervaloHorario = inicioConf.format(parser) + " às " + fimConf.format(parser);
-                                String calendarIdFinal;
-
-                                if (estado.getProfissionalSelecionado() != null &&
-                                        estado.getProfissionalSelecionado().getGoogleCalendarId() != null) {
-                                    calendarIdFinal = estado.getProfissionalSelecionado().getGoogleCalendarId();
-                                } else {
-                                    calendarIdFinal = clinica.getGoogleCalendarId(); // Fallback: agenda da clínica
-                                }
+                                String calendarIdFinal = resolverCalendarId(estado, clinica);
 
                                 eventService.criarAgendamento(tituloEvento, data, de, horaEscolhida, calendarIdFinal, duracao, descricaoEvento);
 
@@ -779,13 +772,7 @@ public class WhatsAppService {
                         String tituloEvento = estado.getNomePaciente();
                         String descricaoEvento = "Telefone: " + de + " | " + pag.getServicoNome() + " | PAGO";
 
-                        String calendarIdFinal;
-                        if (estado.getProfissionalSelecionado() != null &&
-                                estado.getProfissionalSelecionado().getGoogleCalendarId() != null) {
-                            calendarIdFinal = estado.getProfissionalSelecionado().getGoogleCalendarId();
-                        } else {
-                            calendarIdFinal = clinica.getGoogleCalendarId();
-                        }
+                        String calendarIdFinal = resolverCalendarId(estado, clinica);
 
                         try {
                             eventService.criarAgendamento(tituloEvento, data, de, horaEscolhida,
@@ -900,6 +887,13 @@ public class WhatsAppService {
             }
         }
         return sb.toString().trim();
+    }
+    private String resolverCalendarId(EstadoConversa estado, Clinica clinica) {
+        if (estado.getProfissionalSelecionado() != null
+                && estado.getProfissionalSelecionado().getGoogleCalendarId() != null) {
+            return estado.getProfissionalSelecionado().getGoogleCalendarId();
+        }
+        return clinica.getGoogleCalendarId();
     }
 
     private LocalDate interpretarData(String texto) {

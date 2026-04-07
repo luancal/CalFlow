@@ -1,9 +1,11 @@
 package com.luancal.calflow.pagamento.service;
 
+import com.luancal.calflow.model.Clinica;
 import com.luancal.calflow.pagamento.config_dto.CheckoutRequest;
 import com.luancal.calflow.pagamento.config_dto.CheckoutResponse;
 import com.luancal.calflow.pagamento.domain.*;
 import com.luancal.calflow.pagamento.repository.*;
+import com.luancal.calflow.repository.ClinicaRepository;
 import com.mercadopago.resources.payment.Payment;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +27,8 @@ public class VendaService {
     private final ClienteRepository clienteRepository;
     private final AfiliadoRepository afiliadoRepository;
     private final ProdutoRepository produtoRepository;
+    private final AssinaturaRepository assinaturaRepository;
+    private final ClinicaRepository clinicaRepository;
     private final MercadoPagoService mercadoPagoService;
     private final ComissaoService comissaoService;
     private final AssinaturaService assinaturaService;
@@ -154,6 +158,25 @@ public class VendaService {
                     .build();
 
             clienteCF = clienteCalFlowRepository.save(clienteCF);
+            Clinica clinica = new Clinica();
+            clinica.setNome(clienteCF.getNomeNegocio() != null ? clienteCF.getNomeNegocio() : "Meu Negócio");
+            clinica.setTelefoneDono(clienteCF.getTelefone());
+            clinica.setNomeInstancia(clienteCF.getNomeInstancia());
+            clinica.setBotAtivo(true);
+            clinica.setLembreteAtivo(true);
+            clinica.setHorarioAbertura(9);
+            clinica.setHorarioFechamento(18);
+            clinica.setIntervaloPadrao(30);
+            clinica.setTrabalhaSabado(true);
+            clinica.setTrabalhaDomingo(false);
+            clinica.setCobrancaAntecipada(false);
+            clinica.setMensagemLembrete("Olá {paciente}, lembrete da sua consulta às {horario}. Confirma?");
+            clinica.setFusoHorario("America/Sao_Paulo");
+            clinica.setIdioma("pt-BR");
+            clinica = clinicaRepository.save(clinica);
+
+            clienteCF.setClinicaId(clinica.getId());
+            clienteCalFlowRepository.save(clienteCF);
             log.info("ClienteCalFlow criado: usuario={}, email={}", clienteCF.getUsuario(), clienteCF.getEmail());
 
             try {
@@ -224,6 +247,41 @@ public class VendaService {
         log.info("Novo cliente criado: id={}, email={}", novoCliente.getId(), novoCliente.getEmail());
 
         return novoCliente;
+    }
+    @Transactional
+    public void processarPagamentoRecorrente(String preapprovalId) {
+        log.info("Processando pagamento recorrente: preapprovalId={}", preapprovalId);
+
+        // Busca a assinatura pelo ID do gateway
+        assinaturaRepository.findByAssinaturaGatewayId(preapprovalId).ifPresent(assinatura -> {
+
+            // Cria uma nova venda do tipo MENSALIDADE para registrar o pagamento
+            Venda vendaRecorrente = Venda.builder()
+                    .cliente(assinatura.getCliente())
+                    .produto(produtoRepository.findFirstByAtivoTrue().orElseThrow())
+                    .afiliado(assinatura.getAfiliado()) // Mantém o afiliado original
+                    .valorTotal(assinatura.getValor())
+                    .tipo(TipoVenda.MENSALIDADE)
+                    .status(StatusVenda.APROVADA)
+                    .gatewayTransacaoId(preapprovalId)
+                    .dataVenda(LocalDateTime.now())
+                    .dataAprovacao(LocalDateTime.now())
+                    .build();
+
+            vendaRecorrente = vendaRepository.save(vendaRecorrente);
+
+            // Gera comissões do afiliado (R$ 40) - gestor NÃO ganha recorrente
+            comissaoService.gerarComissoes(vendaRecorrente);
+
+            // Atualiza próxima cobrança na assinatura
+            assinatura.setDataProximaCobranca(
+                    assinatura.getDataProximaCobranca().plusMonths(1)
+            );
+            assinaturaRepository.save(assinatura);
+
+            log.info("Pagamento recorrente processado: cliente={}, valor={}",
+                    assinatura.getCliente().getNome(), assinatura.getValor());
+        });
     }
 
     @Transactional

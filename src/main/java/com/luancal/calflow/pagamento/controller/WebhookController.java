@@ -25,39 +25,37 @@ public class WebhookController {
             log.info("Webhook recebido: type={}, action={}, id={}",
                     event.getType(), event.getAction(), event.getId());
 
-            if (!"payment".equalsIgnoreCase(event.getType())) {
-                log.info("Evento ignorado: type={}", event.getType());
+            // Pagamento único (PIX)
+            if ("payment".equalsIgnoreCase(event.getType())) {
+                if (event.getData() == null || event.getData().getId() == null) {
+                    return ResponseEntity.ok().build();
+                }
+                Long paymentId = Long.parseLong(event.getData().getId());
+                Payment payment = mercadoPagoService.buscarPagamento(paymentId);
+
+                if (payment == null) return ResponseEntity.ok().build();
+
+                if ("approved".equalsIgnoreCase(payment.getStatus())) {
+                    vendaService.aprovarVenda(payment.getId().toString());
+                }
                 return ResponseEntity.ok().build();
             }
 
-            if (event.getData() == null || event.getData().getId() == null) {
-                log.warn("Webhook recebido sem data.id");
+            // Assinatura recorrente (mensalidade paga automaticamente)
+            if ("preapproval".equalsIgnoreCase(event.getType())) {
+                if (event.getData() == null || event.getData().getId() == null) {
+                    return ResponseEntity.ok().build();
+                }
+                // Busca a assinatura e gera comissão recorrente
+                vendaService.processarPagamentoRecorrente(event.getData().getId());
                 return ResponseEntity.ok().build();
             }
 
-            Long paymentId = Long.parseLong(event.getData().getId());
-            Payment payment = mercadoPagoService.buscarPagamento(paymentId);
-
-            if (payment == null) {
-                log.warn("Pagamento não encontrado no MP: paymentId={}", paymentId);
-                return ResponseEntity.ok().build();
-            }
-
-            log.info("Pagamento consultado: id={}, status={}, metodo={}",
-                    payment.getId(), payment.getStatus(), payment.getPaymentMethodId());
-
-            if ("approved".equalsIgnoreCase(payment.getStatus())) {
-                vendaService.aprovarVenda(payment.getId().toString());
-                log.info("Venda aprovada via webhook: paymentId={}", paymentId);
-            } else {
-                log.info("Pagamento ainda não aprovado: paymentId={}, status={}",
-                        paymentId, payment.getStatus());
-            }
-
+            log.info("Evento ignorado: type={}", event.getType());
             return ResponseEntity.ok().build();
 
         } catch (Exception e) {
-            log.error("Erro ao processar webhook Mercado Pago", e);
+            log.error("Erro ao processar webhook", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

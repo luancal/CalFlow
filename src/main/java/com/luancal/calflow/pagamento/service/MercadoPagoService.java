@@ -11,9 +11,16 @@ import com.mercadopago.resources.payment.Payment;
 import com.mercadopago.exceptions.MPException;
 import com.mercadopago.exceptions.MPApiException;
 import com.mercadopago.resources.preapproval.Preapproval;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.client.RestTemplate;
+
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,6 +29,9 @@ import java.util.Map;
 public class MercadoPagoService {
     private static final Logger log = LoggerFactory.getLogger(MercadoPagoService.class);
     private final PaymentClient paymentClient;
+
+    @Value("${mercadopago.access.token}")
+    private String accessToken;
 
     public MercadoPagoService() {
         this.paymentClient = new PaymentClient();
@@ -94,10 +104,10 @@ public class MercadoPagoService {
         }
         return null;
     }
+
     public String criarAssinaturaRecorrente(String email, BigDecimal valor, String descricao) {
         try {
             PreapprovalClient client = new PreapprovalClient();
-
             PreapprovalCreateRequest request = PreapprovalCreateRequest.builder()
                     .reason(descricao)
                     .autoRecurring(PreApprovalAutoRecurringCreateRequest.builder()
@@ -106,16 +116,49 @@ public class MercadoPagoService {
                             .transactionAmount(valor)
                             .currencyId("BRL")
                             .build())
+                    .backUrl("https://calflow.pages.dev/cliente.html")
                     .payerEmail(email)
-                    .backUrl("https://calflow.app.br/area-cliente.html")
                     .build();
 
             Preapproval preapproval = client.create(request);
-            log.info("Assinatura MP criada: id={}", preapproval.getId());
             return preapproval.getId();
-
         } catch (Exception e) {
             throw new RuntimeException("Erro ao criar assinatura: " + e.getMessage());
+        }
+    }
+    public String criarAssinaturaComCartaoToken(String email, BigDecimal valor, String cardTokenId) {
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Authorization", "Bearer " + accessToken);
+
+            Map<String, Object> autoRecurring = new HashMap<>();
+            autoRecurring.put("frequency", 1);
+            autoRecurring.put("frequency_type", "months");
+            autoRecurring.put("transaction_amount", valor);
+            autoRecurring.put("currency_id", "BRL");
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("reason", "CalFlow Premium - Assinatura Mensal");
+            body.put("payer_email", email);
+            body.put("back_url", "https://calflow.pages.dev/cliente.html");
+            body.put("auto_recurring", autoRecurring);
+            body.put("card_token_id", cardTokenId); // Token do cartão vindo do frontend
+
+            ResponseEntity<Map> response = restTemplate.postForEntity(
+                    "https://api.mercadopago.com/preapproval",
+                    new HttpEntity<>(body, headers),
+                    Map.class
+            );
+
+            String id = (String) response.getBody().get("id");
+            log.info("Assinatura com cartão tokenizado criada: id={}", id);
+            return id;
+
+        } catch (Exception e) {
+            log.error("Erro ao criar assinatura com cartão", e);
+            throw new RuntimeException("Erro ao criar assinatura com cartão: " + e.getMessage());
         }
     }
 }

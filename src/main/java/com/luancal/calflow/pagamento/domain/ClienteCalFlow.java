@@ -53,4 +53,7 @@ public class ClienteCalFlow {
 
     @Column(name = "data_criacao")
     private LocalDateTime dataCriacao;
+
+    @Column(name = "clinica_id")
+    private Long clinicaId;
 }

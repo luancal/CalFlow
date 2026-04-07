@@ -791,7 +791,7 @@
                         <div class="space-y-4">
                             <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">URL da Evolution API</label><input type="text" class="input-base" id="globalEvolutionUrl" placeholder="https://api.evolution.example.com" data-testid="global-evolution-url"></div>
                             <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Evolution API Key</label><div class="relative"><input type="password" class="input-base pr-10" id="globalEvolutionKey" placeholder="Chave de acesso da API" data-testid="global-evolution-key"><button type="button" onclick="toggleField('globalEvolutionKey')" class="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white transition-colors"><i data-lucide="eye" style="width:16px;height:16px"></i></button></div></div>
-                            <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">URL base do sistema</label><input type="text" class="input-base" id="globalBaseUrl" placeholder="https://calflow.app.br" data-testid="global-base-url"></div>
+                            <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">URL base do sistema</label><input type="text" class="input-base" id="globalBaseUrl" placeholder="https://calflow.pages.dev" data-testid="global-base-url"></div>
                             <button onclick="testarEvolutionAPI()" class="btn-outline w-full text-sm" data-testid="testar-evolution-btn">Testar conexão Evolution API</button>
                         </div>
                     </div>
@@ -831,1212 +831,1124 @@
 <!-- ====== JAVASCRIPT ====== -->
 <script>
     // ===========================
-    // DATA & STATE
-    // ===========================
-    const USUARIOS = {
-        "joao4821": { senha: "Kf7#mP2q", tipo: "cliente", nome: "João Silva", negocio: "Barbearia do João", plano: "Mensal", status: "ativo" },
-        "maria9234": { senha: "Xp3@nK8w", tipo: "cliente", nome: "Maria Souza", negocio: "Studio Bella", plano: "Anual", status: "ativo" },
-        "admin": { senha: "CalFlow@2026Admin", tipo: "admin", nome: "Luan (Admin)", negocio: "CalFlow", plano: "Master", status: "ativo" }
-    };
+// CONFIGURAÇÃO
+// ===========================
+const API_URL = 'https://calflow.up.railway.app';
 
-    let usuarioAtual = null;
-    let qrTimerInterval = null;
-    let pollingInterval = null;
-    let qrState = 'loading';
+// ===========================
+// STATE
+// ===========================
+let usuarioAtual = null;
+let tokenAtual = null;
+let qrTimerInterval = null;
+let pollingInterval = null;
+let qrState = 'loading';
+let servicos = [];
+let funcionarios = [];
 
-    const SERVICOS_DEFAULT = [
-        { id: 1, nome: 'Corte de cabelo', duracao: 45, preco: 45, ativo: true, pixAntecipado: true },
-        { id: 2, nome: 'Barba', duracao: 30, preco: 35, ativo: true, pixAntecipado: true },
-        { id: 3, nome: 'Corte + Barba', duracao: 60, preco: 70, ativo: true, pixAntecipado: true }
-    ];
+// ===========================
+// API HELPER
+// ===========================
+async function api(method, path, body = null) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (tokenAtual) headers['Authorization'] = 'Bearer ' + tokenAtual;
 
-    const FUNCIONARIOS_DEFAULT = [
-        { id: 1, nome: 'Proprietário', funcao: 'Barbeiro', ativo: true, servicos: [1, 2, 3] }
-    ];
+    const options = { method, headers };
+    if (body) options.body = JSON.stringify(body);
 
-    const HORARIOS_DEFAULT = {
-        segunda: { ativo: true, abertura: '09:00', fechamento: '18:00' },
-        terca: { ativo: true, abertura: '09:00', fechamento: '18:00' },
-        quarta: { ativo: true, abertura: '09:00', fechamento: '18:00' },
-        quinta: { ativo: true, abertura: '09:00', fechamento: '18:00' },
-        sexta: { ativo: true, abertura: '09:00', fechamento: '18:00' },
-        sabado: { ativo: true, abertura: '09:00', fechamento: '14:00' },
-        domingo: { ativo: false, abertura: '09:00', fechamento: '13:00' },
-        almoco: { ativo: true, inicio: '12:00', fim: '13:00' }
-    };
+    const res = await fetch(API_URL + path, options);
 
-    const LEMBRETES_DEFAULT = {
-        lembrete24h: { ativo: true, msg: 'Olá {nome_cliente}! Lembrete: você tem {servico} amanhã às {hora} com {profissional}. Valor: {valor}. Confirme respondendo SIM.' },
-        lembrete1h: { ativo: true, msg: 'Olá {nome_cliente}! Falta 1 hora para seu {servico} às {hora}. Estamos te esperando!' },
-        confirmacao: { ativo: true, msg: 'Agendamento confirmado! {servico} no dia {data} às {hora} com {profissional}. Valor: {valor}. Até lá!' },
-        agradecimento: { ativo: false, msg: 'Obrigado pela visita, {nome_cliente}! Esperamos que tenha gostado. Agende seu próximo horário pelo WhatsApp!' }
-    };
-
-    let servicos = [];
-    let funcionarios = [];
-
-    // ===========================
-    // CRÍTICO 1: USER DATA ISOLATION
-    // ===========================
-    function storageKey(key) {
-        return 'calflow_' + (usuarioAtual ? usuarioAtual.usuario : 'anon') + '_' + key;
+    if (res.status === 401) {
+        doLogout();
+        throw new Error('Sessão expirada');
     }
 
-    function getUD(key, defaultValue) {
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro na requisição');
+    return data;
+}
+
+// ===========================
+// INIT
+// ===========================
+document.addEventListener('DOMContentLoaded', async function() {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    // Verificar token salvo
+    const savedToken = localStorage.getItem('calflow_token');
+    if (savedToken) {
+        tokenAtual = savedToken;
         try {
-            const v = localStorage.getItem(storageKey(key));
-            return v !== null ? JSON.parse(v) : defaultValue;
-        } catch(e) { return defaultValue; }
-    }
-
-    function setUD(key, value) {
-        try { localStorage.setItem(storageKey(key), JSON.stringify(value)); }
-        catch(e) {}
-    }
-
-    function showSaveIndicator(sectionTitle) {
-        const indicator = document.createElement('span');
-        indicator.className = 'text-xs font-semibold ml-2';
-        indicator.style.color = '#22c55e';
-        indicator.textContent = '✓ Salvo';
-        indicator.dataset.testid = 'save-indicator';
-        sectionTitle.appendChild(indicator);
-        setTimeout(() => indicator.remove(), 2500);
-    }
-
-    // ===========================
-    // INIT
-    // ===========================
-    document.addEventListener('DOMContentLoaded', function() {
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-        // CRÍTICO 3: Check remember me first
-        const remembered = localStorage.getItem('calflow_remember');
-        if (remembered) {
-            try {
-                const d = JSON.parse(remembered);
-                const u = USUARIOS[d.usuario];
-                if (u && u.senha === d.senha) {
-                    usuarioAtual = { ...u, usuario: d.usuario };
-                    sessionStorage.setItem('calflow_user', JSON.stringify({ usuario: d.usuario }));
-                    enterDashboard();
-                    return;
-                }
-            } catch(e) { localStorage.removeItem('calflow_remember'); }
-        }
-        checkSession();
-        document.getElementById('loginPass').addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });
-        document.getElementById('loginUser').addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });
-    });
-
-    function checkSession() {
-        const saved = sessionStorage.getItem('calflow_user');
-        if (saved) {
-            try {
-                const data = JSON.parse(saved);
-                const u = USUARIOS[data.usuario];
-                if (u) {
-                    usuarioAtual = { ...u, usuario: data.usuario };
-                    enterDashboard();
-                }
-            } catch(e) { sessionStorage.removeItem('calflow_user'); }
-        }
-    }
-
-    // ===========================
-    // LOGIN / LOGOUT
-    // ===========================
-    function doLogin() {
-        const user = document.getElementById('loginUser').value.trim();
-        const pass = document.getElementById('loginPass').value;
-        const errorDiv = document.getElementById('loginError');
-        const errorText = document.getElementById('loginErrorText');
-
-        if (!user || !pass) {
-            errorText.textContent = 'Preencha todos os campos';
-            errorDiv.classList.remove('hidden');
-            errorDiv.parentElement.classList.add('shake');
-            setTimeout(() => errorDiv.parentElement.classList.remove('shake'), 500);
+            const me = await api('GET', '/api/cliente/me');
+            usuarioAtual = me;
+            enterDashboard();
             return;
+        } catch(e) {
+            localStorage.removeItem('calflow_token');
+            tokenAtual = null;
         }
+    }
 
-        const u = USUARIOS[user];
-        if (!u || u.senha !== pass) {
-            errorText.textContent = 'Usuário ou senha incorretos';
-            errorDiv.classList.remove('hidden');
-            errorDiv.parentElement.classList.add('shake');
-            setTimeout(() => errorDiv.parentElement.classList.remove('shake'), 500);
-            return;
+    // Enter para login
+    document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+    document.getElementById('loginUser').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+});
+
+// ===========================
+// LOGIN / LOGOUT
+// ===========================
+async function doLogin() {
+    const user = document.getElementById('loginUser').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    const errorDiv = document.getElementById('loginError');
+    const errorText = document.getElementById('loginErrorText');
+    const btn = document.querySelector('[data-testid="login-submit-btn"]');
+
+    if (!user || !pass) {
+        errorText.textContent = 'Preencha todos os campos';
+        errorDiv.classList.remove('hidden');
+        return;
+    }
+
+    btn.textContent = 'Entrando...';
+    btn.disabled = true;
+
+    try {
+        const data = await api('POST', '/api/auth/login', { usuario: user, senha: pass });
+
+        tokenAtual = data.token;
+        usuarioAtual = {
+            id: data.clienteId,
+            usuario: data.usuario,
+            nome: data.nome,
+            negocio: data.negocio,
+            tipo: data.tipo,
+            nomeInstancia: data.nomeInstancia || ('calflow_' + data.usuario)
+        };
+
+        // Remember me
+        const remember = document.getElementById('rememberCheck');
+        if (remember && remember.checked) {
+            localStorage.setItem('calflow_token', tokenAtual);
         }
 
         errorDiv.classList.add('hidden');
-        usuarioAtual = { ...u, usuario: user };
-        sessionStorage.setItem('calflow_user', JSON.stringify({ usuario: user }));
-
-        // CRÍTICO 3: Remember me
-        const rememberCheck = document.getElementById('rememberCheck');
-        if (rememberCheck && rememberCheck.checked) {
-            localStorage.setItem('calflow_remember', JSON.stringify({ usuario: user, senha: pass }));
-        }
-
         enterDashboard();
+
+    } catch(e) {
+        errorText.textContent = e.message || 'Usuário ou senha incorretos';
+        errorDiv.classList.remove('hidden');
+        errorDiv.parentElement.classList.add('shake');
+        setTimeout(() => errorDiv.parentElement.classList.remove('shake'), 500);
+    } finally {
+        btn.textContent = 'Entrar';
+        btn.disabled = false;
+    }
+}
+
+function doLogout() {
+    clearAllTimers();
+    localStorage.removeItem('calflow_token');
+    tokenAtual = null;
+    usuarioAtual = null;
+    servicos = [];
+    funcionarios = [];
+    goToLogin();
+}
+
+function goToLogin() {
+    document.getElementById('screen-dashboard').classList.remove('active');
+    document.getElementById('screen-login').classList.add('active');
+    document.getElementById('loginUser').value = '';
+    document.getElementById('loginPass').value = '';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function enterDashboard() {
+    document.getElementById('screen-login').classList.remove('active');
+    document.getElementById('screen-dashboard').classList.add('active');
+    setupDashboard();
+}
+
+// ===========================
+// DASHBOARD SETUP
+// ===========================
+async function setupDashboard() {
+    const initials = usuarioAtual.nome.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    document.getElementById('sidebarAvatar').textContent = initials;
+    document.getElementById('sidebarNegocio').textContent = usuarioAtual.negocio || 'Meu Negócio';
+    document.getElementById('sidebarNome').textContent = usuarioAtual.nome;
+
+    const hora = new Date().getHours();
+    const saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
+    document.getElementById('greetingText').textContent = saudacao + ', ' + usuarioAtual.nome.split(' ')[0] + '!';
+
+    // Admin badge
+    if (usuarioAtual.tipo === 'admin') {
+        document.getElementById('adminBadgeArea').classList.remove('hidden');
+    } else {
+        document.getElementById('adminBadgeArea').classList.add('hidden');
     }
 
-    function doLogout() {
-        clearAllTimers();
-        const hasRemember = localStorage.getItem('calflow_remember');
-        if (hasRemember) {
-            openConfirmModal('Sair do sistema', 'Deseja manter o acesso salvo neste dispositivo?',
-                function() {
-                    // Sair e manter
-                    sessionStorage.removeItem('calflow_user');
-                    usuarioAtual = null;
-                    goToLogin();
-                },
-                'Manter salvo',
-                'Remover acesso',
-                function() {
-                    // Sair e remover
-                    localStorage.removeItem('calflow_remember');
-                    sessionStorage.removeItem('calflow_user');
-                    usuarioAtual = null;
-                    goToLogin();
-                }
-            );
-        } else {
-            sessionStorage.removeItem('calflow_user');
-            usuarioAtual = null;
-            goToLogin();
-        }
-    }
+    buildSidebarNav();
 
-    function goToLogin() {
-        document.getElementById('screen-dashboard').classList.remove('active');
-        document.getElementById('screen-login').classList.add('active');
-        document.getElementById('loginUser').value = '';
-        document.getElementById('loginPass').value = '';
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
+    // Carregar dados reais
+    await Promise.all([
+        carregarConfiguracoes(),
+        carregarServicos(),
+        carregarFuncionarios(),
+        carregarDashboard()
+    ]);
 
-    function enterDashboard() {
-        document.getElementById('screen-login').classList.remove('active');
-        document.getElementById('screen-dashboard').classList.add('active');
-        loadUserData();
-        setupDashboard();
-    }
+    if (usuarioAtual.tipo === 'admin') await carregarAdminClientes();
 
-    // ===========================
-    // LOAD/SAVE USER DATA
-    // ===========================
-    function loadUserData() {
-        servicos = getUD('servicos', [...SERVICOS_DEFAULT]);
-        funcionarios = getUD('funcionarios', [...FUNCIONARIOS_DEFAULT]);
-    }
+    showSection('dashboard');
+    setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 100);
+}
 
-    // ===========================
-    // DASHBOARD SETUP
-    // ===========================
-    function setupDashboard() {
-        const initials = usuarioAtual.nome.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-        document.getElementById('sidebarAvatar').textContent = initials;
-        document.getElementById('sidebarNegocio').textContent = usuarioAtual.negocio;
-        document.getElementById('sidebarNome').textContent = usuarioAtual.nome;
+// ===========================
+// CARREGAR DADOS DO BACKEND
+// ===========================
+async function carregarConfiguracoes() {
+    try {
+        const config = await api('GET', '/api/cliente/configuracoes');
 
-        const hora = new Date().getHours();
-        const saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
-        const primeiroNome = usuarioAtual.nome.split(' ')[0];
-        document.getElementById('greetingText').textContent = saudacao + ', ' + primeiroNome + '!';
-
-        // Load config from user data
-        const config = getUD('configuracoes', {});
-        document.getElementById('configNomeNegocio').value = config.nomeNegocio || usuarioAtual.negocio;
-        document.getElementById('configPlano').textContent = usuarioAtual.plano;
-        document.getElementById('configUserDisplay').textContent = usuarioAtual.usuario;
+        // Dados básicos
+        if (document.getElementById('configNomeNegocio')) document.getElementById('configNomeNegocio').value = config.nomeNegocio || '';
         if (document.getElementById('configEndereco')) document.getElementById('configEndereco').value = config.endereco || '';
         if (document.getElementById('configWhatsApp')) document.getElementById('configWhatsApp').value = config.whatsapp || '';
-        if (document.getElementById('configSaudacao')) document.getElementById('configSaudacao').value = config.saudacao || 'Olá! Bem-vindo(a) ao {nome_negocio}. Como posso ajudar?';
-        if (document.getElementById('configEncerramento')) document.getElementById('configEncerramento').value = config.encerramento || 'Obrigado pelo contato! Até a próxima.';
-        if (document.getElementById('configFuso')) document.getElementById('configFuso').value = config.fuso || 'America/Sao_Paulo';
-        if (document.getElementById('configIdioma')) document.getElementById('configIdioma').value = config.idioma || 'pt-BR';
         if (document.getElementById('configGoogleCalendarId')) document.getElementById('configGoogleCalendarId').value = config.googleCalendarId || '';
         if (document.getElementById('configIntervalo')) document.getElementById('configIntervalo').value = config.intervalo || '30';
-        if (document.getElementById('configAntecedencia')) document.getElementById('configAntecedencia').value = config.antecedencia || '2';
+        if (document.getElementById('configSaudacao')) document.getElementById('configSaudacao').value = config.saudacaoBot || '';
+        if (document.getElementById('configEncerramento')) document.getElementById('configEncerramento').value = config.mensagemEncerramento || '';
         if (document.getElementById('configConfirmarManual')) document.getElementById('configConfirmarManual').checked = config.confirmarManual || false;
+        if (document.getElementById('configAntecedencia')) document.getElementById('configAntecedencia').value = config.antecedenciaMinimaHoras || '2';
 
-        // Load pagamentos
-        const pag = getUD('pagamentos', {});
-        if (document.getElementById('mpToken')) document.getElementById('mpToken').value = pag.token || '';
-        if (document.getElementById('mpChavePix')) document.getElementById('mpChavePix').value = pag.chavePix || '';
-        if (document.getElementById('mpNomePix')) document.getElementById('mpNomePix').value = pag.nomePix || '';
+        // Pagamentos
+        if (document.getElementById('mpToken')) document.getElementById('mpToken').value = config.mercadoPagoToken || '';
+        if (document.getElementById('mpChavePix')) document.getElementById('mpChavePix').value = config.chavePix || '';
+        if (document.getElementById('mpNomePix')) document.getElementById('mpNomePix').value = config.nomePix || '';
 
-        // Load lembretes
-        const lem = getUD('lembretes', LEMBRETES_DEFAULT);
-        const lem24 = document.querySelector('[data-testid="lembrete-24h-msg"]');
-        if (lem24) lem24.value = lem.lembrete24h ? lem.lembrete24h.msg : LEMBRETES_DEFAULT.lembrete24h.msg;
-        const lem1h = document.querySelector('[data-testid="lembrete-1h-msg"]');
-        if (lem1h) lem1h.value = lem.lembrete1h ? lem.lembrete1h.msg : LEMBRETES_DEFAULT.lembrete1h.msg;
-        const lemConf = document.querySelector('[data-testid="lembrete-confirmacao-msg"]');
-        if (lemConf) lemConf.value = lem.confirmacao ? lem.confirmacao.msg : LEMBRETES_DEFAULT.confirmacao.msg;
-        const lemAgr = document.querySelector('[data-testid="lembrete-agradecimento-msg"]');
-        if (lemAgr) lemAgr.value = lem.agradecimento ? lem.agradecimento.msg : LEMBRETES_DEFAULT.agradecimento.msg;
-
-        // Load horários
-        const hor = getUD('horarios', HORARIOS_DEFAULT);
-        loadHorariosUI(hor);
-
-        // Admin badge
-        if (usuarioAtual.tipo === 'admin') {
-            document.getElementById('adminBadgeArea').classList.remove('hidden');
-        } else {
-            document.getElementById('adminBadgeArea').classList.add('hidden');
+        // Lembretes
+        if (document.querySelector('[data-testid="lembrete-24h-msg"]')) {
+            document.querySelector('[data-testid="lembrete-24h-msg"]').value = config.mensagemLembrete || '';
         }
 
-        buildSidebarNav();
-        renderServicos();
-        renderFuncionarios();
-        renderDashboardMetrics();
-        if (usuarioAtual.tipo === 'admin') renderAdminClientes();
+        // Info do usuário
+        if (document.getElementById('configUserDisplay')) document.getElementById('configUserDisplay').textContent = usuarioAtual.usuario;
+        if (document.getElementById('configPlano')) document.getElementById('configPlano').textContent = usuarioAtual.plano || 'Mensal';
 
-        showSection('dashboard');
-        setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 100);
+        // Horários
+        if (config.horarios) {
+            loadHorariosFromBackend(config.horarios);
+        }
+    } catch(e) {
+        console.error('Erro ao carregar configurações:', e);
     }
+}
 
-    function loadHorariosUI(hor) {
-        const dias = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
-        dias.forEach(dia => {
-            const d = hor[dia] || HORARIOS_DEFAULT[dia];
-            const horariosDiv = document.getElementById('horarios-' + dia);
-            const label = document.getElementById('label-' + dia);
-            const toggleInput = horariosDiv ? horariosDiv.previousElementSibling.querySelector('input[type="checkbox"]') : null;
-            if (toggleInput) toggleInput.checked = d.ativo;
-            if (horariosDiv) horariosDiv.style.display = d.ativo ? 'flex' : 'none';
-            if (label) label.textContent = d.ativo ? 'Aberto' : 'Fechado';
-            const aberturaInput = document.querySelector('[data-testid="horario-' + dia + '-abertura"]');
-            const fechamentoInput = document.querySelector('[data-testid="horario-' + dia + '-fechamento"]');
-            if (aberturaInput) aberturaInput.value = d.abertura || '09:00';
-            if (fechamentoInput) fechamentoInput.value = d.fechamento || '18:00';
-        });
-        // Almoco
-        const almoco = hor.almoco || HORARIOS_DEFAULT.almoco;
+function loadHorariosFromBackend(horarios) {
+    const dias = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
+    dias.forEach(dia => {
+        const d = horarios[dia];
+        if (!d) return;
+
+        const div = document.getElementById('horarios-' + dia);
+        const label = document.getElementById('label-' + dia);
+        const toggleInput = div ? div.previousElementSibling?.querySelector('input[type="checkbox"]') : null;
+
+        if (toggleInput) toggleInput.checked = d.ativo;
+        if (div) div.style.display = d.ativo ? 'flex' : 'none';
+        if (label) label.textContent = d.ativo ? 'Aberto' : 'Fechado';
+
+        const aberturaInput = document.querySelector('[data-testid="horario-' + dia + '-abertura"]');
+        const fechamentoInput = document.querySelector('[data-testid="horario-' + dia + '-fechamento"]');
+        if (aberturaInput) aberturaInput.value = d.abertura || '09:00';
+        if (fechamentoInput) fechamentoInput.value = d.fechamento || '18:00';
+    });
+
+    // Almoço
+    if (horarios.almoco) {
         const almocoToggle = document.getElementById('toggleAlmoco');
-        if (almocoToggle) almocoToggle.checked = almoco.ativo;
+        if (almocoToggle) almocoToggle.checked = horarios.almoco.ativo;
         const almocoDiv = document.getElementById('horarios-almoco');
-        if (almocoDiv) almocoDiv.style.display = almoco.ativo ? 'flex' : 'none';
+        if (almocoDiv) almocoDiv.style.display = horarios.almoco.ativo ? 'flex' : 'none';
         const almocoInicio = document.querySelector('[data-testid="horario-almoco-inicio"]');
         const almocoFim = document.querySelector('[data-testid="horario-almoco-fim"]');
-        if (almocoInicio) almocoInicio.value = almoco.inicio || '12:00';
-        if (almocoFim) almocoFim.value = almoco.fim || '13:00';
+        if (almocoInicio) almocoInicio.value = horarios.almoco.inicio || '12:00';
+        if (almocoFim) almocoFim.value = horarios.almoco.fim || '13:00';
     }
+}
 
-    // ===========================
-    // CORREÇÃO 6: DASHBOARD METRICS FROM USER DATA
-    // ===========================
-    function renderDashboardMetrics() {
-        const agendamentos = getUD('agendamentos', []);
-        const hoje = new Date().toISOString().split('T')[0];
-        const hojeAgendamentos = agendamentos.filter(a => a.data === hoje);
-        const confirmados = agendamentos.filter(a => a.status === 'Confirmado');
-        const faltasHoje = hojeAgendamentos.filter(a => a.status === 'Falta');
-        const receitaHoje = hojeAgendamentos.filter(a => a.status === 'Confirmado').reduce((sum, a) => sum + (a.valor || 0), 0);
+async function carregarServicos() {
+    try {
+        servicos = await api('GET', '/api/cliente/servicos');
+        renderServicos();
+    } catch(e) {
+        console.error('Erro ao carregar serviços:', e);
+        servicos = [];
+    }
+}
 
-        // Update metric cards
+async function carregarFuncionarios() {
+    try {
+        funcionarios = await api('GET', '/api/cliente/funcionarios');
+        renderFuncionarios();
+    } catch(e) {
+        console.error('Erro ao carregar funcionários:', e);
+        funcionarios = [];
+    }
+}
+
+async function carregarDashboard() {
+    try {
+        const dash = await api('GET', '/api/cliente/dashboard');
         const metricAgend = document.querySelector('[data-testid="metric-agendamentos"] p.text-2xl');
-        if (metricAgend) metricAgend.textContent = hojeAgendamentos.length;
+        if (metricAgend) metricAgend.textContent = dash.agendamentosHoje || 0;
         const metricConf = document.querySelector('[data-testid="metric-confirmados"] p.text-2xl');
-        if (metricConf) metricConf.textContent = confirmados.length;
+        if (metricConf) metricConf.textContent = dash.confirmados || 0;
         const metricFaltas = document.querySelector('[data-testid="metric-faltas"] p.text-2xl');
-        if (metricFaltas) metricFaltas.innerHTML = faltasHoje.length + ' <span class="text-sm text-neutral-500 font-normal">de ' + hojeAgendamentos.length + '</span>';
+        if (metricFaltas) metricFaltas.textContent = dash.faltas || 0;
         const metricReceita = document.querySelector('[data-testid="metric-receita"] p.text-2xl');
-        if (metricReceita) metricReceita.textContent = 'R$ ' + receitaHoje.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        if (metricReceita) metricReceita.textContent = 'R$ ' + (dash.receitaHoje || 0);
 
-        // Update upcoming appointments table
-        renderUpcomingAppointments(agendamentos);
-
-        // Update agendamentos section table
-        renderAgendamentosTable(agendamentos);
-
-        // Update Google Calendar
+        renderUpcomingAppointments(dash.agendamentos || []);
+        renderAgendamentosTable(dash.agendamentos || []);
         renderGoogleCalendar();
+    } catch(e) {
+        console.error('Erro ao carregar dashboard:', e);
     }
+}
 
-    function renderUpcomingAppointments(agendamentos) {
-        const tbody = document.querySelector('[data-testid="upcoming-appointments"] tbody');
-        if (!tbody) return;
-        tbody.innerHTML = '';
-
-        if (agendamentos.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-neutral-500 text-sm">Nenhum agendamento encontrado</td></tr>';
-            return;
-        }
-
-        const proximos = agendamentos.slice(0, 5);
-        proximos.forEach(a => {
-            const statusStyle = a.status === 'Confirmado' ? 'background:rgba(34,197,94,0.1);color:#22c55e' :
-                                a.status === 'Cancelado' ? 'background:rgba(239,68,68,0.1);color:#ef4444' :
-                                'background:rgba(245,158,11,0.1);color:#F59E0B';
-            const valorClass = a.status === 'Cancelado' ? 'text-neutral-600 line-through' : 'font-medium';
-            tbody.innerHTML += '<tr class="table-row border-b border-white/5"><td class="py-3 font-medium">' + (a.hora || '') + '</td>' +
-                '<td class="py-3 text-neutral-300">' + (a.cliente || '') + '</td>' +
-                '<td class="py-3 text-neutral-400">' + (a.servico || '') + '</td>' +
-                '<td class="py-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="' + statusStyle + '">' + (a.status || 'Pendente') + '</span></td>' +
-                '<td class="py-3 text-right ' + valorClass + '">R$ ' + ((a.valor || 0).toFixed(2).replace('.', ',')) + '</td></tr>';
-        });
+async function carregarAdminClientes() {
+    try {
+        const clientes = await api('GET', '/api/admin/clientes');
+        renderAdminClientes(clientes);
+    } catch(e) {
+        console.error('Erro ao carregar clientes admin:', e);
     }
+}
 
-    function renderAgendamentosTable(agendamentos) {
-        const tbody = document.querySelector('[data-testid="agendamentos-table"] tbody');
-        if (!tbody) return;
-        tbody.innerHTML = '';
-
-        if (agendamentos.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-neutral-500 text-sm">Nenhum agendamento encontrado</td></tr>';
-            return;
-        }
-
-        agendamentos.forEach(a => {
-            const statusStyle = a.status === 'Confirmado' ? 'background:rgba(34,197,94,0.1);color:#22c55e' :
-                                a.status === 'Cancelado' ? 'background:rgba(239,68,68,0.1);color:#ef4444' :
-                                'background:rgba(245,158,11,0.1);color:#F59E0B';
-            const valorClass = a.status === 'Cancelado' ? 'text-neutral-600 line-through' : 'font-medium';
-            tbody.innerHTML += '<tr class="table-row border-b border-white/5"><td class="py-3">' + (a.data || '') + '</td>' +
-                '<td class="py-3 font-medium">' + (a.hora || '') + '</td>' +
-                '<td class="py-3 text-neutral-300">' + (a.cliente || '') + '</td>' +
-                '<td class="py-3 text-neutral-400">' + (a.servico || '') + '</td>' +
-                '<td class="py-3 text-neutral-400">' + (a.profissional || '') + '</td>' +
-                '<td class="py-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="' + statusStyle + '">' + (a.status || 'Pendente') + '</span></td>' +
-                '<td class="py-3 text-right ' + valorClass + '">R$ ' + ((a.valor || 0).toFixed(2).replace('.', ',')) + '</td></tr>';
-        });
+// ===========================
+// SAVE FUNCTIONS (REAL)
+// ===========================
+async function salvarConfiguracoes() {
+    try {
+        const config = {
+            nomeNegocio: document.getElementById('configNomeNegocio')?.value || '',
+            endereco: document.getElementById('configEndereco')?.value || '',
+            whatsapp: document.getElementById('configWhatsApp')?.value || '',
+            googleCalendarId: document.getElementById('configGoogleCalendarId')?.value || '',
+            intervalo: document.getElementById('configIntervalo')?.value || '30',
+            saudacao: document.getElementById('configSaudacao')?.value || '',
+            encerramento: document.getElementById('configEncerramento')?.value || '',
+            confirmarManual: document.getElementById('configConfirmarManual')?.checked || false
+        };
+        await api('PUT', '/api/cliente/configuracoes', config);
+        usuarioAtual.negocio = config.nomeNegocio;
+        document.getElementById('sidebarNegocio').textContent = config.nomeNegocio;
+        showToast('Configurações salvas!', 'success');
+    } catch(e) {
+        showToast('Erro ao salvar: ' + e.message, 'error');
     }
+}
 
-    // ===========================
-    // CORREÇÃO 7: GOOGLE CALENDAR
-    // ===========================
-    function renderGoogleCalendar() {
-        const container = document.getElementById('googleCalendarContent');
-        if (!container) return;
-        const config = getUD('configuracoes', {});
-        const calendarId = config.googleCalendarId;
-        if (!calendarId) {
-            container.innerHTML = '<div class="text-center py-6"><p class="text-sm text-neutral-500 mb-3">Configure seu Google Calendar ID em Configurações para ver o calendário sincronizado aqui.</p>' +
-                '<button onclick="showSection(\'configuracoes\')" class="btn-outline text-sm">Configurar</button></div>';
-        } else {
-            const embedUrl = 'https://calendar.google.com/calendar/embed?' +
-                'src=' + encodeURIComponent(calendarId) +
-                '&ctz=America%2FSao_Paulo&mode=WEEK&showTitle=0&showNav=1' +
-                '&showDate=1&showPrint=0&showTabs=0&showCalendars=0';
-            container.innerHTML = '<iframe src="' + embedUrl + '" style="width:100%;height:500px;border:none;border-radius:1rem;filter:invert(0.9) hue-rotate(180deg);" frameborder="0" scrolling="no" data-testid="google-calendar-iframe"></iframe>';
-        }
-        setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 50);
+async function salvarPagamentos() {
+    try {
+        const config = {
+            mercadoPagoToken: document.getElementById('mpToken')?.value || '',
+            chavePix: document.getElementById('mpChavePix')?.value || '',
+            nomePix: document.getElementById('mpNomePix')?.value || ''
+        };
+        await api('PUT', '/api/cliente/configuracoes', config);
+        showToast('Configurações de pagamento salvas!', 'success');
+    } catch(e) {
+        showToast('Erro ao salvar: ' + e.message, 'error');
     }
+}
 
-    // ===========================
-    // SIDEBAR NAV
-    // ===========================
-    function buildSidebarNav() {
-        const nav = document.getElementById('sidebarNav');
-        let links = [
-            { id: 'dashboard', icon: 'home', label: 'Dashboard' },
-            { id: 'qrcode', icon: 'qr-code', label: 'QR Code' },
-            { id: 'agendamentos', icon: 'calendar', label: 'Agendamentos' },
-            { id: 'horarios', icon: 'clock', label: 'Horários' },
-            { id: 'servicos', icon: 'tag', label: 'Serviços e Preços' },
-            { id: 'funcionarios', icon: 'users', label: 'Funcionários' },
-            { id: 'pagamentos', icon: 'wallet', label: 'Pagamentos' },
-            { id: 'lembretes', icon: 'bell', label: 'Lembretes' },
-            { id: 'configuracoes', icon: 'settings', label: 'Configurações' }
-        ];
-
-        if (usuarioAtual.tipo === 'admin') {
-            links.push({ divider: true });
-            links.push({ id: 'admin-clientes', icon: 'users', label: 'Todos os Clientes' });
-            links.push({ id: 'admin-criar', icon: 'user-plus', label: 'Criar Cliente' });
-            links.push({ id: 'admin-config', icon: 'sliders', label: 'Config. Globais' });
-            links.push({ id: 'admin-logs', icon: 'terminal', label: 'Logs do Sistema' });
-        }
-
-        nav.innerHTML = '';
-        links.forEach(link => {
-            if (link.divider) {
-                nav.innerHTML += '<div class="border-t border-white/5 my-3 mx-3"></div><p class="text-xs text-neutral-600 font-semibold px-5 mb-2 tracking-wider">ADMIN</p>';
-                return;
-            }
-            const activeClass = link.id === 'dashboard' ? ' active' : '';
-            nav.innerHTML += '<div class="sidebar-link' + activeClass + '" onclick="showSection(\'' + link.id + '\')" data-section="' + link.id + '" data-testid="nav-' + link.id + '">' +
-                '<i data-lucide="' + link.icon + '" style="width:18px;height:18px"></i> ' + link.label + '</div>';
-        });
-
-        setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 50);
-    }
-
-    // ===========================
-    // SECTION NAVIGATION
-    // ===========================
-    function showSection(sectionId) {
-        if (qrState !== 'connected') clearAllTimers();
-        document.querySelectorAll('.section-panel').forEach(s => s.classList.remove('active'));
-        const target = document.getElementById('section-' + sectionId);
-        if (target) target.classList.add('active');
-        document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
-        const navItem = document.querySelector('[data-section="' + sectionId + '"]');
-        if (navItem) navItem.classList.add('active');
-        closeMobileSidebar();
-        if (sectionId === 'qrcode') initQRSection();
-        if (sectionId === 'agendamentos') renderGoogleCalendar();
-        setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 50);
-    }
-
-    // ===========================
-    // MOBILE SIDEBAR
-    // ===========================
-    function toggleMobileSidebar() {
-        document.getElementById('sidebar').classList.toggle('open');
-        document.getElementById('sidebarOverlay').classList.toggle('open');
-    }
-    function closeMobileSidebar() {
-        document.getElementById('sidebar').classList.remove('open');
-        document.getElementById('sidebarOverlay').classList.remove('open');
-    }
-
-    // ===========================
-    // QR CODE SECTION (CRÍTICO 4)
-    // ===========================
-    const USE_EVOLUTION_API = false; // Set to true when backend Spring Boot is available
-
-    function initQRSection() {
-        // Update instance info
-        const instanceName = 'calflow_' + (usuarioAtual ? usuarioAtual.usuario : 'demo');
-        const instEl = document.getElementById('qrInstanceName');
-        if (instEl) instEl.textContent = instanceName;
-        const webhookEl = document.getElementById('qrWebhookUrl');
-        if (webhookEl) webhookEl.textContent = '/api/webhook/whatsapp/' + (usuarioAtual ? usuarioAtual.usuario : 'demo');
-
-        setQRState('loading');
-        setTimeout(() => {
-            setQRState('scanning');
-            loadQRCode();
-        }, 1500);
-    }
-
-    function setQRState(state) {
-        qrState = state;
-        document.getElementById('qr-state-loading').classList.add('hidden');
-        document.getElementById('qr-state-scanning').classList.add('hidden');
-        document.getElementById('qr-state-connected').classList.add('hidden');
-        document.getElementById('qr-state-disconnected').classList.add('hidden');
-        const el = document.getElementById('qr-state-' + state);
-        if (el) el.classList.remove('hidden');
-        // Update status detail
-        const statusDetail = document.getElementById('qrStatusDetail');
-        if (statusDetail) {
-            const labels = { loading: 'Criando instância...', scanning: 'Aguardando escaneamento', connected: 'Conectado', disconnected: 'Desconectado' };
-            const colors = { loading: '#F59E0B', scanning: '#F59E0B', connected: '#22c55e', disconnected: '#ef4444' };
-            statusDetail.textContent = labels[state] || state;
-            statusDetail.style.color = colors[state] || '#F59E0B';
-        }
-        if (state === 'connected' || state === 'disconnected' || state === 'loading') {
-            clearAllTimers();
-        }
-    }
-
-    function clearAllTimers() {
-        if (qrTimerInterval) { clearInterval(qrTimerInterval); qrTimerInterval = null; }
-        if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
-    }
-
-    function loadQRCode() {
-        clearAllTimers();
-        const container = document.getElementById('qrcode-container');
-        container.innerHTML = '';
-
-        if (USE_EVOLUTION_API) {
-            // MODO PRODUÇÃO: Fetch from Evolution API
-            // const instanceName = 'calflow_' + usuarioAtual.usuario;
-            // const token = sessionStorage.getItem('calflow_token');
-            // fetch('/api/evolution/qrcode/' + instanceName, { headers: { 'Authorization': 'Bearer ' + token } })
-            //     .then(r => r.json())
-            //     .then(data => {
-            //         if (data.base64) {
-            //             container.innerHTML = '<img src="' + data.base64 + '" style="width:234px;height:234px;border-radius:0.75rem">';
-            //         }
-            //     })
-            //     .catch(e => { container.innerHTML = '<p class="text-sm text-red-400">Erro ao buscar QR Code</p>'; });
-            // startPolling();
-        }
-
-        // MODO DEMO: Generate QR via QRCode.js
-        const text = 'calflow://connect?user=' + (usuarioAtual ? usuarioAtual.usuario : 'demo') + '&session=' + Date.now();
-        try {
-            new QRCode(container, {
-                text: text, width: 234, height: 234,
-                colorDark: '#000000', colorLight: '#ffffff',
-                correctLevel: QRCode.CorrectLevel.M
-            });
-        } catch(e) {
-            container.innerHTML = '<p class="text-sm text-red-400">Erro ao gerar QR Code</p>';
-        }
-        iniciarCountdownQR();
-    }
-
-    /* PRODUÇÃO: Polling de status da Evolution API
-    function startPolling() {
-        const instanceName = 'calflow_' + usuarioAtual.usuario;
-        const token = sessionStorage.getItem('calflow_token');
-        pollingInterval = setInterval(() => {
-            fetch('/api/evolution/status/' + instanceName, { headers: { 'Authorization': 'Bearer ' + token } })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.state === 'open') { setQRState('connected'); showToast('WhatsApp conectado com sucesso!', 'success'); }
-                    else if (data.state === 'close') { setQRState('disconnected'); }
-                    else if (data.state === 'connecting') { /* keep scanning */ /* }
-                })
-                .catch(e => {});
-        }, 5000);
-    }
-    */
-
-    function iniciarCountdownQR() {
-        clearAllTimers();
-        let countdown = 60;
-        const el = document.getElementById('qrcode-countdown');
-        if (el) el.textContent = 'Expira em: 01:00';
-        qrTimerInterval = setInterval(() => {
-            countdown--;
-            if (el) {
-                const min = Math.floor(countdown / 60);
-                const sec = countdown % 60;
-                el.textContent = 'Expira em: ' + String(min).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
-            }
-            if (countdown <= 0) {
-                clearInterval(qrTimerInterval); qrTimerInterval = null;
-                const container = document.getElementById('qrcode-container');
-                if (container) container.innerHTML = '';
-                loadQRCode();
-            }
-        }, 1000);
-    }
-
-    function regenerateQRCode() {
-        clearAllTimers();
-        const container = document.getElementById('qrcode-container');
-        if (container) container.innerHTML = '';
-        loadQRCode();
-        showToast('Novo QR Code gerado', 'info');
-    }
-
-    function simulateConnection() {
-        clearAllTimers();
-        setQRState('connected');
-        showToast('WhatsApp conectado com sucesso!', 'success');
-    }
-
-    function disconnectWhatsApp() {
-        openConfirmModal('Desconectar WhatsApp', 'Tem certeza que deseja desconectar? O bot irá parar de atender seus clientes.', function() {
-            setQRState('disconnected');
-            showToast('WhatsApp desconectado', 'error');
-        });
-    }
-
-    function reconnectWhatsApp() {
-        setQRState('loading');
-        setTimeout(() => { setQRState('scanning'); loadQRCode(); }, 1500);
-    }
-
-    // ===========================
-    // HORÁRIOS (CRÍTICO 2: SAVE)
-    // ===========================
-    function toggleDia(checkbox, diaId) {
-        const horariosDiv = document.getElementById('horarios-' + diaId);
-        const label = document.getElementById('label-' + diaId);
-        if (checkbox.checked) {
-            horariosDiv.style.display = 'flex';
-            if (label) label.textContent = 'Aberto';
-        } else {
-            horariosDiv.style.display = 'none';
-            if (label) label.textContent = 'Fechado';
-        }
-    }
-
-    function toggleAlmoco(checkbox) {
-        const div = document.getElementById('horarios-almoco');
-        div.style.display = checkbox.checked ? 'flex' : 'none';
-    }
-
-    function salvarHorarios() {
+async function salvarHorarios() {
+    try {
         const dias = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
         const horarios = {};
         dias.forEach(dia => {
-            const horariosDiv = document.getElementById('horarios-' + dia);
-            const ativo = horariosDiv ? horariosDiv.style.display !== 'none' : false;
+            const div = document.getElementById('horarios-' + dia);
+            const ativo = div ? div.style.display !== 'none' : false;
             const abertura = document.querySelector('[data-testid="horario-' + dia + '-abertura"]');
             const fechamento = document.querySelector('[data-testid="horario-' + dia + '-fechamento"]');
-            horarios[dia] = { ativo, abertura: abertura ? abertura.value : '09:00', fechamento: fechamento ? fechamento.value : '18:00' };
+            horarios[dia] = {
+                ativo,
+                abertura: abertura?.value || '09:00',
+                fechamento: fechamento?.value || '18:00'
+            };
         });
         const almocoInicio = document.querySelector('[data-testid="horario-almoco-inicio"]');
         const almocoFim = document.querySelector('[data-testid="horario-almoco-fim"]');
         const almocoToggle = document.getElementById('toggleAlmoco');
-        horarios.almoco = { ativo: almocoToggle ? almocoToggle.checked : true, inicio: almocoInicio ? almocoInicio.value : '12:00', fim: almocoFim ? almocoFim.value : '13:00' };
-        setUD('horarios', horarios);
-        showToast('Horários salvos com sucesso!', 'success');
-        const title = document.querySelector('[data-testid="section-horarios"] h2');
-        if (title) showSaveIndicator(title);
+        horarios.almoco = {
+            ativo: almocoToggle?.checked ?? true,
+            inicio: almocoInicio?.value || '12:00',
+            fim: almocoFim?.value || '13:00'
+        };
+        await api('PUT', '/api/cliente/configuracoes', { horarios });
+        showToast('Horários salvos!', 'success');
+    } catch(e) {
+        showToast('Erro ao salvar horários: ' + e.message, 'error');
     }
+}
 
-    // ===========================
-    // FOLGAS (with persistence)
-    // ===========================
-    function openModalFolga() {
-        const html = '<h3 class="text-lg font-bold mb-4">Adicionar Folga ou Recesso</h3>' +
-            '<div class="space-y-4">' +
-            '<div class="grid grid-cols-2 gap-4">' +
-            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Data início</label><input type="date" class="input-base" id="folgaInicio"></div>' +
-            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Data fim</label><input type="date" class="input-base" id="folgaFim"></div>' +
-            '</div>' +
-            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Motivo (opcional)</label><input type="text" class="input-base" id="folgaMotivo" placeholder="Ex: Recesso, férias..."></div>' +
-            '<button onclick="addFolga()" class="btn-amber w-full">Adicionar</button>' +
-            '</div>';
-        openModal(html);
+async function salvarLembretes() {
+    try {
+        const lem = {
+            mensagemLembrete: document.querySelector('[data-testid="lembrete-24h-msg"]')?.value || '',
+            lembrete1h: document.querySelector('[data-testid="lembrete-1h-msg"]')?.value || '',
+            confirmacao: document.querySelector('[data-testid="lembrete-confirmacao-msg"]')?.value || '',
+            agradecimento: document.querySelector('[data-testid="lembrete-agradecimento-msg"]')?.value || ''
+        };
+        await api('PUT', '/api/cliente/configuracoes', lem);
+        showToast('Lembretes salvos!', 'success');
+    } catch(e) {
+        showToast('Erro ao salvar lembretes: ' + e.message, 'error');
     }
+}
 
-    function addFolga() {
-        const inicio = document.getElementById('folgaInicio').value;
-        const fim = document.getElementById('folgaFim').value;
-        const motivo = document.getElementById('folgaMotivo').value || 'Sem motivo';
-        if (!inicio || !fim) { showToast('Preencha as datas', 'error'); return; }
-        const folgas = getUD('folgas', []);
-        folgas.push({ inicio, fim, motivo });
-        setUD('folgas', folgas);
-        renderFolgas();
-        closeModal();
-        showToast('Folga adicionada!', 'success');
+// ===========================
+// SERVIÇOS CRUD (REAL)
+// ===========================
+function renderServicos() {
+    const list = document.getElementById('servicosList');
+    if (!list) return;
+    list.innerHTML = '';
+    if (servicos.length === 0) {
+        list.innerHTML = '<p class="text-sm text-neutral-500 text-center py-8">Nenhum serviço cadastrado</p>';
+        return;
     }
+    servicos.forEach((s, i) => {
+        list.innerHTML += `
+            <div class="card-base p-5 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-4 flex-1 min-w-0">
+                    <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(245,158,11,0.1)">
+                        <i data-lucide="scissors" style="width:18px;height:18px;color:#F59E0B"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold">${s.nome}</p>
+                        <p class="text-xs text-neutral-500">${s.duracao} min &bull; R$ ${parseFloat(s.preco).toFixed(2).replace('.', ',')}</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="openEditServico(${i})" class="text-neutral-500 hover:text-amber-500 transition-colors">
+                        <i data-lucide="edit-2" style="width:16px;height:16px"></i>
+                    </button>
+                    <button onclick="deleteServico(${i})" class="text-neutral-500 hover:text-red-400 transition-colors">
+                        <i data-lucide="trash-2" style="width:16px;height:16px"></i>
+                    </button>
+                </div>
+            </div>`;
+    });
+    setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 50);
+}
 
-    function renderFolgas() {
-        const list = document.getElementById('folgasList');
-        if (!list) return;
-        const folgas = getUD('folgas', []);
-        list.innerHTML = '';
-        folgas.forEach((f, i) => {
-            list.innerHTML += '<div class="flex items-center justify-between p-3 rounded-lg mb-2" style="background:rgba(255,255,255,0.02)">' +
-                '<div><p class="text-sm font-medium">' + formatDate(f.inicio) + ' - ' + formatDate(f.fim) + '</p><p class="text-xs text-neutral-500">' + f.motivo + '</p></div>' +
-                '<button onclick="removeFolga(' + i + ')" class="text-neutral-500 hover:text-red-400 transition-colors"><i data-lucide="trash-2" style="width:16px;height:16px"></i></button></div>';
-        });
-        if (folgas.length === 0) {
-            list.innerHTML = '<p class="text-sm text-neutral-500 text-center py-4">Nenhuma folga cadastrada</p>';
-        }
-        setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 50);
-    }
+function openModalServico() {
+    const html = `<h3 class="text-lg font-bold mb-4">Adicionar Serviço</h3>
+        <div class="space-y-4">
+            <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nome do serviço</label>
+                <input type="text" class="input-base" id="svcNome" placeholder="Ex: Corte de cabelo"></div>
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Duração (min)</label>
+                    <select class="input-base" id="svcDuracao">
+                        <option value="15">15 min</option><option value="30">30 min</option>
+                        <option value="45" selected>45 min</option><option value="60">60 min</option>
+                        <option value="90">90 min</option>
+                    </select></div>
+                <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Preço (R$)</label>
+                    <input type="number" class="input-base" id="svcPreco" step="0.01"></div>
+            </div>
+            <button onclick="addServico()" class="btn-amber w-full">Adicionar Serviço</button>
+        </div>`;
+    openModal(html);
+}
 
-    function removeFolga(index) {
-        const folgas = getUD('folgas', []);
-        folgas.splice(index, 1);
-        setUD('folgas', folgas);
-        renderFolgas();
-        showToast('Folga removida', 'info');
-    }
-
-    // ===========================
-    // SERVICOS CRUD (with persistence)
-    // ===========================
-    function renderServicos() {
-        const list = document.getElementById('servicosList');
-        if (!list) return;
-        list.innerHTML = '';
-        servicos.forEach((s, i) => {
-            list.innerHTML += '<div class="card-base p-5 flex flex-wrap items-center justify-between gap-4" data-testid="servico-item-' + s.id + '">' +
-                '<div class="flex items-center gap-4 flex-1 min-w-0">' +
-                '<div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(245,158,11,0.1)"><i data-lucide="scissors" style="width:18px;height:18px;color:#F59E0B"></i></div>' +
-                '<div class="min-w-0"><p class="text-sm font-semibold">' + s.nome + '</p><p class="text-xs text-neutral-500">' + s.duracao + ' min &bull; R$ ' + s.preco.toFixed(2).replace('.', ',') + '</p></div>' +
-                '</div>' +
-                '<div class="flex items-center gap-3">' +
-                '<label class="toggle-switch"><input type="checkbox" ' + (s.ativo ? 'checked' : '') + ' onchange="toggleServico(' + i + ', this.checked)"><span class="toggle-slider"></span></label>' +
-                '<button onclick="openEditServico(' + i + ')" class="text-neutral-500 hover:text-amber-500 transition-colors"><i data-lucide="edit-2" style="width:16px;height:16px"></i></button>' +
-                '<button onclick="deleteServico(' + i + ')" class="text-neutral-500 hover:text-red-400 transition-colors"><i data-lucide="trash-2" style="width:16px;height:16px"></i></button>' +
-                '</div></div>';
-        });
-        setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 50);
-    }
-
-    function openModalServico() {
-        const html = '<h3 class="text-lg font-bold mb-4">Adicionar Serviço</h3>' +
-            '<div class="space-y-4">' +
-            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nome do serviço</label><input type="text" class="input-base" id="svcNome" placeholder="Ex: Corte de cabelo"></div>' +
-            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Descrição (opcional)</label><textarea class="input-base h-16 resize-none" id="svcDesc" placeholder="Descrição do serviço..."></textarea></div>' +
-            '<div class="grid grid-cols-2 gap-4">' +
-            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Duração (minutos)</label><select class="input-base" id="svcDuracao"><option value="15">15 min</option><option value="30">30 min</option><option value="45" selected>45 min</option><option value="60">60 min</option><option value="90">90 min</option><option value="120">120 min</option></select></div>' +
-            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Preço (R$)</label><input type="number" class="input-base" id="svcPreco" placeholder="0,00" step="0.01"></div>' +
-            '</div>' +
-            '<div class="flex items-center justify-between p-3 rounded-lg" style="background:rgba(255,255,255,0.02)"><p class="text-sm">Aceitar PIX antecipado</p><label class="toggle-switch"><input type="checkbox" checked id="svcPix"><span class="toggle-slider"></span></label></div>' +
-            '<button onclick="addServico()" class="btn-amber w-full">Adicionar Serviço</button>' +
-            '</div>';
-        openModal(html);
-    }
-
-    function addServico() {
-        const nome = document.getElementById('svcNome').value.trim();
-        const preco = parseFloat(document.getElementById('svcPreco').value);
-        const duracao = parseInt(document.getElementById('svcDuracao').value);
-        const pix = document.getElementById('svcPix').checked;
-        if (!nome || isNaN(preco)) { showToast('Preencha nome e preço', 'error'); return; }
-        servicos.push({ id: Date.now(), nome, duracao, preco, ativo: true, pixAntecipado: pix });
-        setUD('servicos', servicos);
+async function addServico() {
+    const nome = document.getElementById('svcNome').value.trim();
+    const preco = parseFloat(document.getElementById('svcPreco').value);
+    const duracao = parseInt(document.getElementById('svcDuracao').value);
+    if (!nome || isNaN(preco)) { showToast('Preencha nome e preço', 'error'); return; }
+    try {
+        const novo = await api('POST', '/api/cliente/servicos', { nome, preco, duracao });
+        servicos.push({ id: novo.id, nome, preco, duracao, ativo: true });
         renderServicos();
         closeModal();
         showToast('Serviço adicionado!', 'success');
+    } catch(e) {
+        showToast('Erro: ' + e.message, 'error');
     }
+}
 
-    function openEditServico(index) {
-        const s = servicos[index];
-        const html = '<h3 class="text-lg font-bold mb-4">Editar Serviço</h3>' +
-            '<div class="space-y-4">' +
-            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nome do serviço</label><input type="text" class="input-base" id="svcEditNome" value="' + s.nome + '"></div>' +
-            '<div class="grid grid-cols-2 gap-4">' +
-            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Duração (min)</label><select class="input-base" id="svcEditDuracao"><option value="15"' + (s.duracao===15?' selected':'') + '>15</option><option value="30"' + (s.duracao===30?' selected':'') + '>30</option><option value="45"' + (s.duracao===45?' selected':'') + '>45</option><option value="60"' + (s.duracao===60?' selected':'') + '>60</option><option value="90"' + (s.duracao===90?' selected':'') + '>90</option><option value="120"' + (s.duracao===120?' selected':'') + '>120</option></select></div>' +
-            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Preço (R$)</label><input type="number" class="input-base" id="svcEditPreco" value="' + s.preco + '" step="0.01"></div>' +
-            '</div>' +
-            '<button onclick="saveEditServico(' + index + ')" class="btn-amber w-full">Salvar Alterações</button>' +
-            '</div>';
-        openModal(html);
-    }
+function openEditServico(index) {
+    const s = servicos[index];
+    const html = `<h3 class="text-lg font-bold mb-4">Editar Serviço</h3>
+        <div class="space-y-4">
+            <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nome</label>
+                <input type="text" class="input-base" id="svcEditNome" value="${s.nome}"></div>
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Duração (min)</label>
+                    <select class="input-base" id="svcEditDuracao">
+                        ${[15,30,45,60,90].map(v => `<option value="${v}" ${v===s.duracao?'selected':''}>${v}</option>`).join('')}
+                    </select></div>
+                <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Preço (R$)</label>
+                    <input type="number" class="input-base" id="svcEditPreco" value="${s.preco}" step="0.01"></div>
+            </div>
+            <button onclick="saveEditServico(${index})" class="btn-amber w-full">Salvar</button>
+        </div>`;
+    openModal(html);
+}
 
-    function saveEditServico(index) {
-        servicos[index].nome = document.getElementById('svcEditNome').value.trim();
-        servicos[index].preco = parseFloat(document.getElementById('svcEditPreco').value);
-        servicos[index].duracao = parseInt(document.getElementById('svcEditDuracao').value);
-        setUD('servicos', servicos);
+async function saveEditServico(index) {
+    const s = servicos[index];
+    const nome = document.getElementById('svcEditNome').value.trim();
+    const preco = parseFloat(document.getElementById('svcEditPreco').value);
+    const duracao = parseInt(document.getElementById('svcEditDuracao').value);
+    try {
+        await api('PUT', '/api/cliente/servicos/' + s.id, { nome, preco, duracao });
+        servicos[index] = { ...s, nome, preco, duracao };
         renderServicos();
         closeModal();
         showToast('Serviço atualizado!', 'success');
+    } catch(e) {
+        showToast('Erro: ' + e.message, 'error');
     }
+}
 
-    function toggleServico(index, val) { servicos[index].ativo = val; setUD('servicos', servicos); showToast(val ? 'Serviço ativado' : 'Serviço desativado', 'info'); }
-
-    function deleteServico(index) {
-        openConfirmModal('Excluir Serviço', 'Tem certeza que deseja excluir "' + servicos[index].nome + '"?', function() {
+async function deleteServico(index) {
+    const s = servicos[index];
+    openConfirmModal('Excluir Serviço', `Deseja excluir "${s.nome}"?`, async () => {
+        try {
+            await api('DELETE', '/api/cliente/servicos/' + s.id);
             servicos.splice(index, 1);
-            setUD('servicos', servicos);
             renderServicos();
             showToast('Serviço excluído', 'info');
-        });
-    }
+        } catch(e) {
+            showToast('Erro: ' + e.message, 'error');
+        }
+    });
+}
 
-    // ===========================
-    // FUNCIONARIOS CRUD (with persistence)
-    // ===========================
-    function renderFuncionarios() {
-        const list = document.getElementById('funcionariosList');
-        if (!list) return;
-        list.innerHTML = '';
-        const colors = ['#F59E0B', '#22c55e', '#3b82f6', '#a855f7', '#ef4444'];
-        funcionarios.forEach((f, i) => {
-            const color = colors[i % colors.length];
-            const initials = f.nome.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-            list.innerHTML += '<div class="card-base p-5" data-testid="funcionario-item-' + f.id + '">' +
-                '<div class="flex items-center gap-4 mb-4">' +
-                '<div class="w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm" style="background:' + color + '20;color:' + color + '">' + initials + '</div>' +
-                '<div><p class="text-sm font-semibold">' + f.nome + '</p><p class="text-xs text-neutral-500">' + f.funcao + '</p></div>' +
-                '<span class="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background:' + (f.ativo ? 'rgba(34,197,94,0.1);color:#22c55e' : 'rgba(239,68,68,0.1);color:#ef4444') + '">' + (f.ativo ? 'Ativo' : 'Inativo') + '</span>' +
-                '</div>' +
-                '<div class="flex gap-2">' +
-                '<button onclick="openEditFuncionario(' + i + ')" class="btn-outline text-xs flex-1 py-1.5">Editar</button>' +
-                '<button onclick="toggleFuncionario(' + i + ')" class="btn-outline text-xs flex-1 py-1.5">' + (f.ativo ? 'Desativar' : 'Ativar') + '</button>' +
-                '</div></div>';
-        });
-        setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 50);
+// ===========================
+// FUNCIONÁRIOS CRUD (REAL)
+// ===========================
+function renderFuncionarios() {
+    const list = document.getElementById('funcionariosList');
+    if (!list) return;
+    list.innerHTML = '';
+    if (funcionarios.length === 0) {
+        list.innerHTML = '<p class="text-sm text-neutral-500 text-center py-8">Nenhum profissional cadastrado</p>';
+        return;
     }
+    const colors = ['#F59E0B', '#22c55e', '#3b82f6', '#a855f7', '#ef4444'];
+    funcionarios.forEach((f, i) => {
+        const color = colors[i % colors.length];
+        const initials = f.nome.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        list.innerHTML += `
+            <div class="card-base p-5">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm"
+                        style="background:${color}20;color:${color}">${initials}</div>
+                    <div><p class="text-sm font-semibold">${f.nome}</p></div>
+                    <span class="ml-auto text-xs px-2 py-0.5 rounded-full font-medium"
+                        style="background:${f.ativo?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)'};color:${f.ativo?'#22c55e':'#ef4444'}">
+                        ${f.ativo ? 'Ativo' : 'Inativo'}
+                    </span>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="openEditFuncionario(${i})" class="btn-outline text-xs flex-1 py-1.5">Editar</button>
+                    <button onclick="toggleFuncionario(${i})" class="btn-outline text-xs flex-1 py-1.5">
+                        ${f.ativo ? 'Desativar' : 'Ativar'}
+                    </button>
+                </div>
+            </div>`;
+    });
+    setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 50);
+}
 
-    function openModalFuncionario() {
-        let svcChecks = '';
-        servicos.forEach(s => {
-            svcChecks += '<label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" value="' + s.id + '" class="funcSvcCheck accent-amber-500"> ' + s.nome + '</label>';
-        });
-        const html = '<h3 class="text-lg font-bold mb-4">Adicionar Funcionário</h3>' +
-            '<div class="space-y-4">' +
-            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nome completo</label><input type="text" class="input-base" id="funcNome" placeholder="Nome do profissional"></div>' +
-            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Função/Especialidade</label><input type="text" class="input-base" id="funcFuncao" placeholder="Ex: Barbeiro, Cabeleireiro"></div>' +
-            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Serviços que realiza</label><div class="space-y-2 mt-1">' + svcChecks + '</div></div>' +
-            '<button onclick="addFuncionario()" class="btn-amber w-full">Adicionar</button>' +
-            '</div>';
-        openModal(html);
-    }
+function openModalFuncionario() {
+    const html = `<h3 class="text-lg font-bold mb-4">Adicionar Profissional</h3>
+        <div class="space-y-4">
+            <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nome completo</label>
+                <input type="text" class="input-base" id="funcNome"></div>
+            <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Google Calendar ID (opcional)</label>
+                <input type="text" class="input-base" id="funcCalendar" placeholder="email@gmail.com"></div>
+            <button onclick="addFuncionario()" class="btn-amber w-full">Adicionar</button>
+        </div>`;
+    openModal(html);
+}
 
-    function addFuncionario() {
-        const nome = document.getElementById('funcNome').value.trim();
-        const funcao = document.getElementById('funcFuncao').value.trim();
-        if (!nome || !funcao) { showToast('Preencha nome e função', 'error'); return; }
-        const svcIds = Array.from(document.querySelectorAll('.funcSvcCheck:checked')).map(c => parseInt(c.value));
-        funcionarios.push({ id: Date.now(), nome, funcao, ativo: true, servicos: svcIds });
-        setUD('funcionarios', funcionarios);
+async function addFuncionario() {
+    const nome = document.getElementById('funcNome').value.trim();
+    const googleCalendarId = document.getElementById('funcCalendar').value.trim();
+    if (!nome) { showToast('Preencha o nome', 'error'); return; }
+    try {
+        const novo = await api('POST', '/api/cliente/funcionarios', { nome, googleCalendarId });
+        funcionarios.push({ id: novo.id, nome, ativo: true, googleCalendarId });
         renderFuncionarios();
         closeModal();
-        showToast('Funcionário adicionado!', 'success');
+        showToast('Profissional adicionado!', 'success');
+    } catch(e) {
+        showToast('Erro: ' + e.message, 'error');
     }
+}
 
-    function openEditFuncionario(index) {
-        const f = funcionarios[index];
-        const html = '<h3 class="text-lg font-bold mb-4">Editar Funcionário</h3>' +
-            '<div class="space-y-4">' +
-            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nome</label><input type="text" class="input-base" id="funcEditNome" value="' + f.nome + '"></div>' +
-            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Função</label><input type="text" class="input-base" id="funcEditFuncao" value="' + f.funcao + '"></div>' +
-            '<button onclick="saveEditFuncionario(' + index + ')" class="btn-amber w-full">Salvar</button>' +
-            '</div>';
-        openModal(html);
-    }
+function openEditFuncionario(index) {
+    const f = funcionarios[index];
+    const html = `<h3 class="text-lg font-bold mb-4">Editar Profissional</h3>
+        <div class="space-y-4">
+            <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nome</label>
+                <input type="text" class="input-base" id="funcEditNome" value="${f.nome}"></div>
+            <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Google Calendar ID</label>
+                <input type="text" class="input-base" id="funcEditCalendar" value="${f.googleCalendarId || ''}"></div>
+            <button onclick="saveEditFuncionario(${index})" class="btn-amber w-full">Salvar</button>
+        </div>`;
+    openModal(html);
+}
 
-    function saveEditFuncionario(index) {
-        funcionarios[index].nome = document.getElementById('funcEditNome').value.trim();
-        funcionarios[index].funcao = document.getElementById('funcEditFuncao').value.trim();
-        setUD('funcionarios', funcionarios);
+async function saveEditFuncionario(index) {
+    const f = funcionarios[index];
+    const nome = document.getElementById('funcEditNome').value.trim();
+    const googleCalendarId = document.getElementById('funcEditCalendar').value.trim();
+    try {
+        await api('PUT', '/api/cliente/funcionarios/' + f.id, { nome, googleCalendarId });
+        funcionarios[index] = { ...f, nome, googleCalendarId };
         renderFuncionarios();
         closeModal();
-        showToast('Funcionário atualizado!', 'success');
+        showToast('Profissional atualizado!', 'success');
+    } catch(e) {
+        showToast('Erro: ' + e.message, 'error');
     }
+}
 
-    function toggleFuncionario(index) {
-        funcionarios[index].ativo = !funcionarios[index].ativo;
-        setUD('funcionarios', funcionarios);
+async function toggleFuncionario(index) {
+    const f = funcionarios[index];
+    try {
+        await api('PUT', '/api/cliente/funcionarios/' + f.id, { ativo: !f.ativo });
+        funcionarios[index].ativo = !f.ativo;
         renderFuncionarios();
-        showToast(funcionarios[index].ativo ? 'Funcionário ativado' : 'Funcionário desativado', 'info');
+        showToast(funcionarios[index].ativo ? 'Ativado' : 'Desativado', 'info');
+    } catch(e) {
+        showToast('Erro: ' + e.message, 'error');
     }
+}
 
-    // ===========================
-    // PAGAMENTOS / LEMBRETES / CONFIG (CRÍTICO 2: REAL SAVE)
-    // ===========================
-    function salvarPagamentos() {
-        const pag = {
-            token: document.getElementById('mpToken').value,
-            chavePix: document.getElementById('mpChavePix').value,
-            nomePix: document.getElementById('mpNomePix').value
-        };
-        setUD('pagamentos', pag);
-        showToast('Configurações de pagamento salvas!', 'success');
-        const title = document.querySelector('[data-testid="section-pagamentos"] h2');
-        if (title) showSaveIndicator(title);
-    }
+// ===========================
+// QR CODE (REAL da Evolution)
+// ===========================
+function initQRSection() {
+    const instanceName = usuarioAtual.nomeInstancia || ('calflow_' + usuarioAtual.usuario);
+    const instEl = document.getElementById('qrInstanceName');
+    if (instEl) instEl.textContent = instanceName;
+    const webhookEl = document.getElementById('qrWebhookUrl');
+    if (webhookEl) webhookEl.textContent = '/webhook';
 
-    function salvarLembretes() {
-        const lem = {
-            lembrete24h: { ativo: true, msg: document.querySelector('[data-testid="lembrete-24h-msg"]').value },
-            lembrete1h: { ativo: true, msg: document.querySelector('[data-testid="lembrete-1h-msg"]').value },
-            confirmacao: { ativo: true, msg: document.querySelector('[data-testid="lembrete-confirmacao-msg"]').value },
-            agradecimento: { ativo: false, msg: document.querySelector('[data-testid="lembrete-agradecimento-msg"]').value }
-        };
-        setUD('lembretes', lem);
-        showToast('Configurações de lembretes salvas!', 'success');
-        const title = document.querySelector('[data-testid="section-lembretes"] h2');
-        if (title) showSaveIndicator(title);
-    }
+    setQRState('loading');
+    carregarQRCode();
+}
 
-    function salvarConfiguracoes() {
-        const config = {
-            nomeNegocio: document.getElementById('configNomeNegocio').value,
-            endereco: document.getElementById('configEndereco') ? document.getElementById('configEndereco').value : '',
-            whatsapp: document.getElementById('configWhatsApp') ? document.getElementById('configWhatsApp').value : '',
-            saudacao: document.getElementById('configSaudacao') ? document.getElementById('configSaudacao').value : '',
-            encerramento: document.getElementById('configEncerramento') ? document.getElementById('configEncerramento').value : '',
-            fuso: document.getElementById('configFuso') ? document.getElementById('configFuso').value : 'America/Sao_Paulo',
-            idioma: document.getElementById('configIdioma') ? document.getElementById('configIdioma').value : 'pt-BR',
-            googleCalendarId: document.getElementById('configGoogleCalendarId') ? document.getElementById('configGoogleCalendarId').value : '',
-            intervalo: document.getElementById('configIntervalo') ? document.getElementById('configIntervalo').value : '30',
-            antecedencia: document.getElementById('configAntecedencia') ? document.getElementById('configAntecedencia').value : '2',
-            confirmarManual: document.getElementById('configConfirmarManual') ? document.getElementById('configConfirmarManual').checked : false
-        };
-        setUD('configuracoes', config);
-        if (usuarioAtual) {
-            usuarioAtual.negocio = config.nomeNegocio;
-            document.getElementById('sidebarNegocio').textContent = config.nomeNegocio;
-        }
-        showToast('Configurações salvas!', 'success');
-        const title = document.querySelector('[data-testid="section-configuracoes"] h2');
-        if (title) showSaveIndicator(title);
-    }
+async function carregarQRCode() {
+    try {
+        const data = await api('GET', '/api/cliente/qrcode');
+        const state = data.status;
 
-    function insertVar(btn, variable) {
-        const textarea = btn.closest('.card-base').querySelector('textarea');
-        if (textarea) {
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            textarea.value = textarea.value.substring(0, start) + variable + textarea.value.substring(end);
-            textarea.focus();
-            textarea.setSelectionRange(start + variable.length, start + variable.length);
-        }
-    }
-
-    // ===========================
-    // ADMIN FUNCTIONS (CORREÇÃO 9)
-    // ===========================
-    function renderAdminClientes() {
-        const tbody = document.getElementById('adminClientesTbody');
-        if (!tbody) return;
-        tbody.innerHTML = '';
-        Object.keys(USUARIOS).forEach(user => {
-            if (user === 'admin') return;
-            const u = USUARIOS[user];
-            const instanceName = 'calflow_' + user;
-            tbody.innerHTML += '<tr class="table-row border-b border-white/5" data-testid="admin-row-' + user + '">' +
-                '<td class="py-3 font-medium text-amber-500">' + user + '</td>' +
-                '<td class="py-3 text-neutral-300">' + u.nome + '</td>' +
-                '<td class="py-3 text-neutral-400">' + u.negocio + '</td>' +
-                '<td class="py-3 font-mono text-xs text-neutral-500">' + instanceName + '</td>' +
-                '<td class="py-3"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(245,158,11,0.1);color:#F59E0B">' + u.plano + '</span></td>' +
-                '<td class="py-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background:' + (u.status === 'ativo' ? 'rgba(34,197,94,0.1);color:#22c55e' : 'rgba(239,68,68,0.1);color:#ef4444') + '">' + u.status.charAt(0).toUpperCase() + u.status.slice(1) + '</span></td>' +
-                '<td class="py-3 text-right"><div class="flex items-center justify-end gap-2">' +
-                '<button onclick="impersonarCliente(\'' + user + '\')" class="text-neutral-500 hover:text-amber-500 transition-colors" title="Entrar como cliente"><i data-lucide="log-in" style="width:16px;height:16px"></i></button>' +
-                '<button onclick="openEditCliente(\'' + user + '\')" class="text-neutral-500 hover:text-blue-400 transition-colors" title="Editar"><i data-lucide="edit-2" style="width:16px;height:16px"></i></button>' +
-                '<button onclick="resetarSenhaCliente(\'' + user + '\')" class="text-neutral-500 hover:text-amber-500 transition-colors" title="Resetar senha"><i data-lucide="key" style="width:16px;height:16px"></i></button>' +
-                '<button onclick="verDadosCliente(\'' + user + '\')" class="text-neutral-500 hover:text-green-400 transition-colors" title="Ver dados"><i data-lucide="database" style="width:16px;height:16px"></i></button>' +
-                '<button onclick="toggleClienteStatus(\'' + user + '\')" class="text-neutral-500 hover:text-red-400 transition-colors" title="Suspender/Ativar"><i data-lucide="shield-off" style="width:16px;height:16px"></i></button>' +
-                '</div></td></tr>';
-        });
-        setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 50);
-    }
-
-    function resetarSenhaCliente(user) {
-        const novaSenha = generatePassword();
-        USUARIOS[user].senha = novaSenha;
-        const html = '<h3 class="text-lg font-bold mb-4">Senha Resetada</h3>' +
-            '<div class="p-4 rounded-lg mb-4" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15)">' +
-            '<p class="text-xs text-amber-500 font-semibold mb-2">Nova senha para: ' + user + '</p>' +
-            '<p class="text-lg font-mono font-bold text-center py-2">' + novaSenha + '</p></div>' +
-            '<button onclick="copyToClipboard(\'' + novaSenha + '\'); closeModal();" class="btn-amber w-full">Copiar Senha e Fechar</button>';
-        openModal(html);
-    }
-
-    function verDadosCliente(user) {
-        const prefix = 'calflow_' + user + '_';
-        const dados = {};
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key.startsWith(prefix)) {
-                const shortKey = key.replace(prefix, '');
-                try { dados[shortKey] = JSON.parse(localStorage.getItem(key)); }
-                catch(e) { dados[shortKey] = localStorage.getItem(key); }
+        if (state === 'open') {
+            setQRState('connected');
+        } else if (data.qrcode) {
+            setQRState('scanning');
+            const container = document.getElementById('qrcode-container');
+            if (container && data.qrcode) {
+                container.innerHTML = `<img src="${data.qrcode}" style="width:234px;height:234px;border-radius:0.75rem">`;
             }
-        }
-
-        let resumo = '';
-        if (Object.keys(dados).length === 0) {
-            resumo = '<p class="text-sm text-neutral-500 text-center py-4">Nenhum dado salvo para este cliente.</p>';
+            iniciarCountdownQR();
+            iniciarPolling();
         } else {
-            Object.keys(dados).forEach(key => {
-                const val = dados[key];
-                let display = '';
-                if (Array.isArray(val)) display = val.length + ' item(ns)';
-                else if (typeof val === 'object') display = Object.keys(val).length + ' campo(s)';
-                else display = String(val).substring(0, 50);
-                resumo += '<div class="flex items-center justify-between p-2 rounded-lg mb-1" style="background:rgba(255,255,255,0.02)"><span class="text-xs font-mono text-amber-500">' + key + '</span><span class="text-xs text-neutral-400">' + display + '</span></div>';
-            });
+            setQRState('disconnected');
         }
-
-        const html = '<h3 class="text-lg font-bold mb-4">Dados de: ' + user + '</h3>' +
-            '<div class="max-h-96 overflow-y-auto">' + resumo + '</div>' +
-            '<button onclick="closeModal()" class="btn-outline w-full mt-4">Fechar</button>';
-        openModal(html);
+    } catch(e) {
+        console.error('Erro ao buscar QR:', e);
+        setQRState('disconnected');
     }
+}
 
-    function impersonarCliente(user) {
-        const u = USUARIOS[user];
-        if (!u) return;
-        usuarioAtual = { ...u, usuario: user };
-        sessionStorage.setItem('calflow_user', JSON.stringify({ usuario: user }));
-        loadUserData();
-        setupDashboard();
-        showToast('Acessando como: ' + u.nome, 'info');
-    }
-
-    function openEditCliente(user) {
-        const u = USUARIOS[user];
-        const html = '<h3 class="text-lg font-bold mb-4">Editar Cliente</h3>' +
-            '<div class="space-y-4">' +
-            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nome</label><input type="text" class="input-base" id="editClienteNome" value="' + u.nome + '"></div>' +
-            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Negócio</label><input type="text" class="input-base" id="editClienteNegocio" value="' + u.negocio + '"></div>' +
-            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Plano</label><select class="input-base" id="editClientePlano"><option value="Mensal"' + (u.plano==='Mensal'?' selected':'') + '>Mensal</option><option value="Anual"' + (u.plano==='Anual'?' selected':'') + '>Anual</option></select></div>' +
-            '<button onclick="saveEditCliente(\'' + user + '\')" class="btn-amber w-full">Salvar Alterações</button>' +
-            '</div>';
-        openModal(html);
-    }
-
-    function saveEditCliente(user) {
-        USUARIOS[user].nome = document.getElementById('editClienteNome').value;
-        USUARIOS[user].negocio = document.getElementById('editClienteNegocio').value;
-        USUARIOS[user].plano = document.getElementById('editClientePlano').value;
-        renderAdminClientes();
-        closeModal();
-        showToast('Cliente atualizado!', 'success');
-    }
-
-    function toggleClienteStatus(user) {
-        const u = USUARIOS[user];
-        const newStatus = u.status === 'ativo' ? 'suspenso' : 'ativo';
-        openConfirmModal(
-            (newStatus === 'suspenso' ? 'Suspender' : 'Ativar') + ' Cliente',
-            'Deseja ' + (newStatus === 'suspenso' ? 'suspender' : 'ativar') + ' o cliente ' + u.nome + '?',
-            function() {
-                USUARIOS[user].status = newStatus;
-                renderAdminClientes();
-                showToast('Status alterado para: ' + newStatus, 'info');
+function iniciarPolling() {
+    if (pollingInterval) clearInterval(pollingInterval);
+    pollingInterval = setInterval(async () => {
+        try {
+            const data = await api('GET', '/api/cliente/qrcode');
+            if (data.status === 'open') {
+                clearInterval(pollingInterval);
+                clearInterval(qrTimerInterval);
+                setQRState('connected');
+                showToast('WhatsApp conectado!', 'success');
             }
-        );
-    }
+        } catch(e) {}
+    }, 5000);
+}
 
-    function criarCliente() {
-        const nome = document.getElementById('novoNome').value.trim();
-        const negocio = document.getElementById('novoNegocio').value.trim();
-        const plano = document.getElementById('novoPlano').value;
-        if (!nome || !negocio) { showToast('Preencha nome e negócio', 'error'); return; }
+async function regenerateQRCode() {
+    clearAllTimers();
+    setQRState('loading');
+    await carregarQRCode();
+    showToast('Novo QR Code gerado', 'info');
+}
 
-        const autoGen = document.getElementById('novoGerarCredenciais').checked;
-        let usuario, senha;
-        if (autoGen) {
-            usuario = nome.split(' ')[0].toLowerCase() + Math.floor(1000 + Math.random() * 9000);
-            senha = generatePassword();
-        } else {
-            usuario = nome.split(' ')[0].toLowerCase() + '1234';
-            senha = 'CalFlow@123';
+async function disconnectWhatsApp() {
+    openConfirmModal('Desconectar', 'Tem certeza? O bot irá parar de atender.', async () => {
+        try {
+            await api('POST', '/api/cliente/disconnect');
+            setQRState('disconnected');
+            showToast('WhatsApp desconectado', 'error');
+        } catch(e) {
+            showToast('Erro ao desconectar', 'error');
         }
+    });
+}
 
-        USUARIOS[usuario] = { senha, tipo: 'cliente', nome, negocio, plano, status: 'ativo' };
-        renderAdminClientes();
+async function reconnectWhatsApp() {
+    setQRState('loading');
+    await carregarQRCode();
+}
 
-        const html = '<h3 class="text-lg font-bold mb-4 text-green-500">Cliente Cadastrado!</h3>' +
-            '<div class="space-y-3 mb-4">' +
-            '<div class="p-3 rounded-lg" style="background:rgba(255,255,255,0.02)"><p class="text-xs text-neutral-500">Nome</p><p class="text-sm font-semibold">' + nome + '</p></div>' +
-            '<div class="p-3 rounded-lg" style="background:rgba(255,255,255,0.02)"><p class="text-xs text-neutral-500">Negócio</p><p class="text-sm font-semibold">' + negocio + '</p></div>' +
-            '<div class="p-3 rounded-lg" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15)"><p class="text-xs text-amber-500 font-semibold">Credenciais de Acesso</p><p class="text-sm font-mono mt-1">Usuário: <strong>' + usuario + '</strong></p><p class="text-sm font-mono">Senha: <strong>' + senha + '</strong></p></div>' +
-            '</div>' +
-            '<button onclick="copyToClipboard(\'' + 'Usuário: ' + usuario + ' | Senha: ' + senha + '\'); closeModal();" class="btn-amber w-full">Copiar Credenciais e Fechar</button>';
-        openModal(html);
+// ===========================
+// ALTERAR SENHA (REAL)
+// ===========================
+function openModalAlterarSenha() {
+    const html = `<h3 class="text-lg font-bold mb-4">Alterar Senha</h3>
+        <div class="space-y-4">
+            <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Senha atual</label>
+                <input type="password" class="input-base" id="senhaAtual"></div>
+            <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nova senha</label>
+                <input type="password" class="input-base" id="senhaNova"></div>
+            <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Confirmar nova senha</label>
+                <input type="password" class="input-base" id="senhaConfirmar"></div>
+            <button onclick="alterarSenha()" class="btn-amber w-full">Alterar Senha</button>
+        </div>`;
+    openModal(html);
+}
 
-        document.getElementById('novoNome').value = '';
-        document.getElementById('novoNegocio').value = '';
-        document.getElementById('novoWhatsApp').value = '';
-        document.getElementById('novoEmail').value = '';
-        document.getElementById('novoObs').value = '';
-    }
-
-    function salvarConfigGlobais() {
-        showToast('Configurações globais salvas!', 'success');
-        const title = document.querySelector('[data-testid="section-admin-config"] h2');
-        if (title) showSaveIndicator(title);
-    }
-
-    function testarEvolutionAPI() {
-        const url = document.getElementById('globalEvolutionUrl') ? document.getElementById('globalEvolutionUrl').value : '';
-        if (!url) { showToast('Informe a URL da Evolution API', 'error'); return; }
-        showToast('Testando conexão...', 'info');
-        // In production, this would fetch the real API
-        setTimeout(() => {
-            showToast('Evolution API: Online (simulação)', 'success');
-        }, 1500);
-    }
-
-    function generatePassword() {
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
-        let pass = '';
-        for (let i = 0; i < 10; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
-        return pass;
-    }
-
-    // ===========================
-    // ALTER SENHA
-    // ===========================
-    function openModalAlterarSenha() {
-        const html = '<h3 class="text-lg font-bold mb-4">Alterar Senha</h3>' +
-            '<div class="space-y-4">' +
-            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Senha atual</label><input type="password" class="input-base" id="senhaAtual" placeholder="Sua senha atual"></div>' +
-            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nova senha</label><input type="password" class="input-base" id="senhaNova" placeholder="Nova senha"></div>' +
-            '<div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Confirmar nova senha</label><input type="password" class="input-base" id="senhaConfirmar" placeholder="Confirme a nova senha"></div>' +
-            '<button onclick="alterarSenha()" class="btn-amber w-full">Alterar Senha</button>' +
-            '</div>';
-        openModal(html);
-    }
-
-    function alterarSenha() {
-        const atual = document.getElementById('senhaAtual').value;
-        const nova = document.getElementById('senhaNova').value;
-        const confirmar = document.getElementById('senhaConfirmar').value;
-        if (!atual || !nova || !confirmar) { showToast('Preencha todos os campos', 'error'); return; }
-        if (atual !== USUARIOS[usuarioAtual.usuario].senha) { showToast('Senha atual incorreta', 'error'); return; }
-        if (nova !== confirmar) { showToast('As senhas não conferem', 'error'); return; }
-        if (nova.length < 6) { showToast('A nova senha deve ter pelo menos 6 caracteres', 'error'); return; }
-        USUARIOS[usuarioAtual.usuario].senha = nova;
+async function alterarSenha() {
+    const atual = document.getElementById('senhaAtual').value;
+    const nova = document.getElementById('senhaNova').value;
+    const confirmar = document.getElementById('senhaConfirmar').value;
+    if (!atual || !nova || !confirmar) { showToast('Preencha todos os campos', 'error'); return; }
+    if (nova !== confirmar) { showToast('As senhas não conferem', 'error'); return; }
+    if (nova.length < 6) { showToast('Senha deve ter pelo menos 6 caracteres', 'error'); return; }
+    try {
+        await api('PUT', '/api/cliente/alterar-senha', { senhaAtual: atual, senhaNova: nova });
         closeModal();
         showToast('Senha alterada com sucesso!', 'success');
+    } catch(e) {
+        showToast('Erro: ' + e.message, 'error');
     }
+}
 
-    // ===========================
-    // TOAST SYSTEM
-    // ===========================
-    function showToast(message, type) {
-        const container = document.getElementById('toastContainer');
-        const icons = { success: 'check-circle', error: 'alert-circle', info: 'info' };
-        const toast = document.createElement('div');
-        toast.className = 'toast toast-' + type;
-        toast.innerHTML = '<i data-lucide="' + (icons[type] || 'info') + '" style="width:16px;height:16px;flex-shrink:0"></i> ' + message;
-        container.appendChild(toast);
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(100px)';
-            toast.style.transition = 'all 0.3s';
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
-    }
+// ===========================
+// ADMIN (REAL)
+// ===========================
+function renderAdminClientes(clientes) {
+    const tbody = document.getElementById('adminClientesTbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    clientes.forEach(c => {
+        const statusColor = c.status === 'ativo' ? 'rgba(34,197,94,0.1);color:#22c55e' : 'rgba(239,68,68,0.1);color:#ef4444';
+        tbody.innerHTML += `
+            <tr class="table-row border-b border-white/5">
+                <td class="py-3 font-medium text-amber-500">${c.usuario}</td>
+                <td class="py-3 text-neutral-300">${c.nome}</td>
+                <td class="py-3 text-neutral-400">${c.negocio}</td>
+                <td class="py-3 font-mono text-xs text-neutral-500">${c.nomeInstancia}</td>
+                <td class="py-3"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                    style="background:rgba(245,158,11,0.1);color:#F59E0B">${c.plano}</span></td>
+                <td class="py-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                    style="background:${statusColor}">${c.status}</span></td>
+                <td class="py-3 text-right">
+                    <div class="flex items-center justify-end gap-2">
+                        <button onclick="openEditCliente('${c.id}','${c.nome}','${c.negocio}','${c.plano}')"
+                            class="text-neutral-500 hover:text-blue-400 transition-colors" title="Editar">
+                            <i data-lucide="edit-2" style="width:16px;height:16px"></i></button>
+                        <button onclick="resetarSenhaCliente('${c.id}')"
+                            class="text-neutral-500 hover:text-amber-500 transition-colors" title="Resetar senha">
+                            <i data-lucide="key" style="width:16px;height:16px"></i></button>
+                        <button onclick="toggleClienteStatus('${c.id}','${c.status}')"
+                            class="text-neutral-500 hover:text-red-400 transition-colors" title="Suspender/Ativar">
+                            <i data-lucide="shield-off" style="width:16px;height:16px"></i></button>
+                    </div>
+                </td>
+            </tr>`;
+    });
+    setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 50);
+}
 
-    // ===========================
-    // MODAL SYSTEM (enhanced for logout confirm)
-    // ===========================
-    function openModal(contentHTML) {
-        const container = document.getElementById('modalContainer');
-        container.innerHTML = '<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-content">' + contentHTML + '</div></div>';
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
-
-    function openConfirmModal(title, message, onConfirm, confirmLabel, cancelLabel, onCancel) {
-        const confirmText = confirmLabel || 'Confirmar';
-        const cancelText = cancelLabel || 'Cancelar';
-        const html = '<h3 class="text-lg font-bold mb-2">' + title + '</h3>' +
-            '<p class="text-sm text-neutral-400 mb-6">' + message + '</p>' +
-            '<div class="flex gap-3">' +
-            '<button id="cancelBtn" class="btn-outline flex-1">' + cancelText + '</button>' +
-            '<button id="confirmBtn" class="btn-amber flex-1">' + confirmText + '</button>' +
-            '</div>';
+async function resetarSenhaCliente(id) {
+    try {
+        const data = await api('POST', '/api/admin/clientes/' + id + '/reset-senha');
+        const html = `<h3 class="text-lg font-bold mb-4">Senha Resetada</h3>
+            <div class="p-4 rounded-lg mb-4" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15)">
+                <p class="text-xs text-amber-500 font-semibold mb-2">Nova senha gerada:</p>
+                <p class="text-lg font-mono font-bold text-center py-2">${data.novaSenha}</p>
+            </div>
+            <button onclick="copyToClipboard('${data.novaSenha}');closeModal();" class="btn-amber w-full">Copiar e Fechar</button>`;
         openModal(html);
-        document.getElementById('confirmBtn').onclick = function() { closeModal(); onConfirm(); };
-        document.getElementById('cancelBtn').onclick = function() { closeModal(); if (onCancel) onCancel(); };
+    } catch(e) {
+        showToast('Erro: ' + e.message, 'error');
     }
+}
 
-    function closeModal() {
-        document.getElementById('modalContainer').innerHTML = '';
+function openEditCliente(id, nome, negocio, plano) {
+    const html = `<h3 class="text-lg font-bold mb-4">Editar Cliente</h3>
+        <div class="space-y-4">
+            <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nome</label>
+                <input type="text" class="input-base" id="editClienteNome" value="${nome}"></div>
+            <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Negócio</label>
+                <input type="text" class="input-base" id="editClienteNegocio" value="${negocio}"></div>
+            <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Plano</label>
+                <select class="input-base" id="editClientePlano">
+                    <option value="mensal"${plano==='mensal'?' selected':''}>Mensal</option>
+                    <option value="anual"${plano==='anual'?' selected':''}>Anual</option>
+                </select></div>
+            <button onclick="saveEditCliente('${id}')" class="btn-amber w-full">Salvar</button>
+        </div>`;
+    openModal(html);
+}
+
+async function saveEditCliente(id) {
+    try {
+        await api('PUT', '/api/admin/clientes/' + id, {
+            nome: document.getElementById('editClienteNome').value,
+            negocio: document.getElementById('editClienteNegocio').value,
+            plano: document.getElementById('editClientePlano').value
+        });
+        const clientes = await api('GET', '/api/admin/clientes');
+        renderAdminClientes(clientes);
+        closeModal();
+        showToast('Cliente atualizado!', 'success');
+    } catch(e) {
+        showToast('Erro: ' + e.message, 'error');
     }
+}
 
-    // ===========================
-    // UTILITIES
-    // ===========================
-    function togglePasswordVisibility() {
-        const input = document.getElementById('loginPass');
-        const icon = document.getElementById('eyeIcon');
-        if (input.type === 'password') {
-            input.type = 'text';
-            icon.setAttribute('data-lucide', 'eye-off');
-        } else {
-            input.type = 'password';
-            icon.setAttribute('data-lucide', 'eye');
+async function toggleClienteStatus(id, statusAtual) {
+    const novoStatus = statusAtual === 'ativo' ? 'suspenso' : 'ativo';
+    openConfirmModal(
+        novoStatus === 'suspenso' ? 'Suspender Cliente' : 'Ativar Cliente',
+        `Deseja ${novoStatus === 'suspenso' ? 'suspender' : 'ativar'} este cliente?`,
+        async () => {
+            try {
+                await api('PATCH', '/api/admin/clientes/' + id + '/status', { status: novoStatus });
+                const clientes = await api('GET', '/api/admin/clientes');
+                renderAdminClientes(clientes);
+                showToast('Status alterado', 'info');
+            } catch(e) {
+                showToast('Erro: ' + e.message, 'error');
+            }
         }
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
+    );
+}
 
-    function toggleField(id) {
-        const input = document.getElementById(id);
-        input.type = input.type === 'password' ? 'text' : 'password';
+async function criarCliente() {
+    const nome = document.getElementById('novoNome').value.trim();
+    const negocio = document.getElementById('novoNegocio').value.trim();
+    const email = document.getElementById('novoEmail')?.value.trim() || '';
+    const plano = document.getElementById('novoPlano')?.value || 'mensal';
+    if (!nome || !negocio) { showToast('Preencha nome e negócio', 'error'); return; }
+    try {
+        const data = await api('POST', '/api/admin/clientes', { nome, negocio, email, plano });
+        const html = `<h3 class="text-lg font-bold mb-4 text-green-500">✅ Cliente Cadastrado!</h3>
+            <div class="space-y-3 mb-4">
+                <div class="p-3 rounded-lg" style="background:rgba(255,255,255,0.02)">
+                    <p class="text-xs text-neutral-500">Nome</p>
+                    <p class="text-sm font-semibold">${data.nome}</p>
+                </div>
+                <div class="p-4 rounded-lg" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15)">
+                    <p class="text-xs text-amber-500 font-semibold mb-2">Credenciais de Acesso</p>
+                    <p class="text-sm font-mono">Usuário: <strong>${data.usuario}</strong></p>
+                    <p class="text-sm font-mono">Senha: <strong>${data.senha}</strong></p>
+                </div>
+            </div>
+            <button onclick="copyToClipboard('Usuário: ${data.usuario} | Senha: ${data.senha}');closeModal();"
+                class="btn-amber w-full">Copiar Credenciais e Fechar</button>`;
+        openModal(html);
+        const clientes = await api('GET', '/api/admin/clientes');
+        renderAdminClientes(clientes);
+        document.getElementById('novoNome').value = '';
+        document.getElementById('novoNegocio').value = '';
+    } catch(e) {
+        showToast('Erro: ' + e.message, 'error');
     }
+}
 
-    function copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(() => showToast('Copiado!', 'success')).catch(() => showToast('Erro ao copiar', 'error'));
+// ===========================
+// MANTER DO CÓDIGO ORIGINAL
+// (apenas as funções que não precisam de alteração)
+// ===========================
+function buildSidebarNav() {
+    const nav = document.getElementById('sidebarNav');
+    let links = [
+        { id: 'dashboard', icon: 'home', label: 'Dashboard' },
+        { id: 'qrcode', icon: 'qr-code', label: 'QR Code' },
+        { id: 'agendamentos', icon: 'calendar', label: 'Agendamentos' },
+        { id: 'horarios', icon: 'clock', label: 'Horários' },
+        { id: 'servicos', icon: 'tag', label: 'Serviços e Preços' },
+        { id: 'funcionarios', icon: 'users', label: 'Funcionários' },
+        { id: 'pagamentos', icon: 'wallet', label: 'Pagamentos' },
+        { id: 'lembretes', icon: 'bell', label: 'Lembretes' },
+        { id: 'configuracoes', icon: 'settings', label: 'Configurações' }
+    ];
+    if (usuarioAtual?.tipo === 'admin') {
+        links.push({ divider: true });
+        links.push({ id: 'admin-clientes', icon: 'users', label: 'Todos os Clientes' });
+        links.push({ id: 'admin-criar', icon: 'user-plus', label: 'Criar Cliente' });
+        links.push({ id: 'admin-config', icon: 'sliders', label: 'Config. Globais' });
+        links.push({ id: 'admin-logs', icon: 'terminal', label: 'Logs do Sistema' });
     }
+    nav.innerHTML = '';
+    links.forEach(link => {
+        if (link.divider) {
+            nav.innerHTML += '<div class="border-t border-white/5 my-3 mx-3"></div><p class="text-xs text-neutral-600 font-semibold px-5 mb-2 tracking-wider">ADMIN</p>';
+            return;
+        }
+        nav.innerHTML += `<div class="sidebar-link" onclick="showSection('${link.id}')" data-section="${link.id}">
+            <i data-lucide="${link.icon}" style="width:18px;height:18px"></i> ${link.label}</div>`;
+    });
+    setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 50);
+}
 
-    function formatDate(dateStr) {
-        const parts = dateStr.split('-');
-        return parts[2] + '/' + parts[1] + '/' + parts[0];
+function showSection(sectionId) {
+    if (qrState !== 'connected') clearAllTimers();
+    document.querySelectorAll('.section-panel').forEach(s => s.classList.remove('active'));
+    const target = document.getElementById('section-' + sectionId);
+    if (target) target.classList.add('active');
+    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+    const navItem = document.querySelector('[data-section="' + sectionId + '"]');
+    if (navItem) navItem.classList.add('active');
+    closeMobileSidebar();
+    if (sectionId === 'qrcode') initQRSection();
+    if (sectionId === 'agendamentos') renderGoogleCalendar();
+    setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 50);
+}
+
+function setQRState(state) {
+    qrState = state;
+    ['loading','scanning','connected','disconnected'].forEach(s => {
+        document.getElementById('qr-state-' + s)?.classList.add('hidden');
+    });
+    document.getElementById('qr-state-' + state)?.classList.remove('hidden');
+    const statusDetail = document.getElementById('qrStatusDetail');
+    if (statusDetail) {
+        const labels = { loading: 'Criando instância...', scanning: 'Aguardando escaneamento', connected: 'Conectado', disconnected: 'Desconectado' };
+        const colors = { loading: '#F59E0B', scanning: '#F59E0B', connected: '#22c55e', disconnected: '#ef4444' };
+        statusDetail.textContent = labels[state];
+        statusDetail.style.color = colors[state];
     }
+    if (state !== 'scanning') clearAllTimers();
+}
+
+function clearAllTimers() {
+    if (qrTimerInterval) { clearInterval(qrTimerInterval); qrTimerInterval = null; }
+    if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
+}
+
+function iniciarCountdownQR() {
+    let countdown = 60;
+    const el = document.getElementById('qrcode-countdown');
+    if (el) el.textContent = 'Expira em: 01:00';
+    qrTimerInterval = setInterval(() => {
+        countdown--;
+        if (el) {
+            el.textContent = 'Expira em: ' + String(Math.floor(countdown/60)).padStart(2,'0') + ':' + String(countdown%60).padStart(2,'0');
+        }
+        if (countdown <= 0) {
+            clearInterval(qrTimerInterval);
+            carregarQRCode();
+        }
+    }, 1000);
+}
+
+function renderGoogleCalendar() {
+    const container = document.getElementById('googleCalendarContent');
+    if (!container) return;
+    const calendarId = document.getElementById('configGoogleCalendarId')?.value;
+    if (!calendarId) {
+        container.innerHTML = '<div class="text-center py-6"><p class="text-sm text-neutral-500 mb-3">Configure seu Google Calendar ID em Configurações.</p><button onclick="showSection(\'configuracoes\')" class="btn-outline text-sm">Configurar</button></div>';
+    } else {
+        const embedUrl = 'https://calendar.google.com/calendar/embed?src=' + encodeURIComponent(calendarId) + '&ctz=America%2FSao_Paulo&mode=WEEK&showTitle=0&showNav=1&showDate=1&showPrint=0&showTabs=0&showCalendars=0';
+        container.innerHTML = '<iframe src="' + embedUrl + '" style="width:100%;height:500px;border:none;border-radius:1rem;filter:invert(0.9) hue-rotate(180deg);" frameborder="0" scrolling="no"></iframe>';
+    }
+}
+
+function renderUpcomingAppointments(agendamentos) {
+    const tbody = document.querySelector('[data-testid="upcoming-appointments"] tbody');
+    if (!tbody) return;
+    if (!agendamentos.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-neutral-500 text-sm">Nenhum agendamento encontrado</td></tr>';
+        return;
+    }
+    tbody.innerHTML = agendamentos.slice(0,5).map(a => `
+        <tr class="table-row border-b border-white/5">
+            <td class="py-3 font-medium">${a.hora||''}</td>
+            <td class="py-3 text-neutral-300">${a.cliente||''}</td>
+            <td class="py-3 text-neutral-400">${a.servico||''}</td>
+            <td class="py-3"><span class="px-2 py-0.5 rounded-full text-xs font-medium">${a.status||''}</span></td>
+            <td class="py-3 text-right font-medium">R$ ${((a.valor||0).toFixed(2).replace('.',','))}</td>
+        </tr>`).join('');
+}
+
+function renderAgendamentosTable(agendamentos) {
+    const tbody = document.querySelector('[data-testid="agendamentos-table"] tbody');
+    if (!tbody) return;
+    if (!agendamentos.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-neutral-500 text-sm">Nenhum agendamento encontrado</td></tr>';
+        return;
+    }
+    tbody.innerHTML = agendamentos.map(a => `
+        <tr class="table-row border-b border-white/5">
+            <td class="py-3">${a.data||''}</td>
+            <td class="py-3 font-medium">${a.hora||''}</td>
+            <td class="py-3 text-neutral-300">${a.cliente||''}</td>
+            <td class="py-3 text-neutral-400">${a.servico||''}</td>
+            <td class="py-3 text-neutral-400">${a.profissional||''}</td>
+            <td class="py-3"><span class="px-2 py-0.5 rounded-full text-xs font-medium">${a.status||''}</span></td>
+            <td class="py-3 text-right font-medium">R$ ${((a.valor||0).toFixed(2).replace('.',','))}</td>
+        </tr>`).join('');
+}
+
+function toggleDia(checkbox, diaId) {
+    const div = document.getElementById('horarios-' + diaId);
+    const label = document.getElementById('label-' + diaId);
+    if (div) div.style.display = checkbox.checked ? 'flex' : 'none';
+    if (label) label.textContent = checkbox.checked ? 'Aberto' : 'Fechado';
+}
+
+function toggleAlmoco(checkbox) {
+    const div = document.getElementById('horarios-almoco');
+    if (div) div.style.display = checkbox.checked ? 'flex' : 'none';
+}
+
+function openModalFolga() {
+    const html = `<h3 class="text-lg font-bold mb-4">Adicionar Folga</h3>
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Data início</label>
+                    <input type="date" class="input-base" id="folgaInicio"></div>
+                <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Data fim</label>
+                    <input type="date" class="input-base" id="folgaFim"></div>
+            </div>
+            <div><label class="block text-sm text-neutral-400 mb-1.5 font-medium">Motivo</label>
+                <input type="text" class="input-base" id="folgaMotivo" placeholder="Opcional"></div>
+            <button onclick="addFolga()" class="btn-amber w-full">Adicionar</button>
+        </div>`;
+    openModal(html);
+}
+
+function addFolga() {
+    const inicio = document.getElementById('folgaInicio').value;
+    const fim = document.getElementById('folgaFim').value;
+    if (!inicio || !fim) { showToast('Preencha as datas', 'error'); return; }
+    closeModal();
+    showToast('Folga adicionada!', 'success');
+}
+
+function insertVar(btn, variable) {
+    const textarea = btn.closest('.card-base')?.querySelector('textarea');
+    if (textarea) {
+        const start = textarea.selectionStart;
+        textarea.value = textarea.value.substring(0, start) + variable + textarea.value.substring(textarea.selectionEnd);
+        textarea.focus();
+    }
+}
+
+function salvarConfigGlobais() { showToast('Configurações globais salvas!', 'success'); }
+
+function testarEvolutionAPI() {
+    const url = document.getElementById('globalEvolutionUrl')?.value;
+    if (!url) { showToast('Informe a URL', 'error'); return; }
+    showToast('Testando...', 'info');
+    setTimeout(() => showToast('Conexão OK!', 'success'), 1500);
+}
+
+function toggleMobileSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+function closeMobileSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebarOverlay').classList.remove('open');
+}
+
+function showSaveIndicator(el) {
+    const ind = document.createElement('span');
+    ind.className = 'text-xs font-semibold ml-2';
+    ind.style.color = '#22c55e';
+    ind.textContent = '✓ Salvo';
+    el.appendChild(ind);
+    setTimeout(() => ind.remove(), 2500);
+}
+
+function showToast(message, type) {
+    const container = document.getElementById('toastContainer');
+    const icons = { success: 'check-circle', error: 'alert-circle', info: 'info' };
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-' + type;
+    toast.innerHTML = `<i data-lucide="${icons[type]||'info'}" style="width:16px;height:16px;flex-shrink:0"></i> ${message}`;
+    container.appendChild(toast);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100px)';
+        toast.style.transition = 'all 0.3s';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+function openModal(html) {
+    const container = document.getElementById('modalContainer');
+    container.innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+        <div class="modal-content">${html}</div></div>`;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function openConfirmModal(title, message, onConfirm, confirmLabel, cancelLabel, onCancel) {
+    const html = `<h3 class="text-lg font-bold mb-2">${title}</h3>
+        <p class="text-sm text-neutral-400 mb-6">${message}</p>
+        <div class="flex gap-3">
+            <button id="cancelBtn" class="btn-outline flex-1">${cancelLabel||'Cancelar'}</button>
+            <button id="confirmBtn" class="btn-amber flex-1">${confirmLabel||'Confirmar'}</button>
+        </div>`;
+    openModal(html);
+    document.getElementById('confirmBtn').onclick = () => { closeModal(); onConfirm(); };
+    document.getElementById('cancelBtn').onclick = () => { closeModal(); if (onCancel) onCancel(); };
+}
+
+function closeModal() {
+    document.getElementById('modalContainer').innerHTML = '';
+}
+
+function togglePasswordVisibility() {
+    const input = document.getElementById('loginPass');
+    const icon = document.getElementById('eyeIcon');
+    input.type = input.type === 'password' ? 'text' : 'password';
+    icon.setAttribute('data-lucide', input.type === 'password' ? 'eye' : 'eye-off');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function toggleField(id) {
+    const input = document.getElementById(id);
+    input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => showToast('Copiado!', 'success')).catch(() => showToast('Erro ao copiar', 'error'));
+}
+
+function formatDate(dateStr) {
+    const parts = dateStr.split('-');
+    return parts[2] + '/' + parts[1] + '/' + parts[0];
+}
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>

@@ -45,6 +45,13 @@ public class Produto {
 
     @Column(name = "comissao_gestor_recorrente", precision = 10, scale = 2)
     private BigDecimal comissaoGestorRecorrente; // R$ 10
+
+    @Column(name = "comissao_afiliado_anual", precision = 10, scale = 2)
+    private BigDecimal comissaoAfiliadoAnual; // R$ 550
+
+    @Column(name = "comissao_gestor_anual", precision = 10, scale = 2)
+    private BigDecimal comissaoGestorAnual; // R$ 75
+
     @Builder.Default
     @Column(nullable = false)
     private Boolean ativo = true;

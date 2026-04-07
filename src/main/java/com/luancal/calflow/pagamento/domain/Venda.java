@@ -37,6 +37,8 @@ public class Venda {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TipoVenda tipo; // IMPLANTACAO ou MENSALIDADE
+    @Column(name = "cartao_tokenizado")
+    private String cartaoTokenizado;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

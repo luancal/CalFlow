@@ -29,6 +29,10 @@ public class Cliente {
 
     @Column(name = "cpf_cnpj")
     private String cpfCnpj;
+
+    @Column(nullable = true)
+    private String cartaoTokenizado; // Para guardar o token do cartão do MP
+
     @Builder.Default
     @Column(name = "data_cadastro", nullable = false)
     private LocalDateTime dataCadastro = LocalDateTime.now();

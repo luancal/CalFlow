@@ -34,6 +34,14 @@ public class Clinica {
     private String diasFolga;
     private String mercadoPagoToken;
     private Boolean cobrancaAntecipada = false;
+    private String chavePix;
+    private String nomePix;
+    private Integer antecedenciaMinimaHoras = 2;
+    private Boolean confirmarManual = false;
+    private String saudacaoBot;
+    private String mensagemEncerramento;
+    private String fusoHorario = "America/Sao_Paulo";
+    private String idioma = "pt-BR";
 
     @Column(name = "lembrete_ativo", nullable = false, columnDefinition = "boolean default false")
     private boolean lembreteAtivo = true;

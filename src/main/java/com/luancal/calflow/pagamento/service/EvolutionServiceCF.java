@@ -71,7 +71,7 @@ public class EvolutionServiceCF {
 
         Map<String, Object> body = Map.of(
                 "enabled", true,
-                "url", "https://calflow.app.br/api/webhook/whatsapp",
+                "url", "https://calflow.up.railway.app/webhook",
                 "webhookByEvents", false,
                 "events", List.of("MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED")
         );

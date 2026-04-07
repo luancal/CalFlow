@@ -21,104 +21,106 @@ public class ComissaoService {
     @Autowired
     private ComissaoRepository comissaoRepository;
 
-    /**
-     * Gera comissões automaticamente quando venda é aprovada
-     * CRITICAL: Transacional - tudo ou nada
-     */
     @Transactional
     public void gerarComissoes(Venda venda) {
+        log.info("Gerando comissões: vendaId={}, tipo={}, valor={}",
+                venda.getId(), venda.getTipo(), venda.getValorTotal());
 
-        log.info("Gerando comissões: vendaId={}, tipo={}", venda.getId(), venda.getTipo());
+        if (venda.getAfiliado() == null) {
+            log.info("Venda direta (sem afiliado) - sem comissões");
+            return;
+        }
 
         List<Comissao> comissoes = new ArrayList<>();
-        boolean isAnual = venda.getValorTotal().compareTo(new BigDecimal("1000.00")) > 0;
         Produto produto = venda.getProduto();
 
-        // 1. COMISSÃO DO AFILIADO (se tiver)
-        if (venda.getAfiliado() != null) {
-            BigDecimal valorAfiliado;
+        // Detecta o tipo de venda
+        boolean isAnual = venda.getValorTotal()
+                .compareTo(new BigDecimal("1000.00")) > 0;
+        boolean isImplantacao = venda.getTipo() == TipoVenda.IMPLANTACAO;
+        boolean isRecorrente = venda.getTipo() == TipoVenda.MENSALIDADE
+                && !isAnual;
 
-            if (venda.getTipo() == TipoVenda.IMPLANTACAO) {
-                valorAfiliado = produto.getComissaoAfiliadoImplantacao(); // R$ 150
-            } else {
-                valorAfiliado = produto.getComissaoAfiliadoRecorrente(); // R$ 40
-            }
+        BigDecimal valorAfiliado;
+        BigDecimal valorGestor;
+        TipoComissao tipoAfiliado;
+        TipoComissao tipoGestor;
 
-            Comissao comissaoAfiliado = Comissao.builder()
+        if (isAnual) {
+            // Plano anual: afiliado R$ 550, gestor R$ 75
+            valorAfiliado = produto.getComissaoAfiliadoAnual();
+            valorGestor = produto.getComissaoGestorAnual();
+            tipoAfiliado = TipoComissao.AFILIADO_IMPLANTACAO;
+            tipoGestor = TipoComissao.GESTOR_IMPLANTACAO;
+
+        } else if (isImplantacao) {
+            // Implantação PIX: afiliado R$ 150, gestor R$ 25
+            valorAfiliado = produto.getComissaoAfiliadoImplantacao();
+            valorGestor = produto.getComissaoGestorImplantacao();
+            tipoAfiliado = TipoComissao.AFILIADO_IMPLANTACAO;
+            tipoGestor = TipoComissao.GESTOR_IMPLANTACAO;
+
+        } else {
+            // Mensalidade recorrente: afiliado R$ 40, gestor R$ 0
+            valorAfiliado = produto.getComissaoAfiliadoRecorrente();
+            valorGestor = BigDecimal.ZERO; // Gestor NÃO ganha recorrente
+            tipoAfiliado = TipoComissao.AFILIADO_RECORRENTE;
+            tipoGestor = TipoComissao.GESTOR_IMPLANTACAO;
+        }
+
+        // Comissão do Afiliado
+        if (valorAfiliado != null && valorAfiliado.compareTo(BigDecimal.ZERO) > 0) {
+            comissoes.add(Comissao.builder()
                     .venda(venda)
                     .afiliado(venda.getAfiliado())
-                    .tipo(isAnual ? TipoComissao.AFILIADO_IMPLANTACAO : (venda.getTipo() == TipoVenda.IMPLANTACAO ? TipoComissao.AFILIADO_IMPLANTACAO : TipoComissao.AFILIADO_RECORRENTE))
+                    .tipo(tipoAfiliado)
                     .valor(valorAfiliado)
                     .status(StatusComissao.PENDENTE)
                     .dataGeracao(LocalDateTime.now())
-                    .build();
-            comissoes.add(comissaoAfiliado);
-
-            log.info("Comissão afiliado gerada: afiliado={}",
-                    venda.getAfiliado().getNome());
+                    .build());
+            log.info("Comissão afiliado: {} = R$ {}", venda.getAfiliado().getNome(), valorAfiliado);
         }
 
-        // 2. COMISSÃO DO GESTOR (se afiliado tiver gestor)
-        if (venda.getAfiliado() != null && venda.getAfiliado().getGestor() != null) {
-            // Para gestor:
-            BigDecimal valorGestor = venda.getTipo() == TipoVenda.IMPLANTACAO
-                    ? produto.getComissaoGestorImplantacao()  // R$ 25
-                    : produto.getComissaoGestorRecorrente();
-
-                Comissao comissaoGestor = Comissao.builder()
-                        .venda(venda)
-                        .gestor(venda.getAfiliado().getGestor())
-                        .tipo(TipoComissao.GESTOR_IMPLANTACAO)
-                        .valor(valorGestor)
-                        .status(StatusComissao.PENDENTE)
-                        .dataGeracao(LocalDateTime.now())
-                        .build();
-                comissoes.add(comissaoGestor);
-
-            log.info("Comissão gestor gerada: gestor={}",
-                        venda.getAfiliado().getGestor().getNome());
+        // Comissão do Gestor (só implantação e anual, NUNCA recorrente)
+        if (venda.getAfiliado().getGestor() != null
+                && valorGestor != null
+                && valorGestor.compareTo(BigDecimal.ZERO) > 0) {
+            comissoes.add(Comissao.builder()
+                    .venda(venda)
+                    .gestor(venda.getAfiliado().getGestor())
+                    .tipo(tipoGestor)
+                    .valor(valorGestor)
+                    .status(StatusComissao.PENDENTE)
+                    .dataGeracao(LocalDateTime.now())
+                    .build());
+            log.info("Comissão gestor: {} = R$ {}",
+                    venda.getAfiliado().getGestor().getNome(), valorGestor);
         }
 
-        // 3. Salva todas as comissões de uma vez (transacional)
         if (!comissoes.isEmpty()) {
             comissaoRepository.saveAll(comissoes);
-            log.info("Total de comissões geradas: {}", comissoes.size());
-        } else {
-            log.info("Venda direta - sem comissões a gerar");
+            log.info("Total comissões geradas: {}", comissoes.size());
         }
     }
 
-    /**
-     * Cancela comissões de uma venda (em caso de reembolso)
-     */
     @Transactional
     public void cancelarComissoes(String vendaId, String motivo) {
-
         List<Comissao> comissoes = comissaoRepository.findAll().stream()
                 .filter(c -> c.getVenda().getId().equals(vendaId))
                 .filter(Comissao::isPendente)
                 .toList();
 
-        comissoes.forEach(comissao -> comissao.cancelar(motivo));
-
+        comissoes.forEach(c -> c.cancelar(motivo));
         comissaoRepository.saveAll(comissoes);
-
         log.info("Comissões canceladas: vendaId={}, total={}", vendaId, comissoes.size());
     }
 
-    /**
-     * Marca comissão como paga
-     */
     @Transactional
     public void marcarComoPaga(String comissaoId, String comprovanteId) {
-
         Comissao comissao = comissaoRepository.findById(comissaoId)
                 .orElseThrow(() -> new RuntimeException("Comissão não encontrada"));
-
         comissao.marcarComoPaga(comprovanteId);
         comissaoRepository.save(comissao);
-
-        log.info("Comissão paga: id={}, valor={}, comprovante={}",
-                comissaoId, comissao.getValor(), comprovanteId);
+        log.info("Comissão paga: id={}, valor={}", comissaoId, comissao.getValor());
     }
 }

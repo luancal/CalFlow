@@ -22,23 +22,36 @@ public class AssinaturaService {
     public Assinatura criarAssinatura(Venda venda) {
         log.info("Criando assinatura: vendaId={}", venda.getId());
 
-        // Se já veio com preapprovalId do checkout (cartão), usar ele
         String gatewayId = venda.getGatewayTransacaoId();
 
-        // Se NÃO tem (veio do PIX), criar assinatura no MP
-        if (venda.getTipo() == TipoVenda.IMPLANTACAO) {
-            // PIX pagou implantação, agora cria assinatura recorrente
-            gatewayId = mercadoPagoService.criarAssinaturaRecorrente(
-                    venda.getCliente().getEmail(),
-                    venda.getProduto().getValorMensalidade(),
-                    "CalFlow Premium - Mensal"
-            );
+        // Se não tem gatewayId E é venda de implantação (PIX), cria a assinatura recorrente
+        if ((gatewayId == null || gatewayId.isEmpty()) && venda.getTipo() == TipoVenda.IMPLANTACAO) {
+
+            if (venda.getCliente().getCartaoTokenizado() != null) {
+                // Usa o cartão tokenizado (fluxo PIX + Cartão salvo)
+                gatewayId = mercadoPagoService.criarAssinaturaComCartaoToken(
+                        venda.getCliente().getEmail(),
+                        venda.getProduto().getValorMensalidade(),
+                        venda.getCliente().getCartaoTokenizado()
+                );
+            } else {
+                // Cria assinatura padrão (cliente vai receber email para cadastrar cartão)
+                gatewayId = mercadoPagoService.criarAssinaturaRecorrente(
+                        venda.getCliente().getEmail(),
+                        venda.getProduto().getValorMensalidade(),
+                        "CalFlow Premium - Mensal"
+                );
+            }
+        }
+
+        if (gatewayId == null) {
+            throw new RuntimeException("Não foi possível criar/obter ID da assinatura");
         }
 
         Assinatura assinatura = Assinatura.builder()
                 .cliente(venda.getCliente())
                 .afiliado(venda.getAfiliado())
-                .assinaturaGatewayId(gatewayId) // ✅ VINCULADO
+                .assinaturaGatewayId(gatewayId)
                 .valor(venda.getProduto().getValorMensalidade())
                 .status(StatusAssinatura.ATIVA)
                 .dataProximaCobranca(LocalDate.now().plusMonths(1))

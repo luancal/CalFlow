@@ -26,7 +26,7 @@ public class NotificacaoService {
         String mensagem = String.format(
                 "🎉 *Bem-vindo ao CalFlow!*\n\n" +
                         "Olá %s!\n\nSeu sistema está *ATIVO*! 🚀\n\n" +
-                        "🔗 *Acesse:* calflow.app.br/cliente.html\n" +
+                        "🔗 *Acesse:* calflow.pages.dev/cliente.html\n" +
                         "👤 *Usuário:* %s\n\n" +
                         "Próximos passos:\n" +
                         "1️⃣ Faça login\n" +
@@ -94,7 +94,7 @@ public class NotificacaoService {
                         "Olá %s, aqui estão seus dados:\n\n" +
                         "👤 *Usuário:* %s\n" +
                         "🔒 *Senha:* %s\n\n" +
-                        "🌐 https://calflow.app.br/cliente.html",
+                        "🌐 https://calflow.pages.dev/cliente.html",
                 nome, usuario, senha
         );
 

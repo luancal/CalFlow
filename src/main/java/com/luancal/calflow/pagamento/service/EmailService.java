@@ -43,7 +43,7 @@ public class EmailService {
                         <p><strong>Senha:</strong> <code style="color:#F59E0B;">%s</code></p>
                     </div>
 
-                    <p><strong>Acesse:</strong> <a href="https://calflow.app.br/cliente.html" style="color:#F59E0B;">calflow.app.br/cliente.html</a></p>
+                    <p><strong>Acesse:</strong> <a href="https://calflow.pages.dev/cliente.html" style="color:#F59E0B;">calflow.pages.dev/cliente.html</a></p>
 
                     <h3>Próximos passos:</h3>
                     <ol>

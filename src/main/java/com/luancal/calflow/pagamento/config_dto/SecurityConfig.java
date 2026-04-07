@@ -28,12 +28,17 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
+                        // ✅ Rotas PÚBLICAS (sem token)
                         .requestMatchers("/api/checkout/**").permitAll()
                         .requestMatchers("/api/pagamentos/webhook-mp").permitAll()
                         .requestMatchers("/webhook/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/evolution/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
+                        // ✅ Arquivos estáticos
+                        .requestMatchers("/", "/index.html", "/checkout.html", "/cliente.html", "/images/**").permitAll()
+                        // ✅ Tudo o resto PRECISA de token
+                        // Mas como não temos JwtFilter ainda, vamos permitir tudo por enquanto
+                        // e validar o token manualmente nos controllers
                         .anyRequest().permitAll()
                 )
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
@@ -44,17 +49,12 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-
-        // Converte a string do properties em lista
         List<String> origins = Arrays.stream(allowedOrigins.split(","))
-                .map(String::trim)
-                .toList();
-
+                .map(String::trim).toList();
         configuration.setAllowedOrigins(origins);
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setAllowCredentials(false); // importante para JWT/stateless
-
+        configuration.setAllowCredentials(false);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
