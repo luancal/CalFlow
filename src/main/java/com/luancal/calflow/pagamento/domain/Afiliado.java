@@ -32,6 +32,8 @@ public class Afiliado {
 
     @Column(name = "pix_chave", nullable = false)
     private String pixChave;
+    @Column(name = "senha_hash")
+    private String senhaHash;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

@@ -423,7 +423,7 @@
                     <div class="w-20 h-20 rounded-full bg-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform shadow-[0_0_30px_rgba(245,158,11,0.4)]">
                         <i data-lucide="play" style="width:32px;height:32px;color:#000;margin-left:4px"></i>
                     </div>
-                    <p class="text-sm text-neutral-400 font-medium">Veja o CalFlow em ação (2 min)</p>
+                    <p class="text-sm text-neutral-400 font-medium">Veja o CalFlow em ação (1 min)</p>
                 </div>
             </div>
         </div>
@@ -928,16 +928,97 @@
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
     function openLegalModal(tipo) {
-        const textos = {
-            termos: '<h3 class="text-lg font-bold mb-4">Termos de Uso</h3><p class="text-sm text-neutral-400">Em breve. Para dúvidas, entre em contato pelo WhatsApp.</p>',
-            privacidade: '<h3 class="text-lg font-bold mb-4">Política de Privacidade</h3><p class="text-sm text-neutral-400">Em breve. Seus dados estão seguros conosco.</p>'
-        };
-        const overlay = document.createElement('div');
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:100;display:flex;align-items:center;justify-content:center;padding:1rem;';
-        overlay.onclick = function(e) { if (e.target === overlay) document.body.removeChild(overlay); };
-        overlay.innerHTML = '<div style="background:#141414;border:1px solid rgba(255,255,255,0.08);border-radius:1rem;padding:2rem;max-width:500px;width:100%">' + textos[tipo] + '<button onclick="this.closest(\'div\').parentElement.remove()" style="margin-top:1.5rem;padding:0.5rem 1.5rem;background:#F59E0B;color:#000;border:none;border-radius:0.5rem;font-weight:600;cursor:pointer;font-family:inherit">Fechar</button></div>';
-        document.body.appendChild(overlay);
+    const textos = {
+        termos: `
+<h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem;color:#F59E0B">Termos de Uso e Contratação — CalFlow</h3>
+<p style="font-size:0.75rem;color:#666;margin-bottom:1rem">Última atualização: abril de 2026</p>
+
+<h4 style="font-size:0.85rem;font-weight:700;margin:1rem 0 0.5rem">1. DESCRIÇÃO DO SERVIÇO</h4>
+<p style="font-size:0.82rem;color:#aaa;line-height:1.6">O CalFlow é uma plataforma SaaS de automação de agendamentos via WhatsApp, com integração ao Google Agenda. O sistema automatiza o atendimento de clientes, confirmação de horários e lembretes automáticos, 24h por dia, 7 dias por semana.</p>
+
+<h4 style="font-size:0.85rem;font-weight:700;margin:1rem 0 0.5rem">2. PLANOS E PREÇOS</h4>
+<p style="font-size:0.82rem;color:#aaa;line-height:1.6"><strong style="color:#fff">Plano Mensal:</strong> Taxa de implantação R$ 497 (única vez) + R$ 197/mês (cobrado automaticamente). Inclui configuração completa, bot personalizado, integração Google Agenda, manutenção e suporte.<br><br><strong style="color:#fff">Plano Anual:</strong> R$ 2.197/ano (parcelável em até 12x sem juros). Inclui tudo do plano mensal sem taxa de implantação separada. Renovação automática anual.</p>
+
+<h4 style="font-size:0.85rem;font-weight:700;margin:1rem 0 0.5rem">3. CONTRATAÇÃO E ACESSO</h4>
+<p style="font-size:0.82rem;color:#aaa;line-height:1.6">Após confirmação do pagamento, o acesso é liberado automaticamente em até 5 minutos. Credenciais enviadas por e-mail e WhatsApp. O cliente é responsável pela guarda das credenciais.</p>
+
+<h4 style="font-size:0.85rem;font-weight:700;margin:1rem 0 0.5rem">4. RESPONSABILIDADES DO CLIENTE</h4>
+<p style="font-size:0.82rem;color:#aaa;line-height:1.6">— Manter o WhatsApp conectado ao sistema<br>— Fornecer informações corretas de horários e serviços<br>— Ter smartphone compatível com WhatsApp atualizado<br>— Não violar os Termos de Serviço do WhatsApp e do Google<br>— Manter conectado à internet</p>
+
+<h4 style="font-size:0.85rem;font-weight:700;margin:1rem 0 0.5rem">5. SUPORTE TÉCNICO</h4>
+<p style="font-size:0.82rem;color:#aaa;line-height:1.6">Atendimento via WhatsApp (32) 9940-1356, de segunda a sexta, das 9h às 18h. Inclui dúvidas de uso, ajustes simples e correções técnicas. Não inclui criação de fluxos completamente novos (orçado à parte).</p>
+
+<h4 style="font-size:0.85rem;font-weight:700;margin:1rem 0 0.5rem">6. GARANTIA DE 7 DIAS</h4>
+<p style="font-size:0.82rem;color:#aaa;line-height:1.6">Nos primeiros 7 dias, garantimos reembolso integral sem questionamentos, processado pelo Mercado Pago em até 5 dias úteis. Após esse período, a taxa de implantação não é reembolsável.</p>
+
+<h4 style="font-size:0.85rem;font-weight:700;margin:1rem 0 0.5rem">7. CANCELAMENTO</h4>
+<p style="font-size:0.82rem;color:#aaa;line-height:1.6">Cancele a qualquer momento via WhatsApp ou e-mail, sem multa. O sistema é desativado ao final do período pago. Não há cobranças futuras após o cancelamento.</p>
+
+<h4 style="font-size:0.85rem;font-weight:700;margin:1rem 0 0.5rem">8. LIMITAÇÕES</h4>
+<p style="font-size:0.82rem;color:#aaa;line-height:1.6">O CalFlow depende do WhatsApp, Google e Mercado Pago. Instabilidades nessas plataformas não são de responsabilidade do CalFlow. Não nos responsabilizamos por bloqueios causados por uso inadequado do WhatsApp pelo cliente.</p>
+
+<h4 style="font-size:0.85rem;font-weight:700;margin:1rem 0 0.5rem">9. PROTEÇÃO DE DADOS (LGPD)</h4>
+<p style="font-size:0.82rem;color:#aaa;line-height:1.6">Tratamos seus dados em conformidade com a LGPD (Lei 13.709/2018). Consulte nossa Política de Privacidade para detalhes completos.</p>
+
+<h4 style="font-size:0.85rem;font-weight:700;margin:1rem 0 0.5rem">10. CONTATO</h4>
+<p style="font-size:0.82rem;color:#aaa;line-height:1.6">contato@calflow.app.br | WhatsApp: (32) 9940-1356 | calflow.app.br</p>`,
+
+        privacidade: `
+<h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem;color:#F59E0B">Política de Privacidade — CalFlow</h3>
+<p style="font-size:0.75rem;color:#666;margin-bottom:1rem">Última atualização: abril de 2026</p>
+
+<h4 style="font-size:0.85rem;font-weight:700;margin:1rem 0 0.5rem">1. QUEM SOMOS</h4>
+<p style="font-size:0.82rem;color:#aaa;line-height:1.6">CalFlow é uma plataforma SaaS de automação de agendamentos via WhatsApp, desenvolvida por Luan Nicolas de Oliveira Cal, com sede em Minas Gerais, Brasil.<br>Contato: contato@calflow.app.br</p>
+
+<h4 style="font-size:0.85rem;font-weight:700;margin:1rem 0 0.5rem">2. DADOS QUE COLETAMOS</h4>
+<p style="font-size:0.82rem;color:#aaa;line-height:1.6"><strong style="color:#fff">Fornecidos por você:</strong> Nome completo, e-mail, telefone/WhatsApp, CPF ou CNPJ, dados do negócio, informações de pagamento (processadas pelo Mercado Pago — nunca armazenamos dados de cartão em nossos servidores).<br><br><strong style="color:#fff">Coletados automaticamente:</strong> Logs de acesso, endereço IP, informações do dispositivo e navegador.<br><br><strong style="color:#fff">Clientes finais do seu negócio:</strong> Números de WhatsApp e histórico de conversas. Esses dados pertencem a você (nosso cliente) e somos apenas operadores.</p>
+
+<h4 style="font-size:0.85rem;font-weight:700;margin:1rem 0 0.5rem">3. COMO USAMOS OS DADOS</h4>
+<p style="font-size:0.82rem;color:#aaa;line-height:1.6">— Prestação dos serviços contratados<br>— Criação e manutenção da conta<br>— Envio de credenciais de acesso<br>— Cobrança e gestão financeira<br>— Suporte técnico<br>— Cumprimento de obrigações legais</p>
+
+<h4 style="font-size:0.85rem;font-weight:700;margin:1rem 0 0.5rem">4. COMPARTILHAMENTO</h4>
+<p style="font-size:0.82rem;color:#aaa;line-height:1.6">Compartilhamos dados apenas com parceiros essenciais para o funcionamento do serviço: Mercado Pago (pagamentos), Google (agenda), Evolution API (WhatsApp), Neon Database (armazenamento) e Railway/Cloudflare (hospedagem). Não vendemos dados para terceiros.</p>
+
+<h4 style="font-size:0.85rem;font-weight:700;margin:1rem 0 0.5rem">5. SEGURANÇA</h4>
+<p style="font-size:0.82rem;color:#aaa;line-height:1.6">— Senhas criptografadas com BCrypt<br>— Comunicação via HTTPS/TLS<br>— Autenticação por tokens JWT<br>— Dados de cartão nunca armazenados (tokenização via SDK do Mercado Pago)<br>— Banco de dados com acesso restrito e protegido</p>
+
+<h4 style="font-size:0.85rem;font-weight:700;margin:1rem 0 0.5rem">6. SEUS DIREITOS (LGPD)</h4>
+<p style="font-size:0.82rem;color:#aaa;line-height:1.6">Você tem direito a acessar, corrigir, excluir e portar seus dados, além de revogar o consentimento a qualquer momento. Para exercer seus direitos, entre em contato: contato@calflow.app.br ou WhatsApp (32) 9940-1356.</p>
+
+<h4 style="font-size:0.85rem;font-weight:700;margin:1rem 0 0.5rem">7. RETENÇÃO</h4>
+<p style="font-size:0.82rem;color:#aaa;line-height:1.6">Dados de conta: mantidos durante a vigência do contrato e por até 5 anos após encerramento (obrigação fiscal). Logs de sistema: retidos por 90 dias.</p>
+
+<h4 style="font-size:0.85rem;font-weight:700;margin:1rem 0 0.5rem">8. COOKIES</h4>
+<p style="font-size:0.82rem;color:#aaa;line-height:1.6">Utilizamos apenas cookies essenciais para manter sessão autenticada e preferências do usuário. Não utilizamos cookies de rastreamento ou publicidade.</p>
+
+<h4 style="font-size:0.85rem;font-weight:700;margin:1rem 0 0.5rem">9. CONTATO</h4>
+<p style="font-size:0.82rem;color:#aaa;line-height:1.6">contato@calflow.app.br | WhatsApp: (32) 9940-1356 | calflow.app.br</p>`
+    };
+
+    const overlay = document.createElement('div');
+    overlay.id = 'legalOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:100;display:flex;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px);';
+
+    // ✅ FIX: Fechar corretamente
+    function fecharModal() {
+        const el = document.getElementById('legalOverlay');
+        if (el) el.remove();
     }
+
+    overlay.onclick = function(e) {
+        if (e.target === overlay) fecharModal();
+    };
+
+    overlay.innerHTML = '<div style="background:#141414;border:1px solid rgba(255,255,255,0.08);border-radius:1rem;padding:2rem;max-width:600px;width:100%;max-height:85vh;display:flex;flex-direction:column;">'
+    + '<div style="overflow-y:auto;flex:1;padding-right:0.5rem;">' + textos[tipo] + '</div>'
+    + '<button id="fecharLegalBtn" style="margin-top:1.5rem;padding:0.75rem 2rem;background:#F59E0B;color:#000;border:none;border-radius:0.5rem;font-weight:600;cursor:pointer;font-family:inherit;width:100%;flex-shrink:0">Entendi e Fechar</button>'
+    + '</div>';
+
+    document.body.appendChild(overlay);
+
+    // ✅ FIX: Usa addEventListener em vez de onclick inline
+    document.getElementById('fecharLegalBtn').addEventListener('click', fecharModal);
+}
 
     function toggleMobileMenu() {
         const menu = document.getElementById('mobileMenu');

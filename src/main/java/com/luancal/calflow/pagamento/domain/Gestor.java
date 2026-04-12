@@ -32,6 +32,8 @@ public class Gestor {
 
     @Column(name = "codigo_convite", nullable = false, unique = true)
     private String codigoConvite; // Ex: GEST_MARIA_001
+    @Column(name = "senha_hash")
+    private String senhaHash;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

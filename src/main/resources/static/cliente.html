@@ -914,7 +914,18 @@ async function doLogin() {
     btn.disabled = true;
 
     try {
-        const data = await api('POST', '/api/auth/login', { usuario: user, senha: pass });
+        const response = await fetch(API_URL + '/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ usuario: user, senha: pass })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Usuário ou senha incorretos');
+        }
+
+        const data = await response.json();
 
         tokenAtual = data.token;
         usuarioAtual = {
@@ -926,7 +937,6 @@ async function doLogin() {
             nomeInstancia: data.nomeInstancia || ('calflow_' + data.usuario)
         };
 
-        // Remember me
         const remember = document.getElementById('rememberCheck');
         if (remember && remember.checked) {
             localStorage.setItem('calflow_token', tokenAtual);

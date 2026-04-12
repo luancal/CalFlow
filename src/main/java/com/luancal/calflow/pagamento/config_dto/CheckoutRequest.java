@@ -32,4 +32,5 @@ public class CheckoutRequest {
     private String plano; // "mensal" ou "anual"
     private BigDecimal valor;
     private String metodo;
+    private Integer parcelas;
 }

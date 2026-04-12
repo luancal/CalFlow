@@ -11,6 +11,7 @@ import com.mercadopago.resources.payment.Payment;
 import com.mercadopago.exceptions.MPException;
 import com.mercadopago.exceptions.MPApiException;
 import com.mercadopago.resources.preapproval.Preapproval;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -28,14 +29,18 @@ import java.util.Map;
 @Service
 public class MercadoPagoService {
     private static final Logger log = LoggerFactory.getLogger(MercadoPagoService.class);
-    private final PaymentClient paymentClient;
+
 
     @Value("${mercadopago.access.token}")
     private String accessToken;
+    private PaymentClient paymentClient;
 
-    public MercadoPagoService() {
+    @PostConstruct
+    public void init() {
+        com.mercadopago.MercadoPagoConfig.setAccessToken(accessToken);
         this.paymentClient = new PaymentClient();
     }
+
 
     public Payment criarPagamentoPix(String vendaId, BigDecimal valor, String email, String nome, String doc) {
         try {
@@ -138,6 +143,42 @@ public class MercadoPagoService {
             autoRecurring.put("frequency_type", "months");
             autoRecurring.put("transaction_amount", valor);
             autoRecurring.put("currency_id", "BRL");
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("reason", "CalFlow Premium - Assinatura Mensal");
+            body.put("payer_email", email);
+            body.put("back_url", "https://calflow.pages.dev/cliente.html");
+            body.put("auto_recurring", autoRecurring);
+            body.put("card_token_id", cardTokenId); // Token do cartão vindo do frontend
+
+            ResponseEntity<Map> response = restTemplate.postForEntity(
+                    "https://api.mercadopago.com/preapproval",
+                    new HttpEntity<>(body, headers),
+                    Map.class
+            );
+
+            String id = (String) response.getBody().get("id");
+            log.info("Assinatura com cartão tokenizado criada: id={}", id);
+            return id;
+
+        } catch (Exception e) {
+            log.error("Erro ao criar assinatura com cartão", e);
+            throw new RuntimeException("Erro ao criar assinatura com cartão: " + e.getMessage());
+        }
+    }
+    public String criarAssinaturaAnualComCartao(String email, BigDecimal valor, String cardTokenId) {
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Authorization", "Bearer " + accessToken);
+
+            Map<String, Object> autoRecurring = new HashMap<>();
+            autoRecurring.put("frequency", 1);
+            autoRecurring.put("frequency_type", "years");
+            autoRecurring.put("transaction_amount", valor);
+            autoRecurring.put("currency_id", "BRL");
+            autoRecurring.put("start_date", java.time.OffsetDateTime.now().plusYears(1).toString());
 
             Map<String, Object> body = new HashMap<>();
             body.put("reason", "CalFlow Premium - Assinatura Mensal");

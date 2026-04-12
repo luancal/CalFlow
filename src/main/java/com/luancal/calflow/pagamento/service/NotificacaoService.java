@@ -126,6 +126,26 @@ public class NotificacaoService {
 
         enviar(telefone, mensagem);
     }
+    @Async
+    public void enviarCredenciaisAfiliado(String telefone, String nome, String codigo, String senha) {
+        String mensagem = String.format(
+                "🎉 *Bem-vindo ao Programa de Afiliados CalFlow!*\n\n" +
+                        "Olá %s!\n\n" +
+                        "🔑 *Seus dados de acesso:*\n" +
+                        "• Código: `%s`\n" +
+                        "• Senha: `%s`\n\n" +
+                        "🔗 *Seu link:*\n" +
+                        "calflow.pages.dev/checkout?ref=%s\n\n" +
+                        "💰 *Suas comissões:*\n" +
+                        "• R$ 150 por venda\n" +
+                        "• R$ 40/mês por cliente\n" +
+                        "• R$ 550 por anual\n\n" +
+                        "📊 *Painel:* calflow.pages.dev/afiliados.html\n\n" +
+                        "Qualquer dúvida, me chame aqui! 🚀",
+                nome, codigo, senha, codigo
+        );
+        enviar(telefone, mensagem);
+    }
 
     // Método privado para evitar repetição de código
     private void enviar(String telefone, String mensagem) {

@@ -1,0 +1,2092 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CalFlow - Programa de Afiliados e Gestores</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png">
+    <meta name="description" content="Ganhe dinheiro indicando o CalFlow. Comissões recorrentes para afiliados e gestores.">
+    <meta name="theme-color" content="#F59E0B">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'DM Sans', sans-serif; background: #0a0a0a; color: #fff; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 10px; }
+
+        @keyframes fadeInUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-10px); } }
+        @keyframes pulse-amber { 0%,100% { box-shadow:0 0 0 0 rgba(245,158,11,0.4); } 70% { box-shadow:0 0 0 12px rgba(245,158,11,0); } }
+        @keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+        @keyframes slideIn { from { transform:translateX(100px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+        @keyframes countUp { from { opacity:0; } to { opacity:1; } }
+        @keyframes shimmer { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
+
+        .fade-in-up { animation: fadeInUp 0.6s cubic-bezier(0.22,1,0.36,1) forwards; opacity:0; }
+        .float { animation: float 3s ease-in-out infinite; }
+        .spin { animation: spin 1s linear infinite; }
+        .pulse-amber { animation: pulse-amber 2s infinite; }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #F59E0B, #FBBF24, #F59E0B);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .card-glass {
+            background: rgba(20,20,20,0.8);
+            border: 1px solid rgba(255,255,255,0.06);
+            backdrop-filter: blur(12px);
+            border-radius: 1rem;
+            transition: all 0.3s;
+        }
+        .card-glass:hover { border-color: rgba(245,158,11,0.2); }
+
+        .card-highlight {
+            background: rgba(245,158,11,0.04);
+            border: 1px solid rgba(245,158,11,0.2);
+            border-radius: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .card-highlight::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #F59E0B, transparent);
+        }
+
+        .btn-amber {
+            background: #F59E0B;
+            color: #000;
+            font-weight: 700;
+            border: none;
+            border-radius: 9999px;
+            padding: 0.85rem 2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-amber:hover { background:#FBBF24; box-shadow:0 0 30px rgba(245,158,11,0.4); transform:scale(1.02); }
+        .btn-amber:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+
+        .btn-outline {
+            background: transparent;
+            color: #fff;
+            font-weight: 600;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 9999px;
+            padding: 0.85rem 2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            font-size: 0.95rem;
+        }
+        .btn-outline:hover { border-color: rgba(245,158,11,0.5); background:rgba(245,158,11,0.05); }
+
+        .input-field {
+            width: 100%;
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 0.75rem;
+            padding: 0.85rem 1rem;
+            color: #fff;
+            font-size: 0.875rem;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .input-field:focus { border-color: #F59E0B; box-shadow: 0 0 0 3px rgba(245,158,11,0.1); }
+        .input-field::placeholder { color: #525252; }
+        .input-field.error { border-color: #ef4444; }
+
+        .tab-btn {
+            padding: 0.75rem 2rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: transparent;
+            color: #737373;
+            font-family: inherit;
+        }
+        .tab-btn.active {
+            background: #F59E0B;
+            color: #000;
+            border-color: #F59E0B;
+        }
+
+        .commission-bar {
+            height: 6px;
+            border-radius: 9999px;
+            background: rgba(255,255,255,0.06);
+            overflow: hidden;
+        }
+        .commission-fill {
+            height: 100%;
+            border-radius: 9999px;
+            background: linear-gradient(90deg, #F59E0B, #FBBF24);
+            transition: width 1s ease;
+        }
+
+        .step-line::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 100%;
+            width: 2px;
+            height: 40px;
+            background: linear-gradient(to bottom, rgba(245,158,11,0.4), transparent);
+            transform: translateX(-50%);
+        }
+
+        .toast-container { position:fixed; top:1.5rem; right:1.5rem; z-index:9999; display:flex; flex-direction:column; gap:0.5rem; }
+        .toast { padding:0.85rem 1.25rem; border-radius:0.75rem; font-size:0.85rem; font-weight:500; display:flex; align-items:center; gap:0.5rem; animation:slideIn 0.3s ease; min-width:280px; border:1px solid rgba(255,255,255,0.06); }
+        .toast-success { background:#141414; color:#22c55e; border-color:rgba(34,197,94,0.2); }
+        .toast-error { background:#141414; color:#ef4444; border-color:rgba(239,68,68,0.2); }
+        .toast-info { background:#141414; color:#F59E0B; border-color:rgba(245,158,11,0.2); }
+
+        .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:50; display:flex; align-items:center; justify-content:center; padding:1rem; backdrop-filter:blur(4px); animation:fadeInUp 0.2s; }
+        .modal-content { background:#141414; border:1px solid rgba(255,255,255,0.08); border-radius:1.25rem; padding:2rem; max-width:520px; width:100%; max-height:85vh; display:flex; flex-direction:column; }
+
+        .nav-link { color:#a1a1aa; font-size:0.875rem; font-weight:500; text-decoration:none; transition:color 0.2s; }
+        .nav-link:hover { color:#fff; }
+
+        .tag { display:inline-flex; align-items:center; gap:0.4rem; padding:0.4rem 1rem; border-radius:9999px; font-size:0.75rem; font-weight:600; border:1px solid; }
+        .tag-amber { background:rgba(245,158,11,0.08); color:#F59E0B; border-color:rgba(245,158,11,0.2); }
+        .tag-green { background:rgba(34,197,94,0.08); color:#22c55e; border-color:rgba(34,197,94,0.2); }
+        .tag-blue { background:rgba(59,130,246,0.08); color:#60a5fa; border-color:rgba(59,130,246,0.2); }
+
+        /* Dashboard */
+        .screen { display:none; }
+        .screen.active { display:block; }
+
+        .sidebar-link { display:flex; align-items:center; gap:0.75rem; padding:0.65rem 1.25rem; color:#737373; font-size:0.875rem; cursor:pointer; transition:all 0.2s; border-radius:0.5rem; margin:0 0.75rem; }
+        .sidebar-link:hover { color:#fff; background:rgba(255,255,255,0.04); }
+        .sidebar-link.active { color:#F59E0B; background:rgba(245,158,11,0.08); font-weight:600; }
+
+        .metric-card { background:#141414; border:1px solid rgba(255,255,255,0.06); border-radius:1rem; padding:1.5rem; transition:all 0.3s; }
+        .metric-card:hover { border-color:rgba(245,158,11,0.15); }
+
+        .section-panel { display:none; animation:fadeInUp 0.25s ease; }
+        .section-panel.active { display:block; }
+
+        @media (max-width:768px) {
+            .sidebar-dash { transform:translateX(-100%); transition:transform 0.3s; }
+            .sidebar-dash.open { transform:translateX(0); }
+        }
+
+        /* Shimmer for loading */
+        .shimmer {
+            background: linear-gradient(90deg, #141414 25%, #1a1a1a 50%, #141414 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ====== TOAST ====== -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ====== MODAL ====== -->
+<div id="modalContainer"></div>
+
+<!-- ========================================================== -->
+<!-- TELA 1 — LANDING PÚBLICA -->
+<!-- ========================================================== -->
+<div id="screen-landing" class="screen active">
+
+    <!-- NAV -->
+    <nav style="position:fixed;top:0;left:0;right:0;z-index:40;background:rgba(10,10,10,0.9);border-bottom:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(12px);">
+        <div class="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
+            <a href="index.html">
+                <img src="images/CalFlow.jpeg" alt="CalFlow" style="height:36px;border-radius:8px;">
+            </a>
+
+            <!-- Links desktop -->
+            <div class="hidden md:flex items-center gap-6">
+                <a href="#como-funciona" class="nav-link">Como funciona</a>
+                <a href="#comissoes" class="nav-link">Comissões</a>
+                <a href="#faq" class="nav-link">FAQ</a>
+                <a href="index.html" class="nav-link">Produto</a>
+            </div>
+
+            <!-- Botões desktop -->
+            <div class="hidden md:flex items-center gap-3">
+                <button onclick="showLogin()" class="btn-outline" style="padding:0.5rem 1.25rem;font-size:0.85rem;">Entrar</button>
+                <button onclick="scrollToSection('cadastro')" class="btn-amber" style="padding:0.5rem 1.25rem;font-size:0.85rem;">Quero Participar</button>
+            </div>
+
+            <!-- Hamburguer mobile -->
+            <div class="flex md:hidden items-center gap-3">
+                <button onclick="showLogin()" class="btn-outline" style="padding:0.4rem 0.875rem;font-size:0.8rem;">Entrar</button>
+                <button onclick="toggleMobileNav()" id="hamburgerBtn" style="background:none;border:none;cursor:pointer;color:#fff;padding:0.25rem;">
+                    <i data-lucide="menu" id="hamburgerIcon" style="width:24px;height:24px"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Menu mobile expandido -->
+        <div id="mobileNav" style="display:none;background:rgba(10,10,10,0.98);border-top:1px solid rgba(255,255,255,0.06);padding:1rem 1.25rem 1.5rem;">
+            <div style="display:flex;flex-direction:column;gap:0.25rem;">
+                <a href="#como-funciona" onclick="closeMobileNav()" style="padding:0.875rem 0;font-size:0.9rem;color:#a1a1aa;border-bottom:1px solid rgba(255,255,255,0.04);text-decoration:none;">Como funciona</a>
+                <a href="#comissoes" onclick="closeMobileNav()" style="padding:0.875rem 0;font-size:0.9rem;color:#a1a1aa;border-bottom:1px solid rgba(255,255,255,0.04);text-decoration:none;">Comissões</a>
+                <a href="#faq" onclick="closeMobileNav()" style="padding:0.875rem 0;font-size:0.9rem;color:#a1a1aa;border-bottom:1px solid rgba(255,255,255,0.04);text-decoration:none;">FAQ</a>
+                <a href="index.html" style="padding:0.875rem 0;font-size:0.9rem;color:#a1a1aa;border-bottom:1px solid rgba(255,255,255,0.04);text-decoration:none;">Produto</a>
+                <button onclick="scrollToSection('cadastro');closeMobileNav()" class="btn-amber w-full" style="margin-top:0.75rem;justify-content:center;">Quero Participar</button>
+            </div>
+        </div>
+    </nav>
+
+    <main style="padding-top:4rem;">
+
+        <!-- HERO -->
+        <section style="min-height:100vh;display:flex;align-items:center;background:radial-gradient(ellipse at 50% 0%, rgba(245,158,11,0.08) 0%, transparent 60%);">
+            <div class="max-w-6xl mx-auto px-5 py-20 text-center">
+                <div class="tag tag-amber mb-6 fade-in-up mx-auto" style="--delay:0s">
+                    <i data-lucide="zap" style="width:12px;height:12px"></i>
+                    Programa de Parceiros CalFlow
+                </div>
+
+                <h1 class="fade-in-up" style="font-size:clamp(2.5rem,6vw,4.5rem);font-weight:900;line-height:1.05;margin-bottom:1.5rem;animation-delay:0.1s">
+                    Ganhe dinheiro indicando<br>
+                    <span class="gradient-text">o futuro dos negócios</span>
+                </h1>
+
+                <p class="fade-in-up text-neutral-400 mx-auto" style="max-width:600px;font-size:1.1rem;line-height:1.7;margin-bottom:2.5rem;animation-delay:0.2s">
+                    Cada cliente que você indicar rende comissões todos os meses. Sem limite de ganhos, sem burocracia. Indique agora e receba em PIX.
+                </p>
+
+                <div class="fade-in-up flex flex-wrap justify-center gap-4 mb-16" style="animation-delay:0.3s">
+                    <button onclick="scrollToSection('cadastro')" class="btn-amber pulse-amber" style="font-size:1rem;padding:1rem 2.5rem;">
+                        Quero ser Afiliado
+                        <i data-lucide="arrow-right" style="width:18px;height:18px"></i>
+                    </button>
+                    <button onclick="scrollToSection('cadastro');setTimeout(()=>selectFormTab('gestor'),400)" class="btn-outline" style="font-size:1rem;padding:1rem 2.5rem;display:inline-flex;align-items:center;gap:0.5rem;">
+                        <i data-lucide="crown" style="width:18px;height:18px;color:#F59E0B"></i>
+                        Quero ser Gestor
+                    </button>
+                </div>
+
+                <!-- Métricas rápidas -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto fade-in-up" style="animation-delay:0.4s">
+                    <div class="card-glass p-4 text-center">
+                        <p class="text-3xl font-black text-amber-500">R$150</p>
+                        <p class="text-xs text-neutral-500 mt-1">Por venda feita</p>
+                    </div>
+                    <div class="card-glass p-4 text-center">
+                        <p class="text-3xl font-black text-amber-500">R$40</p>
+                        <p class="text-xs text-neutral-500 mt-1">Todo mês recorrente</p>
+                    </div>
+                    <div class="card-glass p-4 text-center">
+                        <p class="text-3xl font-black text-amber-500">R$550</p>
+                        <p class="text-xs text-neutral-500 mt-1">Por venda anual</p>
+                    </div>
+                    <div class="card-glass p-4 text-center">
+                        <p class="text-3xl font-black text-green-400">∞</p>
+                        <p class="text-xs text-neutral-500 mt-1">Sem limite de ganhos</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- COMO FUNCIONA -->
+        <section id="como-funciona" style="padding:5rem 0;background:rgba(255,255,255,0.01);">
+            <div class="max-w-5xl mx-auto px-5">
+                <div class="text-center mb-16">
+                    <div class="tag tag-amber mb-4 mx-auto">Como funciona</div>
+                    <h2 style="font-size:2.5rem;font-weight:800">Simples assim</h2>
+                </div>
+
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="card-glass p-8 text-center relative">
+                        <div class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4" style="background:rgba(245,158,11,0.1)">
+                            <span class="font-black text-amber-500">1</span>
+                        </div>
+                        <i data-lucide="user-plus" class="mx-auto mb-3 text-amber-500" style="width:28px;height:28px"></i>
+                        <h3 class="font-bold mb-2">Cadastre-se</h3>
+                        <p class="text-neutral-400 text-sm">Preencha o formulário nesta página. Seu link de afiliado é gerado na hora.</p>
+                    </div>
+                    <div class="card-glass p-8 text-center">
+                        <div class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4" style="background:rgba(245,158,11,0.1)">
+                            <span class="font-black text-amber-500">2</span>
+                        </div>
+                        <i data-lucide="share-2" class="mx-auto mb-3 text-amber-500" style="width:28px;height:28px"></i>
+                        <h3 class="font-bold mb-2">Compartilhe</h3>
+                        <p class="text-neutral-400 text-sm">Use seu link personalizado. Quem comprar pelo seu link vira seu cliente.</p>
+                    </div>
+                    <div class="card-glass p-8 text-center">
+                        <div class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4" style="background:rgba(245,158,11,0.1)">
+                            <span class="font-black text-amber-500">3</span>
+                        </div>
+                        <i data-lucide="banknote" class="mx-auto mb-3 text-amber-500" style="width:28px;height:28px"></i>
+                        <h3 class="font-bold mb-2">Receba em PIX</h3>
+                        <p class="text-neutral-400 text-sm">Comissões pagas todo dia 5 via PIX direto na sua chave cadastrada.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- COMISSÕES -->
+        <section id="comissoes" style="padding:5rem 0;">
+            <div class="max-w-5xl mx-auto px-5">
+                <div class="text-center mb-16">
+                    <div class="tag tag-amber mb-4 mx-auto">Tabela de comissões</div>
+                    <h2 style="font-size:2.5rem;font-weight:800">Quanto você vai ganhar?</h2>
+                    <p class="text-neutral-400 mt-3">Renda passiva crescente. Cada cliente que permanece te paga todo mês.</p>
+                </div>
+
+                <!-- Tabs Afiliado / Gestor -->
+                <div class="flex gap-3 justify-center mb-10">
+                    <button class="tab-btn active" id="tab-afiliado" onclick="selectCommissionTab('afiliado')">
+                        <i data-lucide="user" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px"></i>
+                        Afiliado
+                    </button>
+                    <button class="tab-btn" id="tab-gestor" onclick="selectCommissionTab('gestor')">
+                        <i data-lucide="crown" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px"></i>
+                        Gestor
+                    </button>
+                </div>
+
+                <!-- Comissões Afiliado -->
+                <div id="commission-afiliado">
+                    <div class="grid md:grid-cols-3 gap-6 mb-8">
+                        <div class="card-highlight p-6 text-center">
+                            <div class="tag tag-amber mb-4 mx-auto">Venda Mensal</div>
+                            <p class="text-4xl font-black text-amber-500 mb-1">R$ 150</p>
+                            <p class="text-neutral-400 text-sm mb-4">por venda (implantação)</p>
+                            <div class="commission-bar">
+                                <div class="commission-fill" style="width:55%"></div>
+                            </div>
+                            <p class="text-xs text-neutral-500 mt-2">+ R$ 40/mês recorrente</p>
+                        </div>
+                        <div class="card-highlight p-6 text-center">
+                            <div class="tag tag-green mb-4 mx-auto">Recorrência</div>
+                            <p class="text-4xl font-black text-green-400 mb-1">R$ 40</p>
+                            <p class="text-neutral-400 text-sm mb-4">todo mês por cliente</p>
+                            <div class="commission-bar">
+                                <div class="commission-fill" style="width:30%;background:linear-gradient(90deg,#22c55e,#4ade80)"></div>
+                            </div>
+                            <p class="text-xs text-neutral-500 mt-2">Enquanto o cliente ativo</p>
+                        </div>
+                        <div class="card-highlight p-6 text-center">
+                            <div class="tag tag-blue mb-4 mx-auto">Venda Anual</div>
+                            <p class="text-4xl font-black" style="color:#60a5fa" >R$ 550</p>
+                            <p class="text-neutral-400 text-sm mb-4">por venda anual</p>
+                            <div class="commission-bar">
+                                <div class="commission-fill" style="width:100%;background:linear-gradient(90deg,#3b82f6,#60a5fa)"></div>
+                            </div>
+                            <p class="text-xs text-neutral-500 mt-2">Melhor comissão única</p>
+                        </div>
+                    </div>
+
+                    <!-- Simulador afiliado -->
+                    <div class="card-glass p-8">
+                        <h3 class="font-bold text-lg mb-6 flex items-center gap-2">
+                            <i data-lucide="calculator" style="width:20px;height:20px;color:#F59E0B"></i>
+                            Simule seus ganhos — Afiliado
+                        </h3>
+                        <div class="grid md:grid-cols-3 gap-4 mb-6">
+                            <div>
+                                <label class="block text-sm text-neutral-400 mb-2">Vendas mensais</label>
+                                <input type="number" class="input-field" id="aff-vendas-mes" value="8" min="0" oninput="calcAfiliado()">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-neutral-400 mb-2">Clientes ativos totais</label>
+                                <input type="number" class="input-field" id="aff-clientes" value="10" min="0" oninput="calcAfiliado()">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-neutral-400 mb-2">Vendas anuais/mês</label>
+                                <input type="number" class="input-field" id="aff-anuais" value="1" min="0" oninput="calcAfiliado()">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="rounded-xl p-4 text-center" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15)">
+                                <p class="text-xs text-neutral-500 mb-1">Este mês</p>
+                                <p class="text-2xl font-black text-amber-500" id="aff-mes">R$ 1.350</p>
+                            </div>
+                            <div class="rounded-xl p-4 text-center" style="background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.15)">
+                                <p class="text-xs text-neutral-500 mb-1">Em 6 meses</p>
+                                <p class="text-2xl font-black text-green-400" id="aff-6meses">R$ 9.900</p>
+                            </div>
+                            <div class="rounded-xl p-4 text-center" style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15)">
+                                <p class="text-xs text-neutral-500 mb-1">Em 12 meses</p>
+                                <p class="text-2xl font-black" style="color:#60a5fa" id="aff-12meses">R$ 22.200</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comissões Gestor -->
+                <div id="commission-gestor" class="hidden">
+                    <div class="card-highlight p-6 mb-6">
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style="background:rgba(245,158,11,0.15)">
+                                <i data-lucide="crown" style="width:18px;height:18px;color:#F59E0B"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold mb-1">Gestor = Afiliado + Overriding</h3>
+                                <p class="text-neutral-400 text-sm">O gestor recebe as mesmas comissões de afiliado nas suas vendas diretas, MAIS overriding das vendas dos afiliados que recrutar.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6 mb-8">
+                        <div>
+                            <h4 class="font-semibold mb-4 text-amber-500">💰 Suas vendas diretas (igual afiliado)</h4>
+                            <div class="space-y-3">
+                                <div class="card-glass p-4 flex justify-between items-center">
+                                    <span class="text-sm">Venda mensal (implantação)</span>
+                                    <span class="font-bold text-amber-500">R$ 150</span>
+                                </div>
+                                <div class="card-glass p-4 flex justify-between items-center">
+                                    <span class="text-sm">Recorrência mensal</span>
+                                    <span class="font-bold text-green-400">R$ 40/mês</span>
+                                </div>
+                                <div class="card-glass p-4 flex justify-between items-center">
+                                    <span class="text-sm">Venda anual</span>
+                                    <span class="font-bold" style="color:#60a5fa">R$ 550</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold mb-4 text-amber-500">🏆 Overriding dos seus afiliados</h4>
+                            <div class="space-y-3">
+                                <div class="card-glass p-4 flex justify-between items-center">
+                                    <div>
+                                        <p class="text-sm">Por cada venda do afiliado</p>
+                                        <p class="text-xs text-neutral-500">Implantação mensal</p>
+                                    </div>
+                                    <span class="font-bold text-amber-500">R$ 25</span>
+                                </div>
+                                <div class="card-glass p-4 flex justify-between items-center">
+                                    <div>
+                                        <p class="text-sm">Por cada venda anual do afiliado</p>
+                                        <p class="text-xs text-neutral-500">Overriding anual</p>
+                                    </div>
+                                    <span class="font-bold" style="color:#60a5fa">R$ 75</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Simulador gestor -->
+                    <div class="card-glass p-8">
+                        <h3 class="font-bold text-lg mb-6 flex items-center gap-2">
+                            <i data-lucide="calculator" style="width:20px;height:20px;color:#F59E0B"></i>
+                            Simule seus ganhos — Gestor
+                        </h3>
+                        <div class="grid md:grid-cols-2 gap-4 mb-2">
+                            <p class="text-sm text-neutral-400 col-span-2 font-semibold">Suas vendas diretas:</p>
+                            <div>
+                                <label class="block text-xs text-neutral-500 mb-2">Suas vendas mensais</label>
+                                <input type="number" class="input-field" id="gest-vendas" value="6" min="0" oninput="calcGestor()">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-neutral-500 mb-2">Seus clientes ativos</label>
+                                <input type="number" class="input-field" id="gest-clientes" value="10" min="0" oninput="calcGestor()">
+                            </div>
+                        </div>
+                        <div class="grid md:grid-cols-3 gap-4 mb-6 mt-4">
+                            <p class="text-sm text-neutral-400 col-span-3 font-semibold">Overriding dos seus afiliados:</p>
+                            <div>
+                                <label class="block text-xs text-neutral-500 mb-2">Nº de afiliados</label>
+                                <input type="number" class="input-field" id="gest-num-afiliados" value="13" min="0" oninput="calcGestor()">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-neutral-500 mb-2">Vendas/mês por afiliado</label>
+                                <input type="number" class="input-field" id="gest-vendas-afiliado" value="6" min="0" oninput="calcGestor()">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-neutral-500 mb-2">Vendas anuais/mês (afil.)</label>
+                                <input type="number" class="input-field" id="gest-anuais-afiliado" value="2" min="0" oninput="calcGestor()">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="rounded-xl p-4 text-center" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15)">
+                                <p class="text-xs text-neutral-500 mb-1">Este mês</p>
+                                <p class="text-2xl font-black text-amber-500" id="gest-mes">R$ 0</p>
+                            </div>
+                            <div class="rounded-xl p-4 text-center" style="background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.15)">
+                                <p class="text-xs text-neutral-500 mb-1">Em 6 meses</p>
+                                <p class="text-2xl font-black text-green-400" id="gest-6meses">R$ 0</p>
+                            </div>
+                            <div class="rounded-xl p-4 text-center" style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15)">
+                                <p class="text-xs text-neutral-500 mb-1">Em 12 meses</p>
+                                <p class="text-2xl font-black" style="color:#60a5fa" id="gest-12meses">R$ 0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FORMULÁRIOS CADASTRO -->
+        <section id="cadastro" style="padding:5rem 0;background:rgba(245,158,11,0.02);">
+            <div class="max-w-3xl mx-auto px-5">
+                <div class="text-center mb-12">
+                    <div class="tag tag-amber mb-4 mx-auto">Cadastro</div>
+                    <h2 style="font-size:2.5rem;font-weight:800">Comece agora</h2>
+                </div>
+
+                <!-- Tabs -->
+                <div class="flex gap-3 justify-center mb-10">
+                    <button class="tab-btn active" id="form-tab-afiliado" onclick="selectFormTab('afiliado')">
+                        Quero ser Afiliado
+                    </button>
+                    <button class="tab-btn" id="form-tab-gestor" onclick="selectFormTab('gestor')">
+                        Quero ser Gestor
+                    </button>
+                </div>
+
+                <!-- Form Afiliado -->
+                <div id="form-afiliado">
+                    <div class="card-glass p-8">
+                        <div class="flex items-start gap-3 p-4 rounded-xl mb-6" style="background:rgba(34,197,94,0.05);border:1px solid rgba(34,197,94,0.15)">
+                            <i data-lucide="info" style="width:18px;height:18px;color:#22c55e;flex-shrink:0;margin-top:2px"></i>
+                            <p class="text-sm text-green-400">Aprovação instantânea. Seu link de afiliado é gerado na hora do cadastro.</p>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nome completo *</label>
+                                    <input type="text" class="input-field" id="aff-nome" placeholder="João Silva">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-neutral-400 mb-1.5 font-medium">Telefone/WhatsApp *</label>
+                                    <input type="text" class="input-field" id="aff-tel" placeholder="(32) 99999-0000" oninput="maskPhone(this)">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-neutral-400 mb-1.5 font-medium">E-mail *</label>
+                                <input type="email" class="input-field" id="aff-email" placeholder="joao@email.com">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-neutral-400 mb-1.5 font-medium">Chave PIX para receber comissões *</label>
+                                <input type="text" class="input-field" id="aff-pix" placeholder="CPF, e-mail, telefone ou chave aleatória">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-neutral-400 mb-1.5 font-medium">Como pretende divulgar? (opcional)</label>
+                                <select class="input-field" id="aff-canal">
+                                    <option value="">Selecione...</option>
+                                    <option>Redes sociais (Instagram/TikTok)</option>
+                                    <option>WhatsApp/grupos</option>
+                                    <option>Indicação pessoal</option>
+                                    <option>Blog/site próprio</option>
+                                    <option>Outros</option>
+                                </select>
+                            </div>
+                            <button onclick="cadastrarAfiliado()" id="btnCadAfiliado" class="btn-amber w-full" style="justify-content:center;font-size:1rem;padding:1rem">
+                                Gerar Meu Link de Afiliado
+                                <i data-lucide="arrow-right" style="width:18px;height:18px"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Gestor -->
+                <div id="form-gestor" class="hidden">
+                    <div class="card-glass p-8">
+                        <div class="flex items-start gap-3 p-4 rounded-xl mb-6" style="background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.15)">
+                            <i data-lucide="clock" style="width:18px;height:18px;color:#F59E0B;flex-shrink:0;margin-top:2px"></i>
+                            <p class="text-sm text-amber-500">Gestores passam por aprovação prévia. Sua candidatura é enviada para análise e retornamos em até 48h.</p>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm text-neutral-400 mb-1.5 font-medium">Nome completo *</label>
+                                    <input type="text" class="input-field" id="gest-nome" placeholder="Maria Costa">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-neutral-400 mb-1.5 font-medium">Telefone/WhatsApp *</label>
+                                    <input type="text" class="input-field" id="gest-tel" placeholder="(32) 99999-0000" oninput="maskPhone(this)">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-neutral-400 mb-1.5 font-medium">E-mail *</label>
+                                <input type="email" class="input-field" id="gest-email" placeholder="maria@email.com">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-neutral-400 mb-1.5 font-medium">Chave PIX *</label>
+                                <input type="text" class="input-field" id="gest-pix" placeholder="CPF, e-mail, telefone ou chave aleatória">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-neutral-400 mb-1.5 font-medium">Experiência em vendas/marketing *</label>
+                                <select class="input-field" id="gest-experiencia">
+                                    <option value="">Selecione...</option>
+                                    <option>Menos de 1 ano</option>
+                                    <option>1 a 3 anos</option>
+                                    <option>3 a 5 anos</option>
+                                    <option>Mais de 5 anos</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-neutral-400 mb-1.5 font-medium">Quantos afiliados pretende recrutar? *</label>
+                                <select class="input-field" id="gest-meta">
+                                    <option value="">Selecione...</option>
+                                    <option>1 a 5 afiliados</option>
+                                    <option>5 a 15 afiliados</option>
+                                    <option>15 a 30 afiliados</option>
+                                    <option>Mais de 30 afiliados</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-neutral-400 mb-1.5 font-medium">Apresentação / Currículo *</label>
+                                <textarea class="input-field" id="gest-curriculo" rows="5" placeholder="Conte sobre você, sua experiência com vendas ou marketing digital, por que quer ser gestor CalFlow e como pretende estruturar sua equipe de afiliados..."></textarea>
+                                <p class="text-xs text-neutral-500 mt-1">Mínimo 100 caracteres. Seja específico para aumentar chances de aprovação.</p>
+                            </div>
+                            <button onclick="candidatarGestor()" id="btnCadGestor" class="btn-amber w-full" style="justify-content:center;font-size:1rem;padding:1rem">
+                                Enviar Candidatura
+                                <i data-lucide="send" style="width:18px;height:18px"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- GESTOR SECTION (âncora) -->
+        <div id="gestor"></div>
+
+        <!-- FAQ -->
+        <section id="faq" style="padding:5rem 0;">
+            <div class="max-w-3xl mx-auto px-5">
+                <div class="text-center mb-12">
+                    <div class="tag tag-amber mb-4 mx-auto">FAQ</div>
+                    <h2 style="font-size:2rem;font-weight:800">Dúvidas frequentes</h2>
+                </div>
+                <div class="space-y-3" id="faqList">
+                    <!-- Populado por JS -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer style="background:#0f0f0f;border-top:1px solid rgba(255,255,255,0.06);padding:2rem 0;">
+        <div class="max-w-6xl mx-auto px-5 flex flex-wrap items-center justify-between gap-4">
+            <img src="images/CalFlow.jpeg" alt="CalFlow" style="height:32px;border-radius:6px;">
+            <div class="flex gap-6">
+                <a href="index.html" class="nav-link text-xs">Landing Page</a>
+                <a href="checkout.html" class="nav-link text-xs">Checkout</a>
+                <a href="cliente.html" class="nav-link text-xs">Área do Cliente</a>
+            </div>
+            <p class="text-xs text-neutral-600">&copy; 2026 CalFlow. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+</div><!-- /screen-landing -->
+
+<!-- ========================================================== -->
+<!-- TELA 2 — DASHBOARD DO AFILIADO/GESTOR -->
+<!-- ========================================================== -->
+<div id="screen-dashboard" class="screen">
+
+    <!-- Mobile Header -->
+    <div style="display:none;position:fixed;top:0;left:0;right:0;z-index:45;background:#0f0f0f;border-bottom:1px solid rgba(255,255,255,0.06);padding:0 1rem;height:56px;align-items:center;justify-content:space-between;" id="mobileHeader" class="flex">
+        <button onclick="toggleSidebar()">
+            <i data-lucide="menu" style="width:24px;height:24px;color:#fff"></i>
+        </button>
+        <img src="images/CalFlow.jpeg" alt="CalFlow" style="height:28px;border-radius:6px;">
+        <button onclick="doLogout()">
+            <i data-lucide="log-out" style="width:20px;height:20px;color:#737373"></i>
+        </button>
+    </div>
+
+    <!-- Sidebar Overlay mobile -->
+    <div id="sidebarOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:35;" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar-dash" style="width:260px;height:100vh;position:fixed;left:0;top:0;z-index:40;background:#0f0f0f;border-right:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;">
+        <div style="padding:1.25rem;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <img src="images/CalFlow.jpeg" alt="CalFlow" style="height:36px;border-radius:8px;margin-bottom:1rem;">
+            <div class="flex items-center gap-3">
+                <div id="dashAvatar" style="width:40px;height:40px;border-radius:50%;background:rgba(245,158,11,0.15);color:#F59E0B;font-weight:700;font-size:0.875rem;display:flex;align-items:center;justify-content:center;">JO</div>
+                <div style="flex:1;min-width:0">
+                    <p style="font-size:0.875rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="dashNome">João Silva</p>
+                    <p style="font-size:0.75rem;color:#737373" id="dashTipo">Afiliado</p>
+                </div>
+            </div>
+            <div id="dashBadge" style="margin-top:0.75rem;display:inline-flex;align-items:center;gap:0.4rem;padding:0.25rem 0.75rem;border-radius:9999px;font-size:0.7rem;font-weight:700;background:rgba(245,158,11,0.1);color:#F59E0B;border:1px solid rgba(245,158,11,0.2)">
+                <i data-lucide="user" style="width:11px;height:11px"></i>
+                AFILIADO
+            </div>
+        </div>
+        <nav style="flex:1;padding:1rem 0;overflow-y:auto;" id="sidebarNav"></nav>
+        <div style="padding:1rem;border-top:1px solid rgba(255,255,255,0.06)">
+            <button onclick="doLogout()" class="sidebar-link w-full" style="color:#ef4444;">
+                <i data-lucide="log-out" style="width:18px;height:18px"></i> Sair
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <main style="margin-left:260px;min-height:100vh;padding:2rem;" id="dashMain">
+
+        <!-- VISÃO GERAL -->
+        <div id="sec-overview" class="section-panel active">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+                <div>
+                    <h2 style="font-size:1.75rem;font-weight:800" id="greetingDash">Bom dia!</h2>
+                    <p style="font-size:0.875rem;color:#737373;margin-top:0.25rem">Veja o resumo das suas comissões</p>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold" style="background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.2)">
+                    <span style="width:8px;height:8px;background:#22c55e;border-radius:50%;"></span>
+                    Conta ativa
+                </div>
+            </div>
+
+            <!-- Metrics -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div class="metric-card">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div style="width:32px;height:32px;background:rgba(245,158,11,0.1);border-radius:8px;display:flex;align-items:center;justify-content:center">
+                            <i data-lucide="dollar-sign" style="width:16px;height:16px;color:#F59E0B"></i>
+                        </div>
+                        <p style="font-size:0.75rem;color:#737373">Comissões totais</p>
+                    </div>
+                    <p style="font-size:1.75rem;font-weight:800;color:#F59E0B" id="metricTotal">R$ 0</p>
+                </div>
+                <div class="metric-card">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div style="width:32px;height:32px;background:rgba(34,197,94,0.1);border-radius:8px;display:flex;align-items:center;justify-content:center">
+                            <i data-lucide="trending-up" style="width:16px;height:16px;color:#22c55e"></i>
+                        </div>
+                        <p style="font-size:0.75rem;color:#737373">Pendente (mês)</p>
+                    </div>
+                    <p style="font-size:1.75rem;font-weight:800;color:#22c55e" id="metricPendente">R$ 0</p>
+                </div>
+                <div class="metric-card">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div style="width:32px;height:32px;background:rgba(59,130,246,0.1);border-radius:8px;display:flex;align-items:center;justify-content:center">
+                            <i data-lucide="users" style="width:16px;height:16px;color:#60a5fa"></i>
+                        </div>
+                        <p style="font-size:0.75rem;color:#737373">Vendas realizadas</p>
+                    </div>
+                    <p style="font-size:1.75rem;font-weight:800;color:#60a5fa" id="metricVendas">0</p>
+                </div>
+                <div class="metric-card">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div style="width:32px;height:32px;background:rgba(168,85,247,0.1);border-radius:8px;display:flex;align-items:center;justify-content:center">
+                            <i data-lucide="repeat" style="width:16px;height:16px;color:#a855f7"></i>
+                        </div>
+                        <p style="font-size:0.75rem;color:#737373">Recorrência/mês</p>
+                    </div>
+                    <p style="font-size:1.75rem;font-weight:800;color:#a855f7" id="metricRecorrencia">R$ 0</p>
+                </div>
+            </div>
+
+            <!-- Link + Histórico -->
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Meu link -->
+                <div class="card-glass p-6">
+                    <h3 class="font-bold mb-4 flex items-center gap-2">
+                        <i data-lucide="link" style="width:18px;height:18px;color:#F59E0B"></i>
+                        Meu Link de Afiliado
+                    </h3>
+                    <div style="background:#0a0a0a;border:1px solid rgba(255,255,255,0.08);border-radius:0.75rem;padding:0.75rem 1rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem">
+                        <p style="font-size:0.75rem;color:#F59E0B;font-family:monospace;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="dashLink">calflow.pages.dev/checkout?ref=AFF_JOAO_001</p>
+                        <button onclick="copyLink()" style="background:none;border:none;cursor:pointer;color:#737373;flex-shrink:0" title="Copiar">
+                            <i data-lucide="copy" style="width:16px;height:16px"></i>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="shareWhatsApp()" class="btn-outline text-sm" style="padding:0.5rem;border-radius:0.5rem;display:flex;align-items:center;justify-content:center;gap:0.4rem">
+                            <i data-lucide="message-circle" style="width:14px;height:14px;color:#22c55e"></i>
+                            WhatsApp
+                        </button>
+                        <button onclick="copyLink()" class="btn-outline text-sm" style="padding:0.5rem;border-radius:0.5rem;display:flex;align-items:center;justify-content:center;gap:0.4rem">
+                            <i data-lucide="copy" style="width:14px;height:14px"></i>
+                            Copiar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Histórico comissões -->
+                <div class="card-glass p-6">
+                    <h3 class="font-bold mb-4 flex items-center gap-2">
+                        <i data-lucide="receipt" style="width:18px;height:18px;color:#F59E0B"></i>
+                        Últimas Comissões
+                    </h3>
+                    <div id="listaComissoes" style="space-y:0.5rem">
+                        <p class="text-neutral-500 text-sm text-center py-6">Nenhuma comissão registrada ainda.<br>Compartilhe seu link para começar!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MEUS SCRIPTS -->
+        <div id="sec-scripts" class="section-panel">
+            <h2 style="font-size:1.75rem;font-weight:800;margin-bottom:0.5rem">Scripts de Vendas</h2>
+            <p style="color:#737373;font-size:0.875rem;margin-bottom:2rem">Copie, personalize e use. Testados e comprovados.</p>
+
+            <div class="space-y-6">
+                <!-- Script WhatsApp Individual -->
+                <div class="card-glass p-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div style="width:40px;height:40px;background:rgba(34,197,94,0.1);border-radius:0.75rem;display:flex;align-items:center;justify-content:center">
+                            <i data-lucide="message-circle" style="width:20px;height:20px;color:#22c55e"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold">Script WhatsApp — Abordagem direta</h3>
+                            <p style="font-size:0.75rem;color:#737373">Para donos de negócio que você conhece</p>
+                        </div>
+                    </div>
+                    <div style="background:#0a0a0a;border:1px solid rgba(255,255,255,0.06);border-radius:0.75rem;padding:1.25rem;font-size:0.85rem;color:#d4d4d4;line-height:1.8;white-space:pre-wrap;font-family:inherit" id="script1">Oi [Nome]! Tudo bem?
+
+                        Cara, lembrei de você agora. Você ainda agenda os clientes na mão/no caderno, né?
+
+                        Descobri um sistema que faz isso automaticamente pelo WhatsApp — o cliente manda mensagem, o bot responde, oferece os serviços, escolhe o horário disponível e já registra na agenda. Tudo automático, 24h por dia.
+
+                        Você não precisa mais parar o que está fazendo pra marcar horário ou ficar respondendo a mesma coisa mil vezes.
+
+                        Se quiser, posso te mostrar funcionando em 5 minutos. É do CalFlow, sistema que já tá ajudando negócios aqui da região.
+
+                        Interesse?</div>
+                    <button onclick="copyScript('script1')" class="btn-outline text-sm mt-3" style="padding:0.5rem 1.25rem;border-radius:0.5rem">
+                        <i data-lucide="copy" style="width:14px;height:14px;display:inline;margin-right:4px;vertical-align:middle"></i>
+                        Copiar script
+                    </button>
+                </div>
+
+                <!-- Script para Stories/Feed -->
+                <div class="card-glass p-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div style="width:40px;height:40px;background:rgba(168,85,247,0.1);border-radius:0.75rem;display:flex;align-items:center;justify-content:center">
+                            <i data-lucide="instagram" style="width:20px;height:20px;color:#a855f7"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold">Legenda para Instagram/TikTok</h3>
+                            <p style="font-size:0.75rem;color:#737373">Para post mostrando o bot em ação</p>
+                        </div>
+                    </div>
+                    <div style="background:#0a0a0a;border:1px solid rgba(255,255,255,0.06);border-radius:0.75rem;padding:1.25rem;font-size:0.85rem;color:#d4d4d4;line-height:1.8;white-space:pre-wrap;font-family:inherit" id="script2">Isso é o que acontece quando você para de marcar horário na mão 👇
+
+                        ✅ Cliente manda mensagem no WhatsApp
+                        ✅ Bot responde na hora (2h da manhã? Tanto faz)
+                        ✅ Mostra serviços e preços
+                        ✅ Deixa escolher o horário disponível
+                        ✅ Confirma na agenda automático
+
+                        Enquanto você dorme, atende. Enquanto você trabalha, agenda.
+
+                        Barbearias, salões, clínicas, estúdios — qualquer negócio que agenda por WhatsApp precisa disso.
+
+                        Quer ver funcionando no seu negócio? Link na bio ou me chama no direct 👆
+
+                        #CalFlow #AutomaçãoWhatsApp #AgendamentoAutomático #NegócioLocal #Empreendedorismo</div>
+                    <button onclick="copyScript('script2')" class="btn-outline text-sm mt-3" style="padding:0.5rem 1.25rem;border-radius:0.5rem">
+                        <i data-lucide="copy" style="width:14px;height:14px;display:inline;margin-right:4px;vertical-align:middle"></i>
+                        Copiar script
+                    </button>
+                </div>
+
+                <!-- Script Grupos -->
+                <div class="card-glass p-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div style="width:40px;height:40px;background:rgba(245,158,11,0.1);border-radius:0.75rem;display:flex;align-items:center;justify-content:center">
+                            <i data-lucide="users" style="width:20px;height:20px;color:#F59E0B"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold">Mensagem para grupos de empreendedores</h3>
+                            <p style="font-size:0.75rem;color:#737373">Grupos de WhatsApp de negócios locais</p>
+                        </div>
+                    </div>
+                    <div style="background:#0a0a0a;border:1px solid rgba(255,255,255,0.06);border-radius:0.75rem;padding:1.25rem;font-size:0.85rem;color:#d4d4d4;line-height:1.8;white-space:pre-wrap;font-family:inherit" id="script3">Galera, encontrei uma solução que está ajudando muito quem trabalha com agendamento por WhatsApp 👇
+
+                        Sistema chamado CalFlow — automatiza todo o processo de agendamento via WhatsApp:
+                        📅 Bot agenda automaticamente (sem você precisar responder)
+                        🔔 Manda lembrete pro cliente (reduz faltas em até 80%)
+                        💰 Pode cobrar PIX antecipado (elimina no-show)
+                        📊 Painel com todos os agendamentos
+
+                        Vi funcionando em barbearia aqui perto, o dono parou de perder hora respondendo WhatsApp.
+
+                        Tem 7 dias de garantia e é bem acessível. Se alguém quiser ver: [SEU LINK]</div>
+                    <button onclick="copyScript('script3')" class="btn-outline text-sm mt-3" style="padding:0.5rem 1.25rem;border-radius:0.5rem">
+                        <i data-lucide="copy" style="width:14px;height:14px;display:inline;margin-right:4px;vertical-align:middle"></i>
+                        Copiar script
+                    </button>
+                </div>
+
+                <!-- Objeções -->
+                <div class="card-glass p-6">
+                    <h3 class="font-bold mb-4 flex items-center gap-2">
+                        <i data-lucide="shield" style="width:18px;height:18px;color:#F59E0B"></i>
+                        Como responder objeções
+                    </h3>
+                    <div class="space-y-4">
+                        <div style="border:1px solid rgba(255,255,255,0.06);border-radius:0.75rem;overflow:hidden">
+                            <div style="padding:0.75rem 1rem;background:rgba(239,68,68,0.05);border-bottom:1px solid rgba(255,255,255,0.06)">
+                                <p style="font-size:0.85rem;color:#ef4444;font-weight:600">❌ "Tá caro, R$ 497 é muito"</p>
+                            </div>
+                            <div style="padding:0.75rem 1rem">
+                                <p style="font-size:0.82rem;color:#d4d4d4;line-height:1.7">💬 "Entendo. Mas pensa comigo — você perde quantas horas por semana respondendo WhatsApp? Se você atende 20 clientes por dia a R$ 40, e o bot recuperar só 3 agendamentos que você perderia por não responder rápido, o sistema se paga em menos de uma semana."</p>
+                            </div>
+                        </div>
+                        <div style="border:1px solid rgba(255,255,255,0.06);border-radius:0.75rem;overflow:hidden">
+                            <div style="padding:0.75rem 1rem;background:rgba(239,68,68,0.05);border-bottom:1px solid rgba(255,255,255,0.06)">
+                                <p style="font-size:0.85rem;color:#ef4444;font-weight:600">❌ "Não sei mexer com tecnologia"</p>
+                            </div>
+                            <div style="padding:0.75rem 1rem">
+                                <p style="font-size:0.82rem;color:#d4d4d4;line-height:1.7">💬 "Exatamente por isso que tem o time da CalFlow. Eles configuram tudo pra você — você só escaneia um QR Code no celular, como se fosse WhatsApp Web. Mais nada. Entrega em até 24h."</p>
+                            </div>
+                        </div>
+                        <div style="border:1px solid rgba(255,255,255,0.06);border-radius:0.75rem;overflow:hidden">
+                            <div style="padding:0.75rem 1rem;background:rgba(239,68,68,0.05);border-bottom:1px solid rgba(255,255,255,0.06)">
+                                <p style="font-size:0.85rem;color:#ef4444;font-weight:600">❌ "Deixa pra depois, vou pensar"</p>
+                            </div>
+                            <div style="padding:0.75rem 1rem">
+                                <p style="font-size:0.82rem;color:#d4d4d4;line-height:1.7">💬 "Claro! Mas tem garantia de 7 dias — se não gostar de nada, devolve tudo. Então não tem risco nenhum pra você experimentar. Posso te mandar o link agora pra você ver quando tiver tempo?"</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TUTORIAL -->
+        <div id="sec-tutorial" class="section-panel">
+            <h2 style="font-size:1.75rem;font-weight:800;margin-bottom:0.5rem">Tutorial Completo</h2>
+            <p style="color:#737373;font-size:0.875rem;margin-bottom:2rem">Passo a passo para começar a vender e maximizar seus ganhos.</p>
+
+            <div class="space-y-6">
+
+                <!-- Passo 1 -->
+                <div class="card-glass p-6">
+                    <div class="flex items-start gap-4">
+                        <div style="width:40px;height:40px;background:rgba(245,158,11,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#F59E0B;flex-shrink:0">1</div>
+                        <div style="flex:1">
+                            <h3 class="font-bold mb-2">Conheça o produto a fundo</h3>
+                            <p style="font-size:0.85rem;color:#a1a1aa;line-height:1.7;margin-bottom:1rem">Antes de vender, você precisa entender o que está vendendo. Acesse a landing page, leia tudo e entenda como o bot funciona.</p>
+                            <div class="grid md:grid-cols-2 gap-3">
+                                <a href="index.html" target="_blank" class="btn-outline text-sm" style="padding:0.5rem 1rem;border-radius:0.5rem;text-align:center;text-decoration:none;display:block">
+                                    <i data-lucide="external-link" style="width:14px;height:14px;display:inline;margin-right:4px;vertical-align:middle"></i>
+                                    Ver Landing Page
+                                </a>
+                                <a href="checkout.html" target="_blank" class="btn-outline text-sm" style="padding:0.5rem 1rem;border-radius:0.5rem;text-align:center;text-decoration:none;display:block">
+                                    <i data-lucide="shopping-cart" style="width:14px;height:14px;display:inline;margin-right:4px;vertical-align:middle"></i>
+                                    Ver Checkout
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Passo 2 -->
+                <div class="card-glass p-6">
+                    <div class="flex items-start gap-4">
+                        <div style="width:40px;height:40px;background:rgba(245,158,11,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#F59E0B;flex-shrink:0">2</div>
+                        <div style="flex:1">
+                            <h3 class="font-bold mb-2">Use seu link sempre</h3>
+                            <p style="font-size:0.85rem;color:#a1a1aa;line-height:1.7;margin-bottom:1rem">Seu link rastreia automaticamente quem veio por você. Nunca compartilhe o link sem o seu código.</p>
+                            <div style="background:#0a0a0a;border:1px solid rgba(245,158,11,0.2);border-radius:0.75rem;padding:1rem">
+                                <p style="font-size:0.75rem;color:#F59E0B;font-weight:600;margin-bottom:0.5rem">✅ Link CORRETO (com seu código):</p>
+                                <p style="font-size:0.75rem;font-family:monospace;color:#d4d4d4">calflow.pages.dev/checkout?ref=AFF_SEU_CODIGO</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Passo 3 -->
+                <div class="card-glass p-6">
+                    <div class="flex items-start gap-4">
+                        <div style="width:40px;height:40px;background:rgba(245,158,11,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#F59E0B;flex-shrink:0">3</div>
+                        <div style="flex:1">
+                            <h3 class="font-bold mb-2">Onde encontrar clientes</h3>
+                            <p style="font-size:0.85rem;color:#a1a1aa;line-height:1.7;margin-bottom:1rem">Foque em negócios que já atendem por WhatsApp:</p>
+                            <div class="grid md:grid-cols-3 gap-3">
+                                <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:0.75rem;padding:0.75rem;text-align:center">
+                                    <p class="text-2xl mb-2">✂️</p>
+                                    <p style="font-size:0.8rem;font-weight:600">Barbearias</p>
+                                    <p style="font-size:0.72rem;color:#737373">Alta rotatividade</p>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:0.75rem;padding:0.75rem;text-align:center">
+                                    <p class="text-2xl mb-2">💅</p>
+                                    <p style="font-size:0.8rem;font-weight:600">Salões de Beleza</p>
+                                    <p style="font-size:0.72rem;color:#737373">Muitos horários</p>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:0.75rem;padding:0.75rem;text-align:center">
+                                    <p class="text-2xl mb-2">🏥</p>
+                                    <p style="font-size:0.8rem;font-weight:600">Clínicas</p>
+                                    <p style="font-size:0.72rem;color:#737373">Alto ticket</p>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:0.75rem;padding:0.75rem;text-align:center">
+                                    <p class="text-2xl mb-2">🐾</p>
+                                    <p style="font-size:0.8rem;font-weight:600">Pet Shops</p>
+                                    <p style="font-size:0.72rem;color:#737373">Serviços recorrentes</p>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:0.75rem;padding:0.75rem;text-align:center">
+                                    <p class="text-2xl mb-2">🏋️</p>
+                                    <p style="font-size:0.8rem;font-weight:600">Estúdios/Academias</p>
+                                    <p style="font-size:0.72rem;color:#737373">Personal trainers</p>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:0.75rem;padding:0.75rem;text-align:center">
+                                    <p class="text-2xl mb-2">🍕</p>
+                                    <p style="font-size:0.8rem;font-weight:600">Delivery/Restaurantes</p>
+                                    <p style="font-size:0.72rem;color:#737373">Alta demanda</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Passo 4 -->
+                <div class="card-glass p-6">
+                    <div class="flex items-start gap-4">
+                        <div style="width:40px;height:40px;background:rgba(245,158,11,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#F59E0B;flex-shrink:0">4</div>
+                        <div style="flex:1">
+                            <h3 class="font-bold mb-2">Estratégias que funcionam</h3>
+                            <div class="space-y-3">
+                                <div class="flex gap-3 p-3 rounded-xl" style="background:rgba(34,197,94,0.04);border:1px solid rgba(34,197,94,0.1)">
+                                    <span class="text-green-400 font-bold text-sm">🎯</span>
+                                    <p style="font-size:0.85rem;color:#d4d4d4">Liste 20 negócios locais que você conhece ou frequenta. Abordagem pessoal converte 5x mais que abordagem online.</p>
+                                </div>
+                                <div class="flex gap-3 p-3 rounded-xl" style="background:rgba(34,197,94,0.04);border:1px solid rgba(34,197,94,0.1)">
+                                    <span class="text-green-400 font-bold text-sm">📱</span>
+                                    <p style="font-size:0.85rem;color:#d4d4d4">Grave um Reels/TikTok de 60 segundos mostrando o bot funcionando. Alcance orgânico pode trazer leads sem custo.</p>
+                                </div>
+                                <div class="flex gap-3 p-3 rounded-xl" style="background:rgba(34,197,94,0.04);border:1px solid rgba(34,197,94,0.1)">
+                                    <span class="text-green-400 font-bold text-sm">🤝</span>
+                                    <p style="font-size:0.85rem;color:#d4d4d4">Peça indicação de cada cliente satisfeito. "Você conhece mais alguém que precisa disso?" — 40% dos clientes indicam espontaneamente.</p>
+                                </div>
+                                <div class="flex gap-3 p-3 rounded-xl" style="background:rgba(34,197,94,0.04);border:1px solid rgba(34,197,94,0.1)">
+                                    <span class="text-green-400 font-bold text-sm">💬</span>
+                                    <p style="font-size:0.85rem;color:#d4d4d4">Entre em grupos de empreendedores locais no WhatsApp e Facebook. Compartilhe valor antes de vender.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Passo 5 — Pagamentos -->
+                <div class="card-glass p-6">
+                    <div class="flex items-start gap-4">
+                        <div style="width:40px;height:40px;background:rgba(245,158,11,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#F59E0B;flex-shrink:0">5</div>
+                        <div style="flex:1">
+                            <h3 class="font-bold mb-2">Quando e como você recebe</h3>
+                            <div class="space-y-3">
+                                <div style="background:rgba(245,158,11,0.04);border:1px solid rgba(245,158,11,0.15);border-radius:0.75rem;padding:1rem">
+                                    <p style="font-size:0.85rem;font-weight:600;color:#F59E0B;margin-bottom:0.5rem">📅 Todo dia 5 do mês</p>
+                                    <p style="font-size:0.82rem;color:#a1a1aa;line-height:1.6">As comissões do mês anterior são calculadas e pagas via PIX direto na chave que você cadastrou. Você recebe um aviso pelo WhatsApp com o comprovante.</p>
+                                </div>
+                                <div class="grid grid-cols-3 gap-3">
+                                    <div style="background:rgba(255,255,255,0.02);border-radius:0.75rem;padding:0.75rem;text-align:center">
+                                        <p style="font-size:0.75rem;color:#737373">Implantação</p>
+                                        <p style="font-size:1rem;font-weight:700;color:#F59E0B">R$ 150</p>
+                                        <p style="font-size:0.7rem;color:#737373">na venda</p>
+                                    </div>
+                                    <div style="background:rgba(255,255,255,0.02);border-radius:0.75rem;padding:0.75rem;text-align:center">
+                                        <p style="font-size:0.75rem;color:#737373">Recorrente</p>
+                                        <p style="font-size:1rem;font-weight:700;color:#22c55e">R$ 40</p>
+                                        <p style="font-size:0.7rem;color:#737373">/mês</p>
+                                    </div>
+                                    <div style="background:rgba(255,255,255,0.02);border-radius:0.75rem;padding:0.75rem;text-align:center">
+                                        <p style="font-size:0.75rem;color:#737373">Anual</p>
+                                        <p style="font-size:1rem;font-weight:700;color:#60a5fa">R$ 550</p>
+                                        <p style="font-size:0.7rem;color:#737373">na venda</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- MEUS AFILIADOS (só para gestores) -->
+        <div id="sec-afiliados" class="section-panel">
+            <h2 style="font-size:1.75rem;font-weight:800;margin-bottom:0.5rem">Minha Equipe</h2>
+            <p style="color:#737373;font-size:0.875rem;margin-bottom:2rem">Afiliados sob sua gestão e overriding gerado.</p>
+
+            <div class="grid grid-cols-3 gap-4 mb-8">
+                <div class="metric-card text-center">
+                    <p style="font-size:0.75rem;color:#737373;margin-bottom:0.5rem">Afiliados ativos</p>
+                    <p style="font-size:2rem;font-weight:800;color:#F59E0B" id="totalAfiliados">0</p>
+                </div>
+                <div class="metric-card text-center">
+                    <p style="font-size:0.75rem;color:#737373;margin-bottom:0.5rem">Vendas da equipe</p>
+                    <p style="font-size:2rem;font-weight:800;color:#60a5fa" id="vendasEquipe">0</p>
+                </div>
+                <div class="metric-card text-center">
+                    <p style="font-size:0.75rem;color:#737373;margin-bottom:0.5rem">Overriding total</p>
+                    <p style="font-size:2rem;font-weight:800;color:#22c55e" id="overridingTotal">R$ 0</p>
+                </div>
+            </div>
+
+            <div class="card-glass p-6">
+                <h3 class="font-bold mb-4">Afiliados da minha equipe</h3>
+                <div id="listaAfiliados">
+                    <p class="text-neutral-500 text-sm text-center py-8">Nenhum afiliado recrutado ainda.<br>Compartilhe seu código de gestor!</p>
+                </div>
+            </div>
+
+            <div class="card-glass p-6 mt-6">
+                <h3 class="font-bold mb-2 flex items-center gap-2">
+                    <i data-lucide="link" style="width:18px;height:18px;color:#F59E0B"></i>
+                    Seu Código de Gestor
+                </h3>
+                <p style="font-size:0.85rem;color:#a1a1aa;margin-bottom:1rem">Compartilhe este código com pessoas que querem se tornar afiliados da sua equipe.</p>
+                <div style="background:#0a0a0a;border:1px solid rgba(245,158,11,0.2);border-radius:0.75rem;padding:1rem;display:flex;align-items:center;justify-content:space-between">
+                    <p style="font-family:monospace;color:#F59E0B;font-size:0.9rem;font-weight:600" id="codigoGestor">GEST_SEU_CODIGO</p>
+                    <button onclick="copyCodigoGestor()" style="background:none;border:none;cursor:pointer;color:#737373">
+                        <i data-lucide="copy" style="width:16px;height:16px"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONFIGURAÇÕES -->
+        <div id="sec-config" class="section-panel">
+            <h2 style="font-size:1.75rem;font-weight:800;margin-bottom:2rem">Configurações</h2>
+            <div class="card-glass p-6 max-w-lg">
+                <h3 class="font-bold mb-4">Meus dados</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-neutral-400 mb-1.5">Nome</label>
+                        <input type="text" class="input-field" id="cfgNome" readonly style="opacity:0.6;cursor:not-allowed">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-neutral-400 mb-1.5">E-mail</label>
+                        <input type="email" class="input-field" id="cfgEmail" readonly style="opacity:0.6;cursor:not-allowed">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-neutral-400 mb-1.5">Chave PIX</label>
+                        <input type="text" class="input-field" id="cfgPix">
+                    </div>
+                    <button onclick="salvarConfig()" class="btn-amber" style="justify-content:center">Salvar alterações</button>
+                </div>
+
+                <div style="margin-top:2rem;padding-top:2rem;border-top:1px solid rgba(255,255,255,0.06)">
+                    <h3 class="font-bold mb-3">Meu link de afiliado</h3>
+                    <div style="background:#0a0a0a;border:1px solid rgba(255,255,255,0.08);border-radius:0.75rem;padding:0.875rem;font-size:0.8rem;font-family:monospace;color:#F59E0B;word-break:break-all" id="cfgLink"></div>
+                    <button onclick="copyLink()" class="btn-outline text-sm mt-3" style="padding:0.5rem 1.25rem;border-radius:0.5rem">Copiar link</button>
+                </div>
+            </div>
+        </div>
+        <!-- ADMIN — AFILIADOS -->
+        <div id="sec-admin-afiliados" class="section-panel">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 style="font-size:1.75rem;font-weight:800;margin-bottom:0.25rem">Todos os Afiliados</h2>
+                    <p style="color:#737373;font-size:0.875rem">Gerencie todos os afiliados cadastrados</p>
+                </div>
+                <button onclick="criarAfiliadoAdmin()" class="btn-amber text-sm" style="padding:0.5rem 1.25rem">
+                    + Criar Afiliado
+                </button>
+            </div>
+
+            <div class="card-glass p-6">
+                <div style="overflow-x:auto">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.875rem">
+                        <thead>
+                        <tr style="text-align:left;border-bottom:1px solid rgba(255,255,255,0.06);color:#737373;font-size:0.75rem">
+                            <th style="padding:0 0 0.75rem;font-weight:500">Nome</th>
+                            <th style="padding:0 0 0.75rem;font-weight:500">E-mail</th>
+                            <th style="padding:0 0 0.75rem;font-weight:500">Código</th>
+                            <th style="padding:0 0 0.75rem;font-weight:500">Gestor</th>
+                            <th style="padding:0 0 0.75rem;font-weight:500">Status</th>
+                            <th style="padding:0 0 0.75rem;font-weight:500;text-align:right">Ações</th>
+                        </tr>
+                        </thead>
+                        <tbody id="adminAfiliadosTbody">
+                        <tr><td colspan="6" style="padding:2rem;text-align:center;color:#737373">Carregando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADMIN — GESTORES -->
+        <div id="sec-admin-gestores" class="section-panel">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 style="font-size:1.75rem;font-weight:800;margin-bottom:0.25rem">Todos os Gestores</h2>
+                    <p style="color:#737373;font-size:0.875rem">Gerencie todos os gestores aprovados</p>
+                </div>
+                <button onclick="criarGestorAdmin()" class="btn-amber text-sm" style="padding:0.5rem 1.25rem">
+                    + Criar Gestor
+                </button>
+            </div>
+
+            <div class="card-glass p-6">
+                <div style="overflow-x:auto">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.875rem">
+                        <thead>
+                        <tr style="text-align:left;border-bottom:1px solid rgba(255,255,255,0.06);color:#737373;font-size:0.75rem">
+                            <th style="padding:0 0 0.75rem;font-weight:500">Nome</th>
+                            <th style="padding:0 0 0.75rem;font-weight:500">E-mail</th>
+                            <th style="padding:0 0 0.75rem;font-weight:500">Código Convite</th>
+                            <th style="padding:0 0 0.75rem;font-weight:500">Afiliados</th>
+                            <th style="padding:0 0 0.75rem;font-weight:500">Status</th>
+                            <th style="padding:0 0 0.75rem;font-weight:500;text-align:right">Ações</th>
+                        </tr>
+                        </thead>
+                        <tbody id="adminGestoresTbody">
+                        <tr><td colspan="6" style="padding:2rem;text-align:center;color:#737373">Carregando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+</div><!-- /screen-dashboard -->
+
+<!-- ========================================================== -->
+<!-- TELA LOGIN (modal) -->
+<!-- ========================================================== -->
+<div id="loginModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:60;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(8px);">
+    <div style="background:#141414;border:1px solid rgba(255,255,255,0.08);border-radius:1.25rem;padding:2rem;max-width:420px;width:100%">
+        <div class="flex items-center justify-between mb-6">
+            <h3 style="font-size:1.25rem;font-weight:700">Entrar no Painel</h3>
+            <button onclick="hideLogin()" style="background:none;border:none;cursor:pointer;color:#737373">
+                <i data-lucide="x" style="width:20px;height:20px"></i>
+            </button>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm text-neutral-400 mb-1.5">E-mail</label>
+                <input type="email" class="input-field" id="loginEmail" placeholder="seu@email.com">
+            </div>
+            <div>
+                <label class="block text-sm text-neutral-400 mb-1.5">Senha</label>
+                <div style="position:relative">
+                    <input type="password" class="input-field" id="loginSenha" placeholder="Senha recebida por e-mail" onkeydown="if(event.key==='Enter')doLogin()" style="padding-right:2.5rem">
+                    <button type="button" onclick="toggleLoginSenha()" style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#737373">
+                        <i data-lucide="eye" id="loginEyeIcon" style="width:16px;height:16px"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="loginError" class="hidden p-3 rounded-lg text-sm text-red-400" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2)"></div>
+            <button onclick="doLogin()" id="btnLogin" class="btn-amber w-full" style="justify-content:center">
+                Entrar
+            </button>
+            <p style="font-size:0.8rem;color:#737373;text-align:center">
+                Esqueceu a senha?
+                <a href="https://wa.me/553299401356?text=Esqueci+minha+senha+do+painel+de+afiliados" target="_blank" style="color:#F59E0B;text-decoration:none">Fale conosco</a>
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    // ESTADO
+    // ============================================================
+    const API_URL = 'https://calflow.up.railway.app';
+    let currentUser = null;
+    let currentAfiliado = null;
+
+    // ============================================================
+    // FAQ
+    // ============================================================
+    const faqs = [
+        { q: 'Quando recebo minhas comissões?', a: 'Todo dia 5 do mês, referente às comissões do mês anterior. O pagamento é feito via PIX direto na chave cadastrada.' },
+        { q: 'Tem valor mínimo para sacar?', a: 'Não. Qualquer valor é pago integralmente no dia 5.' },
+        { q: 'E se o cliente cancelar a assinatura?', a: 'A comissão recorrente de R$ 40/mês para quando o cliente cancela. As comissões de implantação (R$ 150) não são devolvidas.' },
+        { q: 'Posso me cadastrar como afiliado e gestor?', a: 'Você pode se candidatar a gestor a qualquer momento. Gestores têm as mesmas comissões de afiliado, mais o overriding da equipe.' },
+        { q: 'Quem é responsável por resolver problemas do cliente?', a: 'A CalFlow. Você só indica — o suporte, configuração e manutenção são 100% por conta da CalFlow.' },
+        { q: 'Posso usar meu link em anúncios pagos?', a: 'Sim! Você pode usar em qualquer canal de divulgação desde que respeite as diretrizes de publicidade e não faça afirmações falsas sobre o produto.' },
+        { q: 'Como funciona o overriding de gestor?', a: 'Cada vez que um afiliado da sua equipe fizer uma venda mensal, você recebe R$ 25. Em vendas anuais do afiliado, você recebe R$ 75. O afiliado fica com a recorrência mensal integral.' },
+        { q: 'Posso ter um código de afiliado vinculado a um gestor?', a: 'Sim. Se você se cadastrar pelo código de convite de um gestor, ficará automaticamente na equipe dele, sem afetar suas comissões.' }
+    ];
+
+    function renderFAQ() {
+        const list = document.getElementById('faqList');
+        list.innerHTML = faqs.map((f, i) => `
+            <div style="border:1px solid rgba(255,255,255,0.06);border-radius:0.75rem;overflow:hidden">
+                <button onclick="toggleFAQ(${i})" style="width:100%;padding:1rem;background:rgba(20,20,20,0.6);border:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;text-align:left;color:#fff;font-family:inherit;">
+                    <span style="font-size:0.875rem;font-weight:600">${f.q}</span>
+                    <i data-lucide="chevron-down" id="faq-icon-${i}" style="width:16px;height:16px;color:#F59E0B;flex-shrink:0;transition:transform 0.2s"></i>
+                </button>
+                <div id="faq-ans-${i}" style="display:none;padding:0 1rem 1rem;font-size:0.85rem;color:#a1a1aa;line-height:1.7">${f.a}</div>
+            </div>
+        `).join('');
+        lucide.createIcons();
+    }
+
+    function toggleFAQ(i) {
+        const ans = document.getElementById('faq-ans-' + i);
+        const icon = document.getElementById('faq-icon-' + i);
+        const open = ans.style.display === 'block';
+        ans.style.display = open ? 'none' : 'block';
+        icon.style.transform = open ? '' : 'rotate(180deg)';
+    }
+
+    // ============================================================
+    // TABS
+    // ============================================================
+    function selectCommissionTab(tipo) {
+        document.getElementById('commission-afiliado').classList.toggle('hidden', tipo !== 'afiliado');
+        document.getElementById('commission-gestor').classList.toggle('hidden', tipo !== 'gestor');
+        document.getElementById('tab-afiliado').className = 'tab-btn' + (tipo === 'afiliado' ? ' active' : '');
+        document.getElementById('tab-gestor').className = 'tab-btn' + (tipo === 'gestor' ? ' active' : '');
+    }
+
+    function selectFormTab(tipo) {
+        document.getElementById('form-afiliado').classList.toggle('hidden', tipo !== 'afiliado');
+        document.getElementById('form-gestor').classList.toggle('hidden', tipo !== 'gestor');
+        document.getElementById('form-tab-afiliado').className = 'tab-btn' + (tipo === 'afiliado' ? ' active' : '');
+        document.getElementById('form-tab-gestor').className = 'tab-btn' + (tipo === 'gestor' ? ' active' : '');
+    }
+
+    // ============================================================
+    // CALCULADORAS
+    // ============================================================
+    function calcAfiliado() {
+        const vendas = parseInt(document.getElementById('aff-vendas-mes').value) || 0;
+        const clientes = parseInt(document.getElementById('aff-clientes').value) || 0;
+        const anuais = parseInt(document.getElementById('aff-anuais').value) || 0;
+
+        const mes = (vendas * 150) + (clientes * 40) + (anuais * 550);
+        const meses6 = (vendas * 150 * 6) + (clientes * 40 * 6) + (anuais * 550 * 6);
+        const meses12 = (vendas * 150 * 12) + (clientes * 40 * 12) + (anuais * 550 * 12);
+
+        document.getElementById('aff-mes').textContent = formatMoney(mes);
+        document.getElementById('aff-6meses').textContent = formatMoney(meses6);
+        document.getElementById('aff-12meses').textContent = formatMoney(meses12);
+    }
+
+    function calcGestor() {
+        const vendas = parseInt(document.getElementById('gest-vendas').value) || 0;
+        const clientes = parseInt(document.getElementById('gest-clientes').value) || 0;
+        const numAfiliados = parseInt(document.getElementById('gest-num-afiliados').value) || 0;
+        const vendasAfil = parseInt(document.getElementById('gest-vendas-afiliado').value) || 0;
+        const anuaisAfil = parseInt(document.getElementById('gest-anuais-afiliado').value) || 0;
+
+        // Gestor: suas vendas diretas = igual afiliado
+        const direto = (vendas * 150) + (clientes * 40);
+        // Overriding: R$25 por venda mensal dos afiliados + R$75 por anual dos afiliados
+        const overriding = (numAfiliados * vendasAfil * 25) + (numAfiliados * anuaisAfil * 75);
+        const mes = direto + overriding;
+
+        document.getElementById('gest-mes').textContent = formatMoney(mes);
+        document.getElementById('gest-6meses').textContent = formatMoney(mes * 6);
+        document.getElementById('gest-12meses').textContent = formatMoney(mes * 12);
+    }
+
+    function formatMoney(v) {
+        return 'R$ ' + v.toLocaleString('pt-BR');
+    }
+
+    // ============================================================
+    // CADASTRO AFILIADO
+    // ============================================================
+    async function cadastrarAfiliado() {
+        const nome = document.getElementById('aff-nome').value.trim();
+        const tel = document.getElementById('aff-tel').value.trim();
+        const email = document.getElementById('aff-email').value.trim();
+        const pix = document.getElementById('aff-pix').value.trim();
+
+        if (!nome || !tel || !email || !pix) {
+            showToast('Preencha todos os campos obrigatórios', 'error');
+            return;
+        }
+        if (!email.includes('@')) {
+            showToast('E-mail inválido', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('btnCadAfiliado');
+        btn.disabled = true;
+        btn.innerHTML = '<svg class="spin" style="height:20px;width:20px" viewBox="0 0 24 24" fill="none"><circle style="opacity:0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path style="opacity:0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Cadastrando...';
+
+        try {
+            const res = await fetch(API_URL + '/api/parceiros/afiliado', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    nome,
+                    telefone: tel.replace(/\D/g, ''),
+                    email,
+                    pixChave: pix,
+                    canal: document.getElementById('aff-canal').value
+                })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.error || 'Erro ao cadastrar');
+
+            // Sucesso — salva e entra no painel
+            localStorage.setItem('calflow_parceiro', JSON.stringify(data));
+            currentUser = data;
+            currentAfiliado = data;
+
+            showSuccessModal(data);
+
+        } catch(e) {
+            showToast(e.message || 'Erro ao cadastrar. Tente novamente.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Gerar Meu Link de Afiliado <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+        }
+    }
+
+    // ============================================================
+    // CANDIDATURA GESTOR
+    // ============================================================
+    async function candidatarGestor() {
+        const nome = document.getElementById('gest-nome').value.trim();
+        const tel = document.getElementById('gest-tel').value.trim();
+        const email = document.getElementById('gest-email').value.trim();
+        const pix = document.getElementById('gest-pix').value.trim();
+        const curriculo = document.getElementById('gest-curriculo').value.trim();
+        const experiencia = document.getElementById('gest-experiencia').value;
+        const meta = document.getElementById('gest-meta').value;
+
+        if (!nome || !tel || !email || !pix || !curriculo || !experiencia || !meta) {
+            showToast('Preencha todos os campos obrigatórios', 'error');
+            return;
+        }
+        if (curriculo.length < 100) {
+            showToast('Apresentação muito curta. Escreva pelo menos 100 caracteres.', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('btnCadGestor');
+        btn.disabled = true;
+        btn.textContent = 'Enviando candidatura...';
+
+        try {
+            const res = await fetch(API_URL + '/api/parceiros/gestor-candidatura', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    nome,
+                    telefone: tel.replace(/\D/g, ''),
+                    email,
+                    pixChave: pix,
+                    curriculo,
+                    experiencia,
+                    metaAfiliados: meta
+                })
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Erro ao enviar');
+
+            showModal(`
+                <h3 style="font-size:1.25rem;font-weight:700;margin-bottom:0.75rem;color:#22c55e">✅ Candidatura Enviada!</h3>
+                <p style="color:#a1a1aa;font-size:0.875rem;line-height:1.7;margin-bottom:1rem">Sua candidatura foi recebida e enviada para análise. Retornaremos em até <strong style="color:#fff">48 horas</strong> pelo e-mail <strong style="color:#F59E0B">${email}</strong>.</p>
+                <p style="color:#a1a1aa;font-size:0.875rem">Fique atento à caixa de entrada e ao WhatsApp cadastrado.</p>
+            `);
+
+        } catch(e) {
+            showToast(e.message || 'Erro ao enviar. Tente novamente.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Enviar Candidatura';
+        }
+    }
+
+    function showSuccessModal(data) {
+        const link = `calflow.pages.dev/checkout?ref=${data.codigoReferencia || data.codigo}`;
+        showModal(`
+            <h3 style="font-size:1.25rem;font-weight:700;margin-bottom:0.5rem;color:#22c55e">🎉 Bem-vindo(a) ao time CalFlow!</h3>
+            <p style="color:#a1a1aa;font-size:0.875rem;margin-bottom:1.5rem">Seu link de afiliado foi gerado. Compartilhe e comece a ganhar!</p>
+            <div style="background:#0a0a0a;border:1px solid rgba(245,158,11,0.3);border-radius:0.75rem;padding:1rem;margin-bottom:1rem">
+                <p style="font-size:0.75rem;color:#737373;margin-bottom:0.25rem">Seu link personalizado:</p>
+                <p style="font-family:monospace;color:#F59E0B;font-size:0.85rem;word-break:break-all">${link}</p>
+            </div>
+            <div class="grid grid-cols-2 gap-3" style="margin-bottom:1rem">
+                <div style="background:rgba(255,255,255,0.02);border-radius:0.75rem;padding:0.75rem;text-align:center">
+                    <p style="font-size:0.7rem;color:#737373">Por venda</p>
+                    <p style="font-size:1.1rem;font-weight:700;color:#F59E0B">R$ 150</p>
+                </div>
+                <div style="background:rgba(255,255,255,0.02);border-radius:0.75rem;padding:0.75rem;text-align:center">
+                    <p style="font-size:0.7rem;color:#737373">Recorrente</p>
+                    <p style="font-size:1.1rem;font-weight:700;color:#22c55e">R$ 40/mês</p>
+                </div>
+            </div>
+            <button onclick="navigator.clipboard.writeText('${link}');showToast('Link copiado!','success')" class="btn-amber" style="width:100%;justify-content:center;margin-bottom:0.75rem">Copiar Meu Link</button>
+            <button onclick="closeModal();enterDashboard()" class="btn-outline" style="width:100%;text-align:center">Ir para o Painel →</button>
+        `);
+    }
+
+    // ============================================================
+    // LOGIN
+    // ============================================================
+    function showLogin() {
+        const modal = document.getElementById('loginModal');
+        modal.style.display = 'flex';
+        lucide.createIcons();
+    }
+
+    function hideLogin() {
+        document.getElementById('loginModal').style.display = 'none';
+    }
+
+    async function doLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const senha = document.getElementById('loginSenha').value.trim();
+    const errDiv = document.getElementById('loginError');
+    const btn = document.getElementById('btnLogin');
+
+    if (!email || !senha) {
+        errDiv.textContent = 'Preencha e-mail e senha';
+        errDiv.classList.remove('hidden');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Entrando...';
+
+    try {
+        const res = await fetch(API_URL + '/api/parceiros/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, senha })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'E-mail ou senha incorretos');
+
+        currentUser = data;
+        localStorage.setItem('calflow_parceiro', JSON.stringify(data));
+        hideLogin();
+        enterDashboard();
+
+    } catch(e) {
+        errDiv.textContent = e.message;
+        errDiv.classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Entrar';
+    }
+}
+    function toggleLoginSenha() {
+        const input = document.getElementById('loginSenha');
+        const icon = document.getElementById('loginEyeIcon');
+        input.type = input.type === 'password' ? 'text' : 'password';
+        icon.setAttribute('data-lucide', input.type === 'password' ? 'eye' : 'eye-off');
+        lucide.createIcons();
+    }
+    // ============================================================
+    // DASHBOARD
+    // ============================================================
+    function enterDashboard() {
+    document.getElementById('screen-landing').classList.remove('active');
+    document.getElementById('screen-dashboard').classList.add('active');
+
+    // Admin especial
+    if (currentUser.email === 'calluann11@gmail.com' || currentUser.tipo === 'admin') {
+        currentUser.isAdmin = true;
+    }
+
+    setupDashboard();
+}
+
+    function doLogout() {
+        localStorage.removeItem('calflow_parceiro');
+        currentUser = null;
+        document.getElementById('screen-dashboard').classList.remove('active');
+        document.getElementById('screen-landing').classList.add('active');
+    }
+
+    function setupDashboard() {
+        if (!currentUser) return;
+
+        const isGestor = currentUser.tipo === 'gestor';
+        const nome = currentUser.nome || 'Parceiro';
+        const codigo = currentUser.codigoReferencia || currentUser.codigo || '';
+
+        // Avatar
+        const initials = nome.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        document.getElementById('dashAvatar').textContent = initials;
+        document.getElementById('dashNome').textContent = nome;
+        document.getElementById('dashTipo').textContent = isGestor ? 'Gestor' : 'Afiliado';
+        document.getElementById('dashBadge').innerHTML = `<i data-lucide="${isGestor ? 'crown' : 'user'}" style="width:11px;height:11px"></i>${isGestor ? 'GESTOR' : 'AFILIADO'}`;
+
+        // Greeting
+        const hora = new Date().getHours();
+        const saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
+        document.getElementById('greetingDash').textContent = `${saudacao}, ${nome.split(' ')[0]}!`;
+
+        // Link
+        const link = `calflow.pages.dev/checkout?ref=${codigo}`;
+        document.getElementById('dashLink').textContent = link;
+        document.getElementById('cfgLink').textContent = link;
+
+        // Config
+        document.getElementById('cfgNome').value = currentUser.nome || '';
+        document.getElementById('cfgEmail').value = currentUser.email || '';
+        document.getElementById('cfgPix').value = currentUser.pixChave || '';
+
+        // Gestor code
+        if (isGestor && currentUser.codigoConvite) {
+            document.getElementById('codigoGestor').textContent = currentUser.codigoConvite;
+        }
+
+        // Métricas
+        carregarMetricas();
+
+        // Sidebar
+        buildSidebar(isGestor);
+        showSection('overview');
+
+        // Mobile
+        const mh = document.getElementById('mobileHeader');
+        if (window.innerWidth <= 768) {
+            mh.style.display = 'flex';
+            document.getElementById('dashMain').style.marginLeft = '0';
+            document.getElementById('dashMain').style.paddingTop = '4rem';
+        }
+
+        setTimeout(() => lucide.createIcons(), 100);
+    }
+
+    async function carregarMetricas() {
+        if (!currentUser) return;
+        try {
+            const res = await fetch(API_URL + '/api/parceiros/metricas', {
+                headers: { 'Authorization': 'Bearer ' + (currentUser.token || '') }
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+
+            document.getElementById('metricTotal').textContent = formatMoney(data.totalComissoes || 0);
+            document.getElementById('metricPendente').textContent = formatMoney(data.pendenteMes || 0);
+            document.getElementById('metricVendas').textContent = data.totalVendas || 0;
+            document.getElementById('metricRecorrencia').textContent = formatMoney(data.recorrenciaMensal || 0);
+
+            if (data.comissoes && data.comissoes.length > 0) {
+                renderComissoes(data.comissoes);
+            }
+
+            if (currentUser.tipo === 'gestor' && data.afiliados) {
+                renderAfiliadosDash(data.afiliados);
+                document.getElementById('totalAfiliados').textContent = data.afiliados.filter(a => a.ativo).length;
+                document.getElementById('vendasEquipe').textContent = data.vendasEquipe || 0;
+                document.getElementById('overridingTotal').textContent = formatMoney(data.overridingTotal || 0);
+            }
+        } catch(e) {
+            console.log('Métricas offline:', e.message);
+        }
+    }
+
+    function renderComissoes(comissoes) {
+        const list = document.getElementById('listaComissoes');
+        list.innerHTML = comissoes.slice(0, 8).map(c => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+                <div>
+                    <p style="font-size:0.8rem;font-weight:600">${c.tipo || 'Comissão'}</p>
+                    <p style="font-size:0.72rem;color:#737373">${c.data || ''}</p>
+                </div>
+                <div style="text-align:right">
+                    <p style="font-size:0.85rem;font-weight:700;color:${c.status === 'paga' ? '#22c55e' : '#F59E0B'}">R$ ${c.valor || '0'}</p>
+                    <p style="font-size:0.7rem;color:#737373">${c.status || 'pendente'}</p>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function renderAfiliadosDash(afiliados) {
+        const list = document.getElementById('listaAfiliados');
+        if (!afiliados.length) return;
+        list.innerHTML = afiliados.map(a => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:0.875rem 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+                <div style="display:flex;align-items:center;gap:0.75rem">
+                    <div style="width:36px;height:36px;background:rgba(245,158,11,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:#F59E0B">
+                        ${a.nome.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase()}
+                    </div>
+                    <div>
+                        <p style="font-size:0.85rem;font-weight:600">${a.nome}</p>
+                        <p style="font-size:0.72rem;color:#737373">${a.codigoReferencia}</p>
+                    </div>
+                </div>
+                <div style="text-align:right">
+                    <span style="font-size:0.72rem;padding:0.2rem 0.6rem;border-radius:9999px;background:${a.ativo ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)'};color:${a.ativo ? '#22c55e' : '#ef4444'}">${a.ativo ? 'Ativo' : 'Inativo'}</span>
+                    <p style="font-size:0.72rem;color:#737373;margin-top:0.25rem">${a.totalVendas || 0} vendas</p>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // ============================================================
+    // SIDEBAR DASHBOARD
+    // ============================================================
+    function buildSidebar(isGestor) {
+    const nav = document.getElementById('sidebarNav');
+    const links = [
+        { id: 'overview', icon: 'home', label: 'Visão Geral' },
+        { id: 'scripts', icon: 'file-text', label: 'Scripts de Vendas' },
+        { id: 'tutorial', icon: 'book-open', label: 'Tutorial' },
+    ];
+    if (isGestor) links.push({ id: 'afiliados', icon: 'users', label: 'Minha Equipe' });
+    links.push({ id: 'config', icon: 'settings', label: 'Configurações' });
+
+    // Se admin, adiciona seção
+    if (currentUser && currentUser.isAdmin) {
+        links.push({ divider: true });
+        links.push({ id: 'admin-afiliados', icon: 'shield', label: 'Admin — Afiliados' });
+        links.push({ id: 'admin-gestores', icon: 'crown', label: 'Admin — Gestores' });
+    }
+
+    nav.innerHTML = links.map(l => {
+        if (l.divider) return '<div style="border-top:1px solid rgba(255,255,255,0.06);margin:0.75rem;"></div><p style="font-size:0.7rem;color:#525252;font-weight:700;padding:0 1.5rem;margin-bottom:0.5rem">ADMIN</p>';
+        return `<div class="sidebar-link" onclick="showSection('${l.id}')" data-sec="${l.id}">
+            <i data-lucide="${l.icon}" style="width:18px;height:18px"></i>${l.label}
+        </div>`;
+    }).join('');
+
+    setTimeout(() => lucide.createIcons(), 50);
+}
+
+    function showSection(id) {
+    document.querySelectorAll('.section-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('sec-' + id)?.classList.add('active');
+    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+    document.querySelector(`[data-sec="${id}"]`)?.classList.add('active');
+
+    // Carregar dados ao entrar nas seções admin
+    if (id === 'admin-afiliados') carregarAdminAfiliados();
+    if (id === 'admin-gestores') carregarAdminGestores();
+}
+
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+        const ov = document.getElementById('sidebarOverlay');
+        ov.style.display = ov.style.display === 'block' ? 'none' : 'block';
+    }
+
+    // ============================================================
+    // UTILIDADES
+    // ============================================================
+    function copyLink() {
+        const link = document.getElementById('dashLink').textContent;
+        navigator.clipboard.writeText('https://' + link).then(() => showToast('Link copiado!', 'success'));
+    }
+
+    function copyCodigoGestor() {
+        const code = document.getElementById('codigoGestor').textContent;
+        navigator.clipboard.writeText(code).then(() => showToast('Código copiado!', 'success'));
+    }
+
+    function copyScript(id) {
+        const text = document.getElementById(id).textContent;
+        navigator.clipboard.writeText(text).then(() => showToast('Script copiado!', 'success'));
+    }
+
+    function shareWhatsApp() {
+        const link = 'https://' + document.getElementById('dashLink').textContent;
+        const msg = encodeURIComponent('Conheça o CalFlow — sistema de agendamento automático via WhatsApp: ' + link);
+        window.open('https://wa.me/?text=' + msg, '_blank');
+    }
+
+    function salvarConfig() {
+        const pix = document.getElementById('cfgPix').value.trim();
+        if (!pix) { showToast('Informe sua chave PIX', 'error'); return; }
+        showToast('Configurações salvas!', 'success');
+    }
+
+    function scrollToSection(id) {
+        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function maskPhone(el) {
+        let v = el.value.replace(/\D/g, '').slice(0, 11);
+        if (v.length > 2) v = '(' + v.slice(0,2) + ') ' + v.slice(2);
+        if (v.length > 10) v = v.slice(0,10) + '-' + v.slice(10);
+        el.value = v;
+    }
+
+    // ============================================================
+    // MODAL
+    // ============================================================
+    function showModal(html) {
+        const container = document.getElementById('modalContainer');
+        container.innerHTML = `<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+            <div class="modal-content">${html}</div>
+        </div>`;
+        lucide.createIcons();
+    }
+
+    function closeModal() {
+        document.getElementById('modalContainer').innerHTML = '';
+    }
+
+    // ============================================================
+    // TOAST
+    // ============================================================
+    function showToast(message, type) {
+        const container = document.getElementById('toastContainer');
+        const icons = { success: 'check-circle', error: 'alert-circle', info: 'info' };
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.innerHTML = `<i data-lucide="${icons[type]||'info'}" style="width:16px;height:16px;flex-shrink:0"></i> ${message}`;
+        container.appendChild(toast);
+        lucide.createIcons();
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100px)';
+            toast.style.transition = 'all 0.3s';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+// ============================================================
+// ADMIN JS
+// ============================================================
+async function carregarAdminAfiliados() {
+    try {
+        const res = await fetch(API_URL + '/api/parceiros/admin/afiliados');
+        const data = await res.json();
+        renderAdminAfiliados(data);
+    } catch(e) {
+        console.error('Erro ao carregar afiliados admin', e);
+    }
+}
+
+async function carregarAdminGestores() {
+    try {
+        const res = await fetch(API_URL + '/api/parceiros/admin/gestores');
+        const data = await res.json();
+        renderAdminGestores(data);
+    } catch(e) {
+        console.error('Erro ao carregar gestores admin', e);
+    }
+}
+
+function renderAdminAfiliados(lista) {
+    const tbody = document.getElementById('adminAfiliadosTbody');
+    if (!lista.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="padding:2rem;text-align:center;color:#737373">Nenhum afiliado cadastrado</td></tr>';
+        return;
+    }
+    tbody.innerHTML = lista.map(a => `
+        <tr style="border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background=''">
+            <td style="padding:0.875rem 0;font-weight:600">${a.nome}</td>
+            <td style="padding:0.875rem 0;color:#a1a1aa;font-size:0.8rem">${a.email}</td>
+            <td style="padding:0.875rem 0;font-family:monospace;color:#F59E0B;font-size:0.8rem">${a.codigoReferencia}</td>
+            <td style="padding:0.875rem 0;color:#a1a1aa;font-size:0.8rem">${a.gestorNome || '—'}</td>
+            <td style="padding:0.875rem 0">
+                <span style="font-size:0.72rem;padding:0.2rem 0.6rem;border-radius:9999px;background:${a.status === 'ATIVO' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)'};color:${a.status === 'ATIVO' ? '#22c55e' : '#ef4444'}">${a.status}</span>
+            </td>
+            <td style="padding:0.875rem 0;text-align:right">
+                <div style="display:flex;align-items:center;justify-content:flex-end;gap:0.5rem">
+                    <button onclick="resetarSenhaAfiliado('${a.id}')" style="background:none;border:none;cursor:pointer;color:#737373;padding:0.25rem" title="Resetar senha">
+                        <i data-lucide="key" style="width:15px;height:15px"></i>
+                    </button>
+                    <button onclick="toggleStatusAfiliado('${a.id}','${a.status}')" style="background:none;border:none;cursor:pointer;color:#737373;padding:0.25rem" title="Ativar/Suspender">
+                        <i data-lucide="shield-off" style="width:15px;height:15px"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+    lucide.createIcons();
+}
+
+function renderAdminGestores(lista) {
+    const tbody = document.getElementById('adminGestoresTbody');
+    if (!lista.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="padding:2rem;text-align:center;color:#737373">Nenhum gestor cadastrado</td></tr>';
+        return;
+    }
+    tbody.innerHTML = lista.map(g => `
+        <tr style="border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background=''">
+            <td style="padding:0.875rem 0;font-weight:600">${g.nome}</td>
+            <td style="padding:0.875rem 0;color:#a1a1aa;font-size:0.8rem">${g.email}</td>
+            <td style="padding:0.875rem 0;font-family:monospace;color:#F59E0B;font-size:0.8rem">${g.codigoConvite}</td>
+            <td style="padding:0.875rem 0;text-align:center;color:#60a5fa;font-weight:600">${g.totalAfiliados || 0}</td>
+            <td style="padding:0.875rem 0">
+                <span style="font-size:0.72rem;padding:0.2rem 0.6rem;border-radius:9999px;background:${g.status === 'ATIVO' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)'};color:${g.status === 'ATIVO' ? '#22c55e' : '#ef4444'}">${g.status}</span>
+            </td>
+            <td style="padding:0.875rem 0;text-align:right">
+                <div style="display:flex;align-items:center;justify-content:flex-end;gap:0.5rem">
+                    <button onclick="resetarSenhaGestor('${g.id}')" style="background:none;border:none;cursor:pointer;color:#737373;padding:0.25rem" title="Resetar senha">
+                        <i data-lucide="key" style="width:15px;height:15px"></i>
+                    </button>
+                    <button onclick="toggleStatusGestor('${g.id}','${g.status}')" style="background:none;border:none;cursor:pointer;color:#737373;padding:0.25rem" title="Ativar/Suspender">
+                        <i data-lucide="shield-off" style="width:15px;height:15px"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+    lucide.createIcons();
+}
+
+function criarAfiliadoAdmin() {
+    showModal(`
+        <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1.25rem">Criar Afiliado Manualmente</h3>
+        <div class="space-y-3">
+            <div><label class="block text-sm text-neutral-400 mb-1">Nome completo</label><input type="text" class="input-field" id="adminAffNome"></div>
+            <div><label class="block text-sm text-neutral-400 mb-1">E-mail</label><input type="email" class="input-field" id="adminAffEmail"></div>
+            <div><label class="block text-sm text-neutral-400 mb-1">Telefone</label><input type="text" class="input-field" id="adminAffTel" oninput="maskPhone(this)"></div>
+            <div><label class="block text-sm text-neutral-400 mb-1">Chave PIX</label><input type="text" class="input-field" id="adminAffPix"></div>
+            <div><label class="block text-sm text-neutral-400 mb-1">Código do Gestor (opcional)</label><input type="text" class="input-field" id="adminAffGestor" placeholder="GEST_NOME_001"></div>
+            <button onclick="salvarAfiliadoAdmin()" class="btn-amber w-full" style="justify-content:center;margin-top:0.5rem">Criar e Enviar Credenciais</button>
+        </div>
+    `);
+}
+
+async function salvarAfiliadoAdmin() {
+    const nome = document.getElementById('adminAffNome').value.trim();
+    const email = document.getElementById('adminAffEmail').value.trim();
+    const tel = document.getElementById('adminAffTel').value.trim();
+    const pix = document.getElementById('adminAffPix').value.trim();
+    const gestor = document.getElementById('adminAffGestor').value.trim();
+
+    if (!nome || !email || !tel || !pix) { showToast('Preencha todos os campos', 'error'); return; }
+
+    try {
+        const res = await fetch(API_URL + '/api/parceiros/afiliado', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nome, email, telefone: tel.replace(/\D/g,''), pixChave: pix, codigoGestor: gestor })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        closeModal();
+        showToast('Afiliado criado! Credenciais enviadas por e-mail e WhatsApp.', 'success');
+        carregarAdminAfiliados();
+    } catch(e) {
+        showToast(e.message, 'error');
+    }
+}
+
+function criarGestorAdmin() {
+    showModal(`
+        <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1.25rem">Criar Gestor Manualmente</h3>
+        <div class="space-y-3">
+            <div><label class="block text-sm text-neutral-400 mb-1">Nome completo</label><input type="text" class="input-field" id="adminGestNome"></div>
+            <div><label class="block text-sm text-neutral-400 mb-1">E-mail</label><input type="email" class="input-field" id="adminGestEmail"></div>
+            <div><label class="block text-sm text-neutral-400 mb-1">Telefone</label><input type="text" class="input-field" id="adminGestTel" oninput="maskPhone(this)"></div>
+            <div><label class="block text-sm text-neutral-400 mb-1">Chave PIX</label><input type="text" class="input-field" id="adminGestPix"></div>
+            <button onclick="salvarGestorAdmin()" class="btn-amber w-full" style="justify-content:center;margin-top:0.5rem">Criar e Enviar Credenciais</button>
+        </div>
+    `);
+}
+
+async function salvarGestorAdmin() {
+    const nome = document.getElementById('adminGestNome').value.trim();
+    const email = document.getElementById('adminGestEmail').value.trim();
+    const tel = document.getElementById('adminGestTel').value.trim();
+    const pix = document.getElementById('adminGestPix').value.trim();
+
+    if (!nome || !email || !tel || !pix) { showToast('Preencha todos os campos', 'error'); return; }
+
+    try {
+        const res = await fetch(API_URL + '/api/parceiros/admin/gestor', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nome, email, telefone: tel.replace(/\D/g,''), pixChave: pix })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        closeModal();
+        showToast('Gestor criado! Credenciais enviadas.', 'success');
+        carregarAdminGestores();
+    } catch(e) {
+        showToast(e.message, 'error');
+    }
+}
+
+async function resetarSenhaAfiliado(id) {
+    try {
+        const res = await fetch(`${API_URL}/api/parceiros/admin/afiliado/${id}/reset-senha`, { method: 'POST' });
+        const data = await res.json();
+        showModal(`
+            <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem;color:#22c55e">Senha Resetada</h3>
+            <div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);border-radius:0.75rem;padding:1rem;margin-bottom:1rem">
+                <p style="font-size:0.75rem;color:#F59E0B;margin-bottom:0.5rem">Nova senha:</p>
+                <p style="font-size:1.25rem;font-family:monospace;font-weight:700;text-align:center">${data.novaSenha}</p>
+            </div>
+            <button onclick="navigator.clipboard.writeText('${data.novaSenha}');showToast('Copiado!','success')" class="btn-amber w-full" style="justify-content:center">Copiar</button>
+        `);
+    } catch(e) {
+        showToast('Erro ao resetar senha', 'error');
+    }
+}
+
+async function resetarSenhaGestor(id) {
+    await resetarSenhaAfiliado(id); // mesmo fluxo
+}
+
+async function toggleStatusAfiliado(id, statusAtual) {
+    const novo = statusAtual === 'ATIVO' ? 'INATIVO' : 'ATIVO';
+    if (!confirm(`Deseja ${novo === 'INATIVO' ? 'suspender' : 'ativar'} este afiliado?`)) return;
+    try {
+        await fetch(`${API_URL}/api/parceiros/admin/afiliado/${id}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: novo })
+        });
+        showToast('Status atualizado!', 'success');
+        carregarAdminAfiliados();
+    } catch(e) {
+        showToast('Erro', 'error');
+    }
+}
+
+async function toggleStatusGestor(id, statusAtual) {
+    const novo = statusAtual === 'ATIVO' ? 'INATIVO' : 'ATIVO';
+    if (!confirm(`Deseja ${novo === 'INATIVO' ? 'suspender' : 'ativar'} este gestor?`)) return;
+    try {
+        await fetch(`${API_URL}/api/parceiros/admin/gestor/${id}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: novo })
+        });
+        showToast('Status atualizado!', 'success');
+        carregarAdminGestores();
+    } catch(e) {
+        showToast('Erro', 'error');
+    }
+}
+
+function toggleMobileNav() {
+    const nav = document.getElementById('mobileNav');
+    const icon = document.getElementById('hamburgerIcon');
+    const open = nav.style.display === 'block';
+    nav.style.display = open ? 'none' : 'block';
+    icon.setAttribute('data-lucide', open ? 'menu' : 'x');
+    lucide.createIcons();
+}
+
+function closeMobileNav() {
+    document.getElementById('mobileNav').style.display = 'none';
+    document.getElementById('hamburgerIcon').setAttribute('data-lucide', 'menu');
+    lucide.createIcons();
+}
+    // ============================================================
+    // INIT
+    // ============================================================
+    document.addEventListener('DOMContentLoaded', () => {
+        lucide.createIcons();
+        renderFAQ();
+        calcAfiliado();
+        calcGestor();
+
+        // Verificar sessão salva
+        const saved = localStorage.getItem('calflow_parceiro');
+        if (saved) {
+            try {
+                currentUser = JSON.parse(saved);
+                enterDashboard();
+            } catch(e) {
+                localStorage.removeItem('calflow_parceiro');
+            }
+        }
+    });
+</script>
+
+</body>
+</html>

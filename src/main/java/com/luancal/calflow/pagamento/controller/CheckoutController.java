@@ -26,6 +26,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
@@ -45,36 +47,32 @@ public class CheckoutController {
     @Value("${app.base.url}")
     private String appBaseUrl;
 
+    // ============================================================
+    // PROCESSAR CHECKOUT
+    // ============================================================
     @PostMapping("/processar")
-    public ResponseEntity<CheckoutResponse> processar(@Valid @RequestBody CheckoutRequest request) {
+    public ResponseEntity<?> processar(@Valid @RequestBody CheckoutRequest request) {
         try {
             log.info("Processando checkout: plano={}, metodo={}, valor={}",
                     request.getPlano(), request.getMetodo(), request.getValor());
 
+            // Validações
             if (request.getNome() == null || !request.getNome().trim().matches(".*\\s+.*")) {
-                return ResponseEntity.badRequest()
-                        .body(CheckoutResponse.error("Digite nome e sobrenome completos"));
+                return ResponseEntity.badRequest().body(CheckoutResponse.error("Digite nome e sobrenome completos"));
             }
-
             if (request.getPlano() == null ||
                     (!"mensal".equalsIgnoreCase(request.getPlano()) && !"anual".equalsIgnoreCase(request.getPlano()))) {
-                return ResponseEntity.badRequest()
-                        .body(CheckoutResponse.error("Plano inválido"));
+                return ResponseEntity.badRequest().body(CheckoutResponse.error("Plano inválido"));
             }
-
             if (request.getMetodo() == null ||
                     (!"pix".equalsIgnoreCase(request.getMetodo()) && !"cartao".equalsIgnoreCase(request.getMetodo()))) {
-                return ResponseEntity.badRequest()
-                        .body(CheckoutResponse.error("Método de pagamento inválido"));
+                return ResponseEntity.badRequest().body(CheckoutResponse.error("Método de pagamento inválido"));
             }
-
             if ("anual".equalsIgnoreCase(request.getPlano()) && "pix".equalsIgnoreCase(request.getMetodo())) {
-                return ResponseEntity.badRequest()
-                        .body(CheckoutResponse.error("PIX indisponível para o plano anual"));
+                return ResponseEntity.badRequest().body(CheckoutResponse.error("PIX indisponível para o plano anual"));
             }
 
             MercadoPagoConfig.setAccessToken(mercadoPagoAccessToken);
-
             Venda venda = criarVenda(request);
 
             if ("pix".equalsIgnoreCase(request.getMetodo())) {
@@ -90,6 +88,9 @@ public class CheckoutController {
         }
     }
 
+    // ============================================================
+    // CRIAR VENDA
+    // ============================================================
     private Venda criarVenda(CheckoutRequest request) {
         Cliente cliente = clienteRepository.findByEmail(request.getEmail())
                 .orElseGet(() -> {
@@ -110,12 +111,8 @@ public class CheckoutController {
         venda.setValorTotal(request.getValor());
         venda.setStatus(StatusVenda.PENDENTE);
         venda.setDataVenda(LocalDateTime.now());
-
-        // Mensal = primeira cobrança de implantação
-        // Anual = cobrança única anual
         venda.setTipo("anual".equalsIgnoreCase(request.getPlano())
-                ? TipoVenda.MENSALIDADE
-                : TipoVenda.IMPLANTACAO);
+                ? TipoVenda.MENSALIDADE : TipoVenda.IMPLANTACAO);
 
         if (request.getCodigoAfiliado() != null && !request.getCodigoAfiliado().isBlank()) {
             afiliadoRepository.findByCodigoReferencia(request.getCodigoAfiliado())
@@ -125,7 +122,10 @@ public class CheckoutController {
         return vendaRepository.save(venda);
     }
 
-    private ResponseEntity<CheckoutResponse> processarPix(Venda venda, CheckoutRequest request) {
+    // ============================================================
+    // PIX — Gera QR Code de R$ 497
+    // ============================================================
+    private ResponseEntity<?> processarPix(Venda venda, CheckoutRequest request) {
         try {
             PaymentClient client = new PaymentClient();
 
@@ -154,20 +154,23 @@ public class CheckoutController {
 
             Payment payment = client.create(paymentRequest);
 
-            venda.setCartaoTokenizado(venda.getCliente().getCartaoTokenizado());
+            venda.setGatewayTransacaoId(payment.getId().toString());
+            Cliente cli = venda.getCliente();
+            if (cli.getCartaoTokenizado() != null) {
+                venda.setCartaoTokenizado(cli.getCartaoTokenizado());
+            }
             vendaRepository.save(venda);
 
-            CheckoutResponse response = CheckoutResponse.builder()
-                    .vendaId(venda.getId())
-                    .transactionId(venda.getId())
-                    .qrCode(payment.getPointOfInteraction().getTransactionData().getQrCodeBase64())
-                    .qrCodeTexto(payment.getPointOfInteraction().getTransactionData().getQrCode())
-                    .status("pending")
-                    .valor(request.getValor().toString())
-                    .mensagem("PIX gerado com sucesso")
-                    .build();
+            Map<String, Object> response = new HashMap<>();
+            response.put("vendaId", venda.getId());
+            response.put("transactionId", venda.getId());
+            response.put("qrCode", payment.getPointOfInteraction().getTransactionData().getQrCodeBase64());
+            response.put("qrCodeTexto", payment.getPointOfInteraction().getTransactionData().getQrCode());
+            response.put("status", "pending");
+            response.put("valor", request.getValor().toString());
+            response.put("mensagem", "PIX gerado com sucesso");
 
-            log.info("PIX gerado com sucesso: vendaId={}, mpId={}", venda.getId(), payment.getId());
+            log.info("PIX gerado: vendaId={}, mpId={}", venda.getId(), payment.getId());
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
@@ -176,75 +179,151 @@ public class CheckoutController {
         }
     }
 
-    private ResponseEntity<CheckoutResponse> processarCartao(Venda venda, CheckoutRequest request) {
+    // ============================================================
+    // CARTÃO — Checkout Transparente (sem redirect!)
+    // Usa o token do cartão para cobrar direto
+    // ============================================================
+    private ResponseEntity<?> processarCartao(Venda venda, CheckoutRequest request) {
         try {
-            PreapprovalClient client = new PreapprovalClient();
+            PaymentClient paymentClient = new PaymentClient();
 
-            BigDecimal valorRecorrente;
-            int frequencia;
-            String frequencyType;
-            String motivo;
+            // Pega o token do cartão que o frontend salvou
+            Cliente cliente = venda.getCliente();
+            String cardToken = cliente.getCartaoTokenizado();
 
-            if ("mensal".equalsIgnoreCase(request.getPlano())) {
-                valorRecorrente = new BigDecimal("197.00");
-                frequencia = 1;
-                frequencyType = "months";
-                motivo = "CalFlow Premium - Assinatura Mensal";
-            } else {
-                valorRecorrente = new BigDecimal("2197.00");
-                frequencia = 1;
-                frequencyType = "years";
-                motivo = "CalFlow Premium - Assinatura Anual";
+            if (cardToken == null || cardToken.isEmpty()) {
+                return ResponseEntity.badRequest().body(
+                        CheckoutResponse.error("Cadastre o cartão antes de prosseguir"));
             }
 
-            PreapprovalCreateRequest subscriptionRequest = PreapprovalCreateRequest.builder()
-                    .reason(motivo)
-                    .autoRecurring(PreApprovalAutoRecurringCreateRequest.builder()
-                            .frequency(frequencia)
-                            .frequencyType(frequencyType)
-                            .transactionAmount(valorRecorrente)
-                            .currencyId("BRL")
-                            .build())
-                    .backUrl(appBaseUrl + "/cliente.html")
-                    .payerEmail(request.getEmail().trim().toLowerCase())
-                    .build();
+            String documento = request.getCpfCnpj().replaceAll("\\D", "");
+            String tipoDocumento = documento.length() > 11 ? "CNPJ" : "CPF";
 
-            Preapproval subscription = client.create(subscriptionRequest);
+            if ("mensal".equalsIgnoreCase(request.getPlano())) {
+                // ✅ MENSAL: Cobra R$ 497 agora no cartão
+                PaymentCreateRequest paymentRequest = PaymentCreateRequest.builder()
+                        .transactionAmount(new BigDecimal("497.00"))
+                        .token(cardToken)
+                        .description("CalFlow Premium - Implantação")
+                        .installments(request.getParcelas() != null ? request.getParcelas() : 1)
+                        .payer(PaymentPayerRequest.builder()
+                                .email(request.getEmail().trim().toLowerCase())
+                                .identification(IdentificationRequest.builder()
+                                        .type(tipoDocumento)
+                                        .number(documento)
+                                        .build())
+                                .build())
+                        .build();
 
-            venda.setGatewayTransacaoId(subscription.getId());
-            vendaRepository.save(venda);
+                Payment payment = paymentClient.create(paymentRequest);
 
-            CheckoutResponse response = CheckoutResponse.builder()
-                    .vendaId(venda.getId())
-                    .transactionId(venda.getId())
-                    .checkoutUrl(subscription.getInitPoint())
-                    .status("pending")
-                    .valor(request.getValor().toString())
-                    .mensagem("Redirecionando para o Mercado Pago...")
-                    .build();
+                venda.setGatewayTransacaoId(payment.getId().toString());
+                vendaRepository.save(venda);
 
-            log.info("Assinatura criada com sucesso: vendaId={}, subscriptionId={}",
-                    venda.getId(), subscription.getId());
+                // ✅ Cria assinatura recorrente de R$ 197/mês (começa no próximo mês)
+                PreapprovalClient preapprovalClient = new PreapprovalClient();
+                PreapprovalCreateRequest subscriptionRequest = PreapprovalCreateRequest.builder()
+                        .reason("CalFlow Premium - Mensalidade R$ 197/mês")
+                        .autoRecurring(PreApprovalAutoRecurringCreateRequest.builder()
+                                .frequency(1)
+                                .frequencyType("months")
+                                .transactionAmount(new BigDecimal("197.00"))
+                                .currencyId("BRL")
+                                .startDate(OffsetDateTime.now().plusMonths(1))
+                                .build())
+                        .backUrl(appBaseUrl + "/cliente.html")
+                        .payerEmail(request.getEmail().trim().toLowerCase())
+                        .build();
 
-            return ResponseEntity.ok(response);
+                Preapproval subscription = preapprovalClient.create(subscriptionRequest);
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("vendaId", venda.getId());
+                response.put("transactionId", venda.getId());
+                response.put("status", payment.getStatus());
+                response.put("valor", "497.00");
+                response.put("mensagem", "Pagamento de R$ 497 processado! Assinatura de R$ 197/mês criada.");
+                response.put("paymentStatus", payment.getStatus());
+                response.put("subscriptionId", subscription.getId());
+
+                log.info("Mensal cartão transparente: pagamento 497 status={}, assinatura={}, vendaId={}",
+                        payment.getStatus(), subscription.getId(), venda.getId());
+                return ResponseEntity.ok(response);
+
+            } else {
+                // ✅ ANUAL: Cobra R$ 2197 agora + renova todo ano automaticamente
+                PaymentCreateRequest paymentRequest = PaymentCreateRequest.builder()
+                        .transactionAmount(new BigDecimal("2197.00"))
+                        .token(cardToken)
+                        .description("CalFlow Premium - Plano Anual")
+                        .installments(request.getParcelas())
+                        .payer(PaymentPayerRequest.builder()
+                                .email(request.getEmail().trim().toLowerCase())
+                                .identification(IdentificationRequest.builder()
+                                        .type(tipoDocumento)
+                                        .number(documento)
+                                        .build())
+                                .build())
+                        .build();
+
+                Payment payment = paymentClient.create(paymentRequest);
+                venda.setGatewayTransacaoId(payment.getId().toString());
+                vendaRepository.save(venda);
+
+                // 2. Cria assinatura recorrente anual (renova todo ano)
+                PreapprovalClient preapprovalClient = new PreapprovalClient();
+                PreapprovalCreateRequest subscriptionRequest = PreapprovalCreateRequest.builder()
+                        .reason("CalFlow Premium - Plano Anual R$ 2.197/ano")
+                        .autoRecurring(PreApprovalAutoRecurringCreateRequest.builder()
+                                .frequency(1)
+                                .frequencyType("years")
+                                .transactionAmount(new BigDecimal("2197.00"))
+                                .currencyId("BRL")
+                                .startDate(OffsetDateTime.now().plusYears(1))
+                                .build())
+                        .backUrl(appBaseUrl + "/cliente.html")
+                        .payerEmail(request.getEmail().trim().toLowerCase())
+                        .build();
+
+                Preapproval subscription = preapprovalClient.create(subscriptionRequest);
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("vendaId", venda.getId());
+                response.put("transactionId", venda.getId());
+                response.put("status", payment.getStatus());
+                response.put("valor", "2197.00");
+                response.put("mensagem", "Pagamento anual processado! Renovação automática criada.");
+                response.put("paymentStatus", payment.getStatus());
+                response.put("subscriptionId", subscription.getId());
+
+                log.info("Anual: pagamento 2197 + assinatura anual criada: vendaId={}", venda.getId());
+                return ResponseEntity.ok(response);
+            }
 
         } catch (Exception e) {
-            log.error("Erro ao criar assinatura/cartão", e);
-            throw new RuntimeException("Erro ao criar assinatura: " + e.getMessage());
+            log.error("Erro ao processar cartão transparente", e);
+            throw new RuntimeException("Erro ao processar cartão: " + e.getMessage());
         }
     }
 
+    // ============================================================
+    // STATUS
+    // ============================================================
     @GetMapping("/status/{vendaId}")
     public ResponseEntity<?> getStatus(@PathVariable String vendaId) {
         return vendaRepository.findById(vendaId)
-                .map(venda -> ResponseEntity.ok(Map.of(
-                        "status", venda.getStatus().name().toLowerCase(),
-                        "transactionId", venda.getId()
-                )))
+                .map(venda -> {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("status", venda.getStatus().name().toLowerCase());
+                    response.put("transactionId", venda.getId());
+                    return ResponseEntity.ok(response);
+                })
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // ✅ NOVO: Endpoint para salvar token do cartão (recebe apenas o token, não os dados do cartão)
+    // ============================================================
+    // SALVAR TOKEN DO CARTÃO (vem do frontend)
+    // ============================================================
     @PostMapping("/salvar-token-cartao")
     public ResponseEntity<?> salvarTokenCartao(@RequestBody Map<String, String> request) {
         try {
@@ -252,7 +331,9 @@ public class CheckoutController {
             String token = request.get("token");
 
             if (email == null || token == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Email e token são obrigatórios"));
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "Email e token são obrigatórios");
+                return ResponseEntity.badRequest().body(error);
             }
 
             Cliente cliente = clienteRepository.findByEmail(email)
@@ -261,11 +342,16 @@ public class CheckoutController {
             cliente.setCartaoTokenizado(token);
             clienteRepository.save(cliente);
 
-            return ResponseEntity.ok(Map.of("success", true, "message", "Token de cartão salvo com sucesso"));
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Token salvo");
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Erro ao salvar token do cartão", e);
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            log.error("Erro ao salvar token", e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
         }
     }
 }
