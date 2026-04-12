@@ -46,9 +46,5 @@ public class AuthController {
                 "tipo", cliente.getTipo()
         ));
     }
-    @GetMapping("/gerar-hash")
-    public ResponseEntity<?> gerarHash(@RequestParam String senha) {
-        return ResponseEntity.ok(Map.of("hash", passwordEncoder.encode(senha)));
-    }
 }
 

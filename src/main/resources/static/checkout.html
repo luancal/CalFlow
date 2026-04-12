@@ -169,7 +169,14 @@
     <div class="redirect-spinner"></div>
     <h2 style="font-size: 20px; font-weight: 600;">Redirecionando para o checkout seguro...</h2>
 </div>
-
+<!-- ===== TOAST BAR ===== -->
+<div id="loadingToast" class="toast-bar hidden">
+    <svg class="spin-slow" style="height:1rem;width:1rem;color:#F59E0B" viewBox="0 0 24 24" fill="none">
+        <circle style="opacity:0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+        <path style="opacity:0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+    </svg>
+    <span class="text-sm text-amber-500 font-medium">Preparando seu checkout seguro...</span>
+</div>
 <!-- ===== CHECKOUT PAGE ===== -->
 <div id="checkoutPage">
     <main class="min-h-screen" style="background:#0a0a0a">
@@ -1075,44 +1082,10 @@
     btn.innerHTML = '<span style="display:flex;align-items:center;justify-content:center;gap:0.5rem"><svg class="spin-slow" style="height:1.25rem;width:1.25rem" viewBox="0 0 24 24" fill="none"><circle style="opacity:0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path style="opacity:0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Processando...</span>';
 
     try {
-        if (state.metodo === 'pix') {
-            // ✅ PIX: Abre modal para cadastrar cartão primeiro
-            openCardRegisterModal();
-        } else {
-            // ✅ CARTÃO: Processa pagamento
-            const response = await fetch(CONFIG.apiBaseUrl + '/api/checkout/processar', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    nome, email,
-                    telefone: tel.replace(/\D/g, ''),
-                    cpfCnpj: limpoDoc,
-                    metodo: state.metodo,
-                    plano: state.plano,
-                    valor: getValorPagarAgora(),
-                    parcelas: state.parcelas,
-                }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.mensagem || 'Erro ao processar pagamento. Tente novamente.');
-            }
-
-            const data = await response.json();
-            if (data.status === 'error') throw new Error(data.mensagem || 'Erro desconhecido');
-
-            state.transactionId = data.transactionId || data.vendaId;
-
-            // ✅ Redireciona para Mercado Pago
-            if (data.checkoutUrl) {
-                window.location.href = data.checkoutUrl;
-            } else {
-                throw new Error('URL de checkout não disponível. Tente novamente.');
-            }
-        }
+        // ✅ TODOS os fluxos passam pelo modal de cartão
+        openCardRegisterModal();
     } catch (err) {
-        console.error('Erro completo:', err);
+        console.error('Erro:', err);
         alert(err.message || 'Erro ao processar. Tente novamente.');
     } finally {
         btn.disabled = false;
@@ -1124,7 +1097,37 @@
 let cardRegistered = false;
 
 function openCardRegisterModal() {
-    document.getElementById('cardRegisterModal').classList.remove('hidden');
+    const modal = document.getElementById('cardRegisterModal');
+    modal.classList.remove('hidden');
+
+    // Atualiza título e botão conforme método
+    const isCartao = state.metodo === 'cartao';
+    const btn = document.getElementById('cardRegisterBtn');
+
+    if (isCartao) {
+        // Modal de cartão: processamento direto
+        const title = modal.querySelector('h2');
+        if (title) title.textContent = 'Dados do cartão';
+        const desc = modal.querySelector('p.text-sm.text-gray-400');
+        if (desc) desc.textContent = 'Seus dados são tokenizados e nunca armazenados em nossos servidores.';
+        if (btn) btn.textContent = 'Pagar agora';
+        // Esconde info sobre PIX
+        const pixInfo = modal.querySelector('.info-box');
+        if (pixInfo) pixInfo.style.display = 'none';
+        // Esconde barra de progresso (não tem etapa 2 para cartão)
+        const progressBar = modal.querySelector('.flex.items-center.gap-2.mb-6');
+        if (progressBar) progressBar.style.display = 'none';
+    } else {
+        // Modal de cartão: fluxo PIX
+        const title = modal.querySelector('h2');
+        if (title) title.textContent = 'Cadastrar cartão para assinatura';
+        if (btn) btn.textContent = 'Cadastrar e ir para o PIX →';
+        const pixInfo = modal.querySelector('.info-box');
+        if (pixInfo) pixInfo.style.display = '';
+        const progressBar = modal.querySelector('.flex.items-center.gap-2.mb-6');
+        if (progressBar) progressBar.style.display = '';
+    }
+
     lucide.createIcons();
 }
 function closeCardRegisterModal() {
@@ -1132,7 +1135,6 @@ function closeCardRegisterModal() {
 }
 
 async function processCardRegister() {
-    // Validar campos
     const num = document.getElementById('regCardNumero').value.replace(/\D/g,'');
     const nome = document.getElementById('regCardNome').value;
     const val = document.getElementById('regCardValidade').value.replace(/\D/g,'');
@@ -1145,10 +1147,10 @@ async function processCardRegister() {
     else showError('errRegCardNome','');
     if(val.length!==4){showError('errRegCardValidade','Inválida');ok=false;}
     else{
-      const m=parseInt(val.slice(0,2)),a=parseInt('20'+val.slice(2));
-      if(m<1||m>12){showError('errRegCardValidade','Mês inválido');ok=false;}
-      else if(new Date(a,m-1)<new Date()){showError('errRegCardValidade','Vencido');ok=false;}
-      else showError('errRegCardValidade','');
+        const m=parseInt(val.slice(0,2)),a=parseInt('20'+val.slice(2));
+        if(m<1||m>12){showError('errRegCardValidade','Mês inválido');ok=false;}
+        else if(new Date(a,m-1)<new Date()){showError('errRegCardValidade','Vencido');ok=false;}
+        else showError('errRegCardValidade','');
     }
     if(cvv.length<3){showError('errRegCardCvv','CVV inválido');ok=false;}
     else showError('errRegCardCvv','');
@@ -1156,20 +1158,28 @@ async function processCardRegister() {
 
     const btn = document.getElementById('cardRegisterBtn');
     btn.disabled = true;
-    btn.innerHTML = '<span style="display:flex;align-items:center;justify-content:center;gap:0.5rem"><svg class="spin-slow" style="height:1.1rem;width:1.1rem" viewBox="0 0 24 24" fill="none"><circle style="opacity:0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path style="opacity:0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Cadastrando cartão...</span>';
+    btn.innerHTML = '<span style="display:flex;align-items:center;justify-content:center;gap:0.5rem"><svg class="spin-slow" style="height:1.1rem;width:1.1rem" viewBox="0 0 24 24" fill="none"><circle style="opacity:0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path style="opacity:0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Processando...</span>';
 
     try {
-        // ✅ Tokeniza cartão com SDK do Mercado Pago
-        const cardToken = await mp.cardToken.create({
+        // ✅ Tokeniza cartão com SDK do Mercado Pago (API correta v2)
+        const cardData = {
             cardNumber: num,
+            cardholderName: nome,
+            cardExpirationMonth: val.slice(0, 2),
+            cardExpirationYear: '20' + val.slice(2),
             securityCode: cvv,
-            expirationMonth: val.slice(0,2),
-            expirationYear: val.slice(2),
-            cardholder: { name: nome }
-        });
+            identificationType: state.customerData.cpfCnpj.length <= 11 ? 'CPF' : 'CNPJ',
+            identificationNumber: state.customerData.cpfCnpj
+        };
+
+        const cardToken = await mp.createCardToken(cardData);
+
+        if (!cardToken || !cardToken.id) {
+            throw new Error('Erro ao tokenizar cartão. Verifique os dados e tente novamente.');
+        }
 
         // ✅ Salva token no backend
-        await fetch(CONFIG.apiBaseUrl + '/api/checkout/salvar-token-cartao', {
+        const saveRes = await fetch(CONFIG.apiBaseUrl + '/api/checkout/salvar-token-cartao', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1177,8 +1187,9 @@ async function processCardRegister() {
                 token: cardToken.id
             })
         });
+        if (!saveRes.ok) throw new Error('Erro ao salvar dados do cartão');
 
-        // ✅ Cartão cadastrado, agora gera PIX
+        // ✅ Agora processa o pagamento
         closeCardRegisterModal();
 
         const response = await fetch(CONFIG.apiBaseUrl + '/api/checkout/processar', {
@@ -1189,49 +1200,74 @@ async function processCardRegister() {
                 email: state.customerData.email,
                 telefone: state.customerData.telefone,
                 cpfCnpj: state.customerData.cpfCnpj,
-                metodo: 'pix',
+                metodo: state.metodo, // 'pix' ou 'cartao'
                 plano: state.plano,
                 valor: getValorPagarAgora(),
-                parcelas: 1
+                parcelas: state.parcelas
             })
         });
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.mensagem || 'Erro ao gerar PIX');
+            throw new Error(errorData.mensagem || errorData.error || 'Erro ao processar pagamento');
         }
 
         const data = await response.json();
         state.transactionId = data.transactionId || data.vendaId;
-        state.pixData = {
-            qrCode: data.qrCode,
-            qrCodeTexto: data.qrCodeTexto
-        };
 
-        openPixModal(state.pixData, getValorPagarAgora());
+        if (state.metodo === 'pix') {
+            // ✅ PIX: Mostra QR Code
+            state.pixData = {
+                qrCode: data.qrCode,
+                qrCodeTexto: data.qrCodeTexto
+            };
+            openPixModal(state.pixData, getValorPagarAgora());
+
+        } else {
+            // ✅ CARTÃO: Pagamento processado direto no backend
+            const payStatus = data.paymentStatus || data.status;
+
+            if (payStatus === 'approved') {
+                showSuccessPage();
+            } else if (payStatus === 'in_process' || payStatus === 'pending') {
+                // Mostra aguardando e faz polling
+                mostrarAguardandoPagamento();
+            } else if (payStatus === 'rejected') {
+                alert('Pagamento recusado. Tente outro cartão.');
+            } else {
+                // Fallback: mostra sucesso (backend processa async via webhook)
+                showSuccessPage();
+            }
+        }
 
     } catch (err) {
-        console.error('Erro ao cadastrar cartão:', err);
-        alert(err.message || 'Erro ao cadastrar cartão. Tente novamente.');
+        console.error('Erro ao processar:', err);
+        alert(err.message || 'Erro ao processar. Tente novamente.');
+        closeCardRegisterModal();
     } finally {
         btn.disabled = false;
-        btn.textContent = 'Cadastrar e ir para o PIX →';
+        btn.textContent = state.metodo === 'pix' ? 'Cadastrar e ir para o PIX →' : 'Pagar agora';
         lucide.createIcons();
     }
 }
 
 
 function mostrarAguardandoPagamento() {
-    const modal = document.getElementById('cardModal');
-    if (!modal) return;
+    // Mostra tela de loading inline (não no cardModal que foi fechado)
+    document.getElementById('checkoutPage').classList.add('hidden');
 
-    document.getElementById('cardModal').classList.remove('hidden');
-    document.getElementById('cardModal').innerHTML = `
-        <div class="flex flex-col items-center justify-center py-8 text-center">
-            <div style="width:60px;height:60px;border:4px solid #F59E0B;border-top:4px solid transparent;border-radius:50%;animation:spinSlow 1s linear infinite;margin-bottom:1.5rem"></div>
-            <h3 class="text-lg font-bold mb-2">Processando pagamento...</h3>
-            <p class="text-sm text-gray-400">Aguardando confirmação do cartão. Isso pode levar alguns instantes.</p>
+    // Cria tela temporária de aguardo
+    const aguardando = document.createElement('div');
+    aguardando.id = 'aguardandoPage';
+    aguardando.className = 'min-h-screen flex items-center justify-center px-4';
+    aguardando.style.background = '#0a0a0a';
+    aguardando.innerHTML = `
+        <div class="text-center max-w-sm">
+            <div style="width:64px;height:64px;border:4px solid #F59E0B;border-top:4px solid transparent;border-radius:50%;animation:spinSlow 1s linear infinite;margin:0 auto 1.5rem"></div>
+            <h3 style="font-size:1.25rem;font-weight:700;margin-bottom:0.5rem">Processando pagamento...</h3>
+            <p style="color:#737373;font-size:0.875rem">Aguardando confirmação do cartão. Isso pode levar alguns instantes.</p>
         </div>`;
+    document.body.appendChild(aguardando);
 
     // Polling para verificar aprovação
     const poll = setInterval(async () => {
@@ -1240,11 +1276,19 @@ function mostrarAguardandoPagamento() {
             const data = await res.json();
             if (data.status === 'aprovada') {
                 clearInterval(poll);
-                document.getElementById('cardModal').classList.add('hidden');
+                aguardando.remove();
                 showSuccessPage();
             }
         } catch(e) {}
     }, 3000);
+
+    // Timeout de segurança: 2 minutos
+    setTimeout(() => {
+        clearInterval(poll);
+        aguardando.remove();
+        document.getElementById('checkoutPage').classList.remove('hidden');
+        alert('O pagamento está sendo processado. Você receberá as credenciais por e-mail em breve.');
+    }, 120000);
 }
     // ============================================================
     // PIX MODAL
@@ -1372,32 +1416,28 @@ function mostrarAguardandoPagamento() {
     // SUCCESS PAGE
     // ============================================================
     function showSuccessPage() {
-        document.getElementById('checkoutPage').classList.add('hidden');
-        document.getElementById('successPage').classList.remove('hidden');
+    document.getElementById('checkoutPage').classList.add('hidden');
+    document.getElementById('successPage').classList.remove('hidden');
 
-        const cd = state.customerData;
-        const firstName = cd.nome.split(' ')[0];
-        document.getElementById('successGreeting').textContent = 'Parabéns, ' + firstName + '! Seu acesso ao CalFlow Premium foi liberado.';
-        document.getElementById('successPlano').textContent = 'CalFlow Premium ' + (cd.plano === 'anual' ? 'Anual' : 'Mensal');
-        document.getElementById('successNome').textContent = cd.nome;
-        document.getElementById('successEmail').textContent = cd.email;
+    const cd = state.customerData;
+    const firstName = cd.nome.split(' ')[0];
+    document.getElementById('successGreeting').textContent = 'Parabéns, ' + firstName + '! Seu acesso ao CalFlow Premium foi liberado.';
+    document.getElementById('successPlano').textContent = 'CalFlow Premium ' + (cd.plano === 'anual' ? 'Anual' : 'Mensal');
+    document.getElementById('successNome').textContent = cd.nome;
+    document.getElementById('successEmail').textContent = cd.email;
 
-        // Generate credentials
-        const usuario = gerarUsuario(cd.nome);
-        const senha = gerarSenha();
-        state.credenciais = { usuario, senha };
-        state.senhaVisible = false;
+    // ✅ Credenciais vêm do backend (enviadas por email e WhatsApp)
+    // Aqui mostramos uma mensagem de aguardo
+    document.getElementById('credUsuario').textContent = 'Verifique seu e-mail e WhatsApp';
+    document.getElementById('credUsuario').setAttribute('data-raw', 'Verifique seu e-mail e WhatsApp');
+    const senhaEl = document.getElementById('credSenha');
+    senhaEl.setAttribute('data-raw', '••••••••••');
+    senhaEl.textContent = '••••••••••';
 
-        document.getElementById('credUsuario').textContent = usuario;
-        document.getElementById('credUsuario').setAttribute('data-raw', usuario);
-        const senhaEl = document.getElementById('credSenha');
-        senhaEl.setAttribute('data-raw', senha);
-        senhaEl.textContent = senha.replace(/./g, '\u2022');
-
-        lucide.createIcons();
-        createConfetti();
-        setTimeout(() => openWhatsApp(), 2500);
-    }
+    lucide.createIcons();
+    createConfetti();
+    setTimeout(() => openWhatsApp(), 2500);
+}
 
     function createConfetti() {
         const container = document.getElementById('confettiContainer');
@@ -1429,59 +1469,133 @@ function mostrarAguardandoPagamento() {
     // INIT
     // ============================================================
     document.addEventListener('DOMContentLoaded', () => {
-        lucide.createIcons();
+    lucide.createIcons();
 
-        // URL pre-selection
-        const params = new URLSearchParams(window.location.search);
-        const planoParam = params.get('plano');
-        if (planoParam === 'anual') {
-            selectPlano('anual');
-        } else {
-            selectPlano('mensal');
-        }
+    const params = new URLSearchParams(window.location.search);
+    const planoParam = params.get('plano');
+    if (planoParam === 'anual') {
+        selectPlano('anual');
+    } else {
+        selectPlano('mensal');
+    }
 
-        // Toast transition on ref param
-        const ref = params.get('ref');
-        if (ref || document.referrer.includes('calflow')) {
-        const toast = document.getElementById('loadingToast');
+    const ref = params.get('ref');
+if (ref) {
+    const redirectScreen = document.getElementById('redirectScreen');
+    if (redirectScreen) {
+        redirectScreen.style.display = 'flex';
+        setTimeout(() => {
+            redirectScreen.style.display = 'none';
+        }, 1000);
+    }
+} else if (document.referrer.includes('calflow')) {
+    // Se vier de outra página do site, mostra toast
+    const toast = document.getElementById('loadingToast');
+    if (toast) {
         toast.classList.remove('hidden');
         setTimeout(() => {
             toast.classList.add('fade-out');
             setTimeout(() => toast.classList.add('hidden'), 300);
         }, 1800);
     }
+}
 
-        updateParcelasOptions();
+    updateParcelasOptions();
 
-        document.getElementById('inputCpfCnpj').addEventListener('input', function() { maskCpfCnpj(this); checkFormValid(); });
-        document.getElementById('inputTelefone').addEventListener('input', function() { maskPhone(this); checkFormValid(); });
-        document.getElementById('inputNome').addEventListener('input', checkFormValid);
-        document.getElementById('inputEmail').addEventListener('input', checkFormValid);
-
-        document.getElementById('inputNome').addEventListener('blur', function() {
-            if (!validarNome(this.value) && this.value.trim()) { showError('errNome', 'Digite nome e sobrenome completos'); this.classList.add('error'); }
-            else { showError('errNome', ''); this.classList.remove('error'); }
-        });
-        document.getElementById('inputEmail').addEventListener('blur', function() {
-            if (!validarEmail(this.value) && this.value.trim()) { showError('errEmail', 'Digite um e-mail válido'); this.classList.add('error'); }
-            else { showError('errEmail', ''); this.classList.remove('error'); }
-        });
-        document.getElementById('inputTelefone').addEventListener('blur', function() {
-            if (!validarTelefone(this.value) && this.value.trim()) { showError('errTelefone', 'Digite um telefone válido com DDD'); this.classList.add('error'); }
-            else { showError('errTelefone', ''); this.classList.remove('error'); }
-        });
-        document.getElementById('inputCpfCnpj').addEventListener('blur', function() {
-            const limpo = this.value.replace(/\D/g, '');
-            if (!validarCPFouCNPJ(this.value) && limpo.length > 0) {
-                const msg = limpo.length <= 11 ? 'CPF inválido' : 'CNPJ inválido';
-                showError('errCpfCnpj', msg); this.classList.add('error');
-            } else { showError('errCpfCnpj', ''); this.classList.remove('error'); }
-        });
-
-        document.getElementById('selectParcelas').addEventListener('change', function() {
-            state.parcelas = parseInt(this.value);
-        });
+    // ✅ TELEFONE — só números, aplica máscara
+    document.getElementById('inputTelefone').addEventListener('keypress', function(e) {
+        if (!/[0-9]/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) {
+            e.preventDefault();
+        }
     });
+    document.getElementById('inputTelefone').addEventListener('input', function() {
+        this.value = this.value.replace(/[^\d]/g, '').slice(0, 11);
+        maskPhone(this);
+        checkFormValid();
+    });
+    document.getElementById('inputTelefone').addEventListener('blur', function() {
+        if (!validarTelefone(this.value) && this.value.trim()) {
+            showError('errTelefone', 'Digite um telefone válido com DDD');
+            this.classList.add('error');
+        } else {
+            showError('errTelefone', '');
+            this.classList.remove('error');
+        }
+    });
+
+    // ✅ CPF/CNPJ — só números, aplica máscara, sem bug de backspace
+    document.getElementById('inputCpfCnpj').addEventListener('keypress', function(e) {
+        if (!/[0-9]/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) {
+            e.preventDefault();
+        }
+    });
+    document.getElementById('inputCpfCnpj').addEventListener('input', function() {
+        // Guarda só os números puros
+        const apenasNumeros = this.value.replace(/\D/g, '').slice(0, 14);
+        // Aplica máscara visual
+        let formatado = apenasNumeros;
+        if (apenasNumeros.length <= 11) {
+            // CPF: 000.000.000-00
+            formatado = apenasNumeros
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+        } else {
+            // CNPJ: 00.000.000/0000-00
+            formatado = apenasNumeros
+                .replace(/^(\d{2})(\d)/, '$1.$2')
+                .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+                .replace(/\.(\d{3})(\d)/, '.$1/$2')
+                .replace(/(\d{4})(\d)/, '$1-$2');
+        }
+        this.value = formatado;
+        checkFormValid();
+    });
+    document.getElementById('inputCpfCnpj').addEventListener('blur', function() {
+        const limpo = this.value.replace(/\D/g, '');
+        if (!validarCPFouCNPJ(this.value) && limpo.length > 0) {
+            const msg = limpo.length <= 11 ? 'CPF inválido' : 'CNPJ inválido';
+            showError('errCpfCnpj', msg);
+            this.classList.add('error');
+        } else {
+            showError('errCpfCnpj', '');
+            this.classList.remove('error');
+        }
+    });
+
+    // ✅ NOME — só letras e espaços
+    document.getElementById('inputNome').addEventListener('keypress', function(e) {
+        if (!/[a-zA-ZÀ-ÿ\s]/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) {
+            e.preventDefault();
+        }
+    });
+    document.getElementById('inputNome').addEventListener('input', checkFormValid);
+    document.getElementById('inputNome').addEventListener('blur', function() {
+        if (!validarNome(this.value) && this.value.trim()) {
+            showError('errNome', 'Digite nome e sobrenome completos');
+            this.classList.add('error');
+        } else {
+            showError('errNome', '');
+            this.classList.remove('error');
+        }
+    });
+
+    // ✅ EMAIL — qualquer caractere mas valida no blur
+    document.getElementById('inputEmail').addEventListener('input', checkFormValid);
+    document.getElementById('inputEmail').addEventListener('blur', function() {
+        if (!validarEmail(this.value) && this.value.trim()) {
+            showError('errEmail', 'Digite um e-mail válido');
+            this.classList.add('error');
+        } else {
+            showError('errEmail', '');
+            this.classList.remove('error');
+        }
+    });
+
+    document.getElementById('selectParcelas').addEventListener('change', function() {
+        state.parcelas = parseInt(this.value);
+    });
+});
 </script>
 <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e188b299bad9a45',t:'MTc3NDM4NTM3OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
